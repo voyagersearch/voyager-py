@@ -1,9 +1,9 @@
 """----------------------------------------------------------------------------
 Name:        clip_data.py
 Purpose:     Copies data to a new or existing geodatabase.
-Author:
+Author:      NewfoundGEO Consulting
 Created:     01/10/2013
-Copyright:
+Copyright:   VoyagerSearch, 2013
 ----------------------------------------------------------------------------"""
 import os
 import zipfile
