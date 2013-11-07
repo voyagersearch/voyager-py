@@ -1,5 +1,6 @@
-jason
+voyager-processing
 =====
 
-Geoprocessng toolbox - VoyagerGPTools.tbx
-Scripts Folder contains Python scripts for each tool in the toolbox.
+VoyagerProcessingTools.tbx -- contains tools for voyager processing framework.
+
+VoyagerUtilityTools.tbx    -- contains tools for data management such as MakeLayerFiles and AddWKT.
