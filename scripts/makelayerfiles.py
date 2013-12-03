@@ -3,7 +3,7 @@ Name:        makelayerfiles.py
 Purpose:     Make layer files for feature classes & rasters in a geodatabase.
 Author:      NewfoundGEO Consulting
 Created:     29/05/2013
-Updated:     29/05/2013
+Updated:     05/06/2013
 ---------------------------------------------------------------------------"""
 import os
 import arcpy
