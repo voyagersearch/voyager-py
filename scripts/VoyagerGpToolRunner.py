@@ -31,6 +31,9 @@ def run_job(json_file):
         # Retrieve the list of parameters.
         parameters = request['params']
 
+        # TODO: this script makes assumptions about the *order* of the path elements
+        # ideally this should lookup names by key and validate as required
+
         # Prepare parameters for task.
         in_data = ';'.join([v['lyr'] if not v['lyr'] == '' else v['path'] for v in parameters[1]['value']])
         clip_geom_wkt = parameters[0]['wkt']
