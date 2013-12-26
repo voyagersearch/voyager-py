@@ -49,7 +49,7 @@ def run_job(json_file):
             clip_geom_wkt = find(lambda p: p['name'] == 'clip_geometry', parameters)['wkt']
 
             # Retieve the coordinate system code.
-            find(lambda p: p['name'] == 'output_projection', parameters)['value']
+            sr_code = find(lambda p: p['name'] == 'output_projection', parameters)['value']
 
             # Retrive the output format type.
             output_format = find(lambda p: p['name'] == 'output_format', parameters)['value']
@@ -60,7 +60,7 @@ def run_job(json_file):
 
             # Execute task.
             try:
-                arcpy.voyager.ClipData(in_data, output_location, clip_geom_wkt, sr_code, out)
+                arcpy.voyager.ClipData(in_data, output_location, clip_geom_wkt, sr_code, output_format)
             except arcpy.ExecuteError:
                 sys.stderr.write(arcpy.GetMessages(2))
                 sys.exit(1)
@@ -69,5 +69,6 @@ def run_job(json_file):
         sys.exit(0)
 
 if __name__ == '__main__':
-    run_job(sys.argv[1])
+    run_job(r"C:\jason\scripts\cliptask.json")
+    #run_job(sys.argv[1])
 
