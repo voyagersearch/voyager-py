@@ -65,7 +65,8 @@ def clip_data(datasets,
               out_gdb,
               clip_area='',
               out_coordinate_system='',
-              non_spatial_data=True):
+              out_format='',
+              zip_up=''):
     """Clips data to a new or existing geodatabase.
     Optionally, the geodatbase can be zipped into
     a distributable file.
@@ -74,22 +75,18 @@ def clip_data(datasets,
 
     # Create the clip polygon.
     gcs_sr = arcpy.SpatialReference(4326)
-    xys = clip_area.split()
-    points = arcpy.Array([
-        arcpy.Point(xys[0], xys[1]),
-        arcpy.Point(xys[0], xys[3]),
-        arcpy.Point(xys[2], xys[3]),
-        arcpy.Point(xys[2], xys[1])
-    ])
-    gcs_clip_poly = arcpy.Polygon(points, gcs_sr)
+##    xys = clip_area.split()
+##    points = arcpy.Array([
+##        arcpy.Point(xys[0], xys[1]),
+##        arcpy.Point(xys[0], xys[3]),
+##        arcpy.Point(xys[2], xys[3]),
+##        arcpy.Point(xys[2], xys[1])
+##    ])
+    gcs_clip_poly = arcpy.FromWKT(clip_area, gcs_sr) #arcpy.Polygon(points, gcs_sr)
 
     if not os.path.exists(out_gdb):
         out_gdb = arcpy.management.CreateFileGDB(dirname(out_gdb),
                                                  basename(out_gdb))[0]
-
-    if non_spatial_data is True:
-        file_folder = arcpy.management.CreateFolder(dirname(out_gdb),
-                                                    'output_files')
 
     arcpy.env.workspace = out_gdb
     datasets = datasets.split(';')
@@ -168,10 +165,7 @@ def clip_data(datasets,
                 arcpy.env.workspace = dsc.catalogPath
                 cad_wks_name = os.path.splitext(dsc.name)[0]
                 for cad_fc in arcpy.ListFeatureClasses():
-                    if cad_fc.lower() == 'annotation':
-                        cad_anno = arcpy.conversion.ImportCADAnnotation(cad_fc, arcpy.CreateUniqueName('cadanno', arcpy.env.scratchGDB))
-                        arcpy.analysis.Clip(cad_anno, clip_poly, join(cad_wks_name, cad_fc))
-                    arcpy.analysis.Clip(cad_fc, clip_poly, join(cad_wks_name, cad_fc))
+                    arcpy.analysis.Clip(cad_fc, clip_poly, create_unique_name(cad_wks_name + '_' + cad_fc, out_gdb))
                 arcpy.env.workspace = out_gdb
 
             # File
@@ -201,8 +195,8 @@ def clip_data(datasets,
                     )
                     arcpy.management.Delete(kml_layer[1])
                     del group_layer
-                elif non_spatial_data is True:
-                    arcpy.management.Copy(ds, join(file_folder, dsc.name))
+                else:
+                    arcpy.management.Copy(ds, join(dirname(out_gdb), dsc.name))
 
             # Map document
             elif dsc.dataType == 'MapDocument':
@@ -215,7 +209,7 @@ def clip_data(datasets,
                     '{}.mpk'.format(join(dirname(out_gdb), dsc.name)),
                     'CONVERT',
                     'CONVERT_ARCSDE',
-                    clip_area
+                    clip_poly.extent
                 )
                 log_file.write('--Created map package for {0}.'.format(ds))
                 continue
@@ -234,9 +228,11 @@ def clip_data(datasets,
     log_file.flush()
     log_file.close()
 
-    zip_name = os.path.splitext(os.path.basename(out_gdb))[0]
-    zf = zip_data(out_gdb, '{}.zip'.format(zip_name))
-    arcpy.SetParameterAsText(5, zf)
+    if zip_up:
+        zip_name = os.path.splitext(os.path.basename(out_gdb))[0]
+        zf = zip_data(out_gdb, '{}.zip'.format(zip_name))
+        arcpy.AddMessage('--Created: {0}'.format(zf))
+
 # End clip_data function
 
 if __name__ == '__main__':
@@ -245,9 +241,11 @@ if __name__ == '__main__':
     output_geodatabase = arcpy.GetParameterAsText(1)
     clip_extent = arcpy.GetParameterAsText(2)
     out_cs = arcpy.GetParameterAsText(3)
-    allow_non_spatial_data = arcpy.GetParameter(4)
+    zip_up_data = arcpy.GetParameter(4)
+    output_format = arcpy.GetParameterAsText(5)
     clip_data(input_datasets,
               output_geodatabase,
               clip_extent,
               out_cs,
-              allow_non_spatial_data)
+              output_format,
+              zip_up_data)
