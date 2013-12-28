@@ -41,13 +41,13 @@ def run_job(json_file):
             # Retrieve input items to be clipped.
             input_items = find(lambda p: p['name'] == 'input_items', parameters)
             docs = input_items.get('response').get('docs')
-            in_data = ';'.join([v['[lyrFile]'] if not v['[lyrFile]'] == '' else v['path'] for v in docs)
+            in_data = ';'.join([v['[lyrFile]'] if not v['[lyrFile]'] == '' else v['path'] for v in docs])
 
             # Retrieve clip geometry.
             clip_geom_wkt = find(lambda p: p['name'] == 'clip_geometry', parameters)['wkt']
 
             # Retieve the coordinate system code.
-            sr_code = find(lambda p: p['name'] == 'output_projection', parameters)['value']
+            sr_code = find(lambda p: p['name'] == 'output_projection', parameters)['code']
 
             # Retrive the output format type.
             output_format = find(lambda p: p['name'] == 'output_format', parameters)['value']
