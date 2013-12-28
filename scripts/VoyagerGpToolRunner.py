@@ -22,14 +22,11 @@ def run_job(json_file):
     """
     with open(json_file) as data_file:
         data = json.load(data_file)
-        request = data['request'][0]
+        request = data;  # data['request'][0]
 
-        # Check for request type, if not TASK, exit.
-        if request['type'] == 'TASK':
-            arcpy.ImportToolbox(os.path.dirname(request['task']))
-        else:
-            sys.exit(1)
-
+        # Load the GP Toolbox
+        arcpy.ImportToolbox(os.path.dirname(request['task']))
+        
         # Create the folder if it does not exist.
         if not os.path.exists(data['folder']):
             os.makedirs(data['folder'])
@@ -69,6 +66,6 @@ def run_job(json_file):
         sys.exit(0)
 
 if __name__ == '__main__':
-    run_job(r"C:\jason\scripts\cliptask.json")
-    #run_job(sys.argv[1])
+    #run_job(r"C:\jason\scripts\cliptask.json")
+    run_job(sys.argv[1])
 
