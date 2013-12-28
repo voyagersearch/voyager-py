@@ -40,7 +40,7 @@ def run_job(json_file):
 
             # Retrieve input items to be clipped.
             input_items = find(lambda p: p['name'] == 'input_items', parameters)
-            in_data = ';'.join([v['lyr'] if not v['lyr'] == '' else v['path'] for v in input_items['value']])
+            in_data = ';'.join([v['[lyrFile]'] if not v['[lyrFile]'] == '' else v['path'] for v in input_items['response']['docs'])
 
             # Retrieve clip geometry.
             clip_geom_wkt = find(lambda p: p['name'] == 'clip_geometry', parameters)['wkt']
