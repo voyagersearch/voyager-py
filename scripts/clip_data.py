@@ -61,6 +61,19 @@ def clip_mxd_layers(mxd_path, coord_sys, geo_poly):
             )
 # End clip_mxd_layers function
 
+def from_wkt(wkt, sr):
+    """Return the clip geometry from a
+    list of well-known test coordinates.
+    """
+    coords = wkt[wkt.find('(')+2 : wkt.find(')')].split(',')
+    array = arcpy.Array()
+    for p in coords:
+        pt = p.strip().split(' ')
+        array.add(arcpy.Point(float(pt[0]), float(pt[1])))
+
+    poly = arcpy.Polygon(array, sr)
+    return poly
+
 def clip_data(datasets,
               out_gdb,
               clip_area='',
@@ -75,14 +88,7 @@ def clip_data(datasets,
 
     # Create the clip polygon.
     gcs_sr = arcpy.SpatialReference(4326)
-##    xys = clip_area.split()
-##    points = arcpy.Array([
-##        arcpy.Point(xys[0], xys[1]),
-##        arcpy.Point(xys[0], xys[3]),
-##        arcpy.Point(xys[2], xys[3]),
-##        arcpy.Point(xys[2], xys[1])
-##    ])
-    gcs_clip_poly = arcpy.FromWKT(clip_area, gcs_sr) #arcpy.Polygon(points, gcs_sr)
+    gcs_clip_poly = from_wkt(clip_area, gcs_sr) #arcpy.FromWKT(clip_area, gcs_sr) #arcpy.Polygon(points, gcs_sr)
 
     if not os.path.exists(out_gdb):
         out_gdb = arcpy.management.CreateFileGDB(dirname(out_gdb),
