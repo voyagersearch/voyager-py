@@ -7,8 +7,10 @@ Copyright:
 ----------------------------------------------------------------------------"""
 import os
 from os.path import join, dirname, basename
+import sys
 import glob
 import zipfile
+import traceback
 import arcpy
 
 
@@ -232,7 +234,11 @@ def clip_data(datasets,
         except Exception as ex:
             log_file.write('--Failed to clip {0}.\n'.format(ds))
             log_file.write('--Error: {0}.\n'.format(ex))
-            arcpy.AddWarning('--Failed to clip {0}. Error: {1}.'.format(ds, ex))
+            #arcpy.AddWarning('--Failed to clip {0}. Error: {1}.'.format(ds, ex))
+            tb = sys.exc_info()[2]
+            tbinfo = traceback.format_tb(tb)[0]
+            msgs = 'Traceback info: {0}.\n Error info: {1}.\n'.format(tbinfo, str(sys.exc_info()[1]))
+            arcpy.AddWarning(msgs)
             pass
 
     log_file.flush()
