@@ -49,8 +49,8 @@ def run_job(json_file):
         arcpy.ImportToolbox(os.path.dirname(request['task']))
 
         # Create the folder if it does not exist.
-        if not os.path.exists(data['folder']):
-            os.makedirs(data['folder'])
+        if not os.path.exists(request['folder']):
+            os.makedirs(request['folder'])
 
         # Retrieve the list of parameters.
         parameters = request['params']
@@ -73,9 +73,9 @@ def run_job(json_file):
             # Retrive the output format type.
             output_format = find(lambda p: p['name'] == 'output_format', parameters)['value']
             if output_format == 'FileGDB':
-                output_location = os.path.join(data['folder'], 'output.gdb')
+                output_location = os.path.join(request['folder'], 'output.gdb')
             else:
-                output_location = data['folder']
+                output_location = request['folder']
 
             # Execute task.
             try:
