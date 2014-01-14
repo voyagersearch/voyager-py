@@ -25,13 +25,13 @@ def get_item(item):
     if the layer's datasource does not exist.
     """
     try:
-        cnt = arcpy.management.GetCount(item['lyrFile'])
-        return item['lyrFile']
+        cnt = arcpy.management.GetCount(item['[lyrFile]'])
+        return item['[lyrFile]']
     except arcpy.ExecuteError:
         pass
 
     try:
-        layer_file = urllib.urlretrieve(item['lyrURL'])[0]
+        layer_file = urllib.urlretrieve(item['[lyrURL]'])[0]
         cnt = arcpy.management.GetCount(layer_file)
         return layer_file
     except Exception:
