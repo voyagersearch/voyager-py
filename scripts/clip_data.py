@@ -1,9 +1,10 @@
 """----------------------------------------------------------------------------
 Name:        clip_data.py
-Purpose:     Clips data using extent to a new or existing geodatabase.
-Author:
-Created:     01/10/2013
-Copyright:
+Purpose:     Clips data to a new or existing geodatabase.
+Author:      VoyagerSearch
+Created:     10/01/2013
+Updated:     01/13/2014
+Copyright:   (c) VoyagerSearch 2013
 ----------------------------------------------------------------------------"""
 import os
 from os.path import join, dirname, basename
@@ -24,9 +25,13 @@ def zip_data(file_gdb, name):
                     absf = join(root, f)
                     zf = absf[len(file_gdb) + len(os.sep):]
                     z.write(absf, join(basename(file_gdb), zf))
-        z.write('output.log')
+
+        # Add output.log to the .zip.
+        z.write(join(dirname(file_gdb), 'output.log'), 'output.log')
+        # Add any and all .mpk files to the .zip.
         for mpk in glob.glob(join(dirname(file_gdb), '*.mpk')):
-            z.write(basename(mpk))
+            z.write(mpk, basename(mpk))
+
     return zfile
 # End zip_data function
 

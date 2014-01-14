@@ -19,7 +19,9 @@ def zip_data(file_gdb, name):
                     absf = os.path.join(root, f)
                     zf = absf[len(file_gdb) + len(os.sep):]
                     z.write(absf, os.path.join(os.path.basename(file_gdb), zf))
-        z.write('output.log')
+
+        z.write(os.path.join(os.path.dirname(file_gdb), 'output.log'), 'output.log')
+
     return zfile
 # End zip_data function
 
