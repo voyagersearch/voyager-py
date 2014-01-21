@@ -25,14 +25,14 @@ def get_item(item):
     if the layer's datasource does not exist.
     """
     try:
-        cnt = arcpy.management.GetCount(item['[lyrFile]'])
+        dsc = arcpy.Describe(item['[lyrFile]'])
         return item['[lyrFile]']
-    except arcpy.ExecuteError:
+    except Exception:
         pass
 
     try:
         layer_file = urllib.urlretrieve(item['[lyrURL]'])[0]
-        cnt = arcpy.management.GetCount(layer_file)
+        dsc = arcpy.Describe(layer_file)
         return layer_file
     except Exception:
         return item['path']
@@ -65,12 +65,15 @@ def run_job(json_file):
             #in_data = ';'.join([v['[lyrFile]'] if not v['[lyrFile]'] == '' else v['path'] for v in docs])
 
             # Retrieve clip geometry.
-            clip_geom_wkt = find(lambda p: p['name'] == 'clip_geometry', parameters)['wkt']
+            try:
+                clip_geom_wkt = find(lambda p: p['name'] == 'clip_geometry', parameters)['wkt']
+            except KeyError:
+                clip_geom_wkt = find(lambda p: p['name'] == 'clip_geometry', parameters)['feature']
 
-            # Retieve the coordinate system code.
+            # Retrieve the coordinate system code.
             sr_code = find(lambda p: p['name'] == 'output_projection', parameters)['code']
 
-            # Retrive the output format type.
+            # Retrieve the output format type.
             output_format = find(lambda p: p['name'] == 'output_format', parameters)['value']
             if output_format == 'FileGDB':
                 output_location = os.path.join(request['folder'], 'output.gdb')
