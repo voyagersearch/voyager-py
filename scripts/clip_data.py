@@ -2,6 +2,7 @@
 Clips each input feature class or layer against the
 clip area and creates a compressed zip file, map package, or layer package.
 """
+from __future__ import unicode_literals
 import os
 from os.path import basename, dirname, join, splitext
 import sys
@@ -10,6 +11,7 @@ import shutil
 import zipfile
 import traceback
 import arcpy
+import status
 
 
 __author__ = 'VoyagerSearch'
@@ -26,7 +28,7 @@ def clean_up(data_location):
         arcpy.env.workspace = join(data_location, 'output.gdb')
     else:
         arcpy.env.workspace = data_location
-                      
+
     [arcpy.management.Delete(fc) for fc in arcpy.ListFeatureClasses()]
     shutil.rmtree(data_location, True)
 # End clean_up function
@@ -149,7 +151,7 @@ def from_wkt(wkt, sr):
 # End from_wkt function
 
 
-def create_layer_package(data_location):
+def create_layer_package(data_location, additional_files):
     """Creates a layer package (.lpk) for all the clipped datasets."""
     gdbs = glob.glob(join(data_location, '*.gdb'))
     for gdb in gdbs:
@@ -158,11 +160,15 @@ def create_layer_package(data_location):
             fl = arcpy.management.MakeFeatureLayer(fc, '{0}_'.format(fc))
             arcpy.management.SaveToLayerFile(fl, join(data_location, '{0}.lyr'.format(fc)), version='10')
     lyrs = glob.glob(join(data_location, '*.lyr'))
-    arcpy.management.PackageLayer(lyrs, join(dirname(data_location), 'output.lpk'), 'PRESERVE', version='10')
+    arcpy.management.PackageLayer(lyrs,
+                                  join(dirname(data_location), 'output.lpk'),
+                                  'PRESERVE',
+                                  version='10',
+                                  additional_files=additional_files)
 # End create_layer_package function
 
 
-def create_map_package(data_location):
+def create_map_package(data_location, additional_files):
     """Creates a map package (.mpk) for all the clipped datasets."""
     mxd = arcpy.mapping.MapDocument(join(dirname(__file__), 'MapTemplate.mxd'))
     if mxd.description == '':
@@ -180,7 +186,11 @@ def create_map_package(data_location):
 
     new_mxd = join(dirname(data_location), 'output.mxd')
     mxd.saveACopy(new_mxd)
-    arcpy.management.PackageMap(new_mxd, new_mxd.replace('.mxd', '.mpk'), 'PRESERVE', version='10')
+    arcpy.management.PackageMap(new_mxd,
+                                new_mxd.replace('.mxd', '.mpk'),
+                                'PRESERVE',
+                                version='10',
+                                additional_files=additional_files)
     del mxd
     os.unlink(new_mxd)
 # End create_map_package function
@@ -190,12 +200,11 @@ def clip_data(datasets,
               out_workspace,
               clip_area,
               out_coordinate_system=None,
-              out_format='',
+              out_format='FileGDB',
               zip_up=True):
     """Clips data to a new or existing geodatabase.
     Optionally, the geodatbase can be zipped into
     a distributable file."""
-    import arcpy
     try:
         # Voyager Job Runner: passes a dictionary of inputs and output names.
         datasets = eval(datasets)
@@ -220,16 +229,15 @@ def clip_data(datasets,
     os.mkdir(working_folder)
     if not out_format == 'SHP':
         out_workspace = arcpy.management.CreateFileGDB(working_folder, 'output.gdb').getOutput(0)
-    else:        
+    else:
         out_workspace = working_folder
-    #else:
-    #    out_workspace = arcpy.management.CreateFileGDB(out_workspace, 'output.gdb').getOutput(0)
-
     arcpy.env.workspace = out_workspace
+
+    i = 1.
     count = len(datasets)
-    i = 0
-    sys.stdout.write('0% - [Starting to clip data...]')
-    sys.stdout.flush()
+    files_to_package = list()
+    status_writer= status.Writer()
+    status_writer.send_status('Starting the clipping process...')
     for ds, out_name in datasets.iteritems():
         try:
             dsc = arcpy.Describe(ds)
@@ -320,53 +328,48 @@ def clip_data(datasets,
                     arcpy.management.Delete(kml_layer[1])
                     del group_layer
                 else:
-                    if out_format in ('FileGDB', 'SHP'):
-                        if out_name == '':
-                            out_name = dsc.name
-                        if out_workspace.endswith('.gdb'):
-                            arcpy.management.Copy(ds, join(dirname(out_workspace), out_name))
-                        else:
-                            arcpy.management.Copy(ds, join(out_workspace, out_name))
-                        sys.stdout.write("\r{0}% - [Copied {1}...]".format(float(i +1)/count*100, ds))
-                        sys.stdout.flush()
-                        i += 1
-                        continue
+                    if out_name == '':
+                        out_name = dsc.name
+                    if out_workspace.endswith('.gdb'):
+                        f = arcpy.management.Copy(ds, join(dirname(out_workspace), out_name))
                     else:
-                        sys.stdout.write("Invalid output type for {0}...]".format(ds))
-                        sys.stdout.flush()
-                        i += 1
-                        continue
+                        f = arcpy.management.Copy(ds, join(out_workspace, out_name))
+                    status_writer.send_percent(i/count, 'copied file {0}.'.format(ds), 'clip_data')
+                    if out_format in ('LPK', 'MPK'):
+                        files_to_package.append(f.getOutput(0))
+                    status_writer.send_percent(i/count, '{0} cannot be packaged.'.format(ds), 'clip_data')
+                    i += 1.
+                    continue
 
             # Map document
             elif dsc.dataType == 'MapDocument':
                 clip_mxd_layers(dsc.catalogPath, clip_poly, out_format)
 
-            sys.stdout.write("\r{0}% - [Clipped {1}...]".format(float(i +1)/count*100, ds))
-            sys.stdout.flush()
-            i += 1
+            status_writer.send_percent(i/count, 'clipped {0}.'.format(ds), 'clip_data')
+            i += 1.
 
         # Continue if an error. Process as many as possible.
         except Exception:
             tbinfo = traceback.format_tb(sys.exc_info()[2])[0]
-            sys.stdout.write('Traceback info: {0}.\n Error info: {1}.\n'.format(tbinfo, str(sys.exc_info()[1])))
-            sys.stdout.flush()
-            i += 1
+            status_writer.send_percent(i/count, 'Traceback info: {0}.\n Error info: {1}.\n'.format(tbinfo, str(sys.exc_info()[1])), 'clip_data')
+            i += 1.
             pass
 
     if arcpy.env.workspace.endswith('.gdb'):
         out_workspace = dirname(arcpy.env.workspace)
 
     if out_format == 'MPK':
-        create_map_package(out_workspace)
+        status_writer.send_status('Creating the map package...')
+        create_map_package(out_workspace, files_to_package)
         clean_up(out_workspace)
     elif out_format == 'LPK':
-        create_layer_package(out_workspace)
+        status_writer.send_status('Creating the layer package...')
+        create_layer_package(out_workspace, files_to_package)
         clean_up(out_workspace)
     else:
         if zip_up:
-            #zip_name = splitext(basename(out_workspace))[0]
-            zf = zip_data(out_workspace, 'output.zip')
+            status_writer.send_status('Creating the output zip file: {0}...'.format(join(out_workspace, 'output.zip')))
+            zip_data(out_workspace, 'output.zip')
             clean_up(out_workspace)
-            sys.stdout.write('--Created: {0}'.format(zf))
-            sys.stdout.flush()
+    status_writer.send_status('Completed.')
 # End clip_data function
