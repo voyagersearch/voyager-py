@@ -1,38 +1,72 @@
-import os
 import sys
 import json
+import inspect
 import argparse
-import arcpy
+
+# Don't create .pyc file.
+sys.dont_write_bytecode = True
 
 
-def parameter_info(task):
-    """Get a task's parameter information."""
-    arcpy.ImportToolbox(os.path.dirname(task))
-    param_info = arcpy.GetParameterInfo(os.path.basename(task))
-    params = []
+class TaskInfo(object):
+    """Provides parameter information for each processing task."""
+    def __call__(self, *args, **kwargs):
+        """Return all the processing tasks argument information as JSON.
 
-    for pi in param_info:
-        if pi.name.find('Geometry') > 0:
-            params.append({'name':pi.name, 'type':'Geometry', 'wkt':pi.value})
+        By using the inspect module to get the arguments for each task,
+        argument names and defaults can change in the processing scripts without changes here.
+        """
+        self.clip_data_info()
+        self.zip_files_info()
 
-        elif pi.name == 'Input_Items' and pi.multiValue == True:
-            params.append({'name':pi.name, 'type':'VoyagerResults', 'value':[{'name':'', 'path':'', 'lyr':''}]})
+    @staticmethod
+    def clip_data_info():
+        import clip_data
 
-        elif pi.name == 'Output_Location' or pi.name == 'Output_Geodatabase':
-            continue
-        else:
-            try:
-                if not pi.filter.list == []:
-                    params.append({'name':pi.name, 'type':'StringChoice', 'value':pi.value, 'choices':pi.filter.list})
-                else:
-                    params.append({'name':pi.name, 'type':'String', 'value':pi.value})
-            except AttributeError:
-                params.append({'name':pi.name, 'type':'String', 'value':pi.value})
+        arg_spec = inspect.getargspec(clip_data.clip_data)
+        req_args = arg_spec.args[:-len(arg_spec.defaults)]
+        args_defaults = zip(arg_spec.args[-len(arg_spec.defaults):], arg_spec.defaults)
 
-    sys.stdout.write(json.dumps([p for p in params]))
+        params = list()
+        params.append({'name': req_args[0], 'type': 'VoyagerResults', 'required': 'True'})
+        params.append({'name': req_args[2], 'type': 'Geometry', 'required': 'True'})
+        params.append({'name': args_defaults[0][0], 'type': 'Projection', 'code': args_defaults[0][1], 'required': 'false'})
+        params.append({'name': args_defaults[1][0],
+                       'type': 'StringChoice',
+                       'value': args_defaults[1][1],
+                       'required': 'false',
+                       'choices': [['FileGDB', 'File Geodatabase'],
+                                   ['SHP', 'Shapefile'],
+                                   ['LPK', 'Layer Package'],
+                                   ['MPK', 'Map Package']]})
+
+        param_info = {'task': 'clip_data', 'params': params}
+        sys.stdout.write(json.dumps(param_info))
+        sys.stdout.flush()
+
+    @staticmethod
+    def zip_files_info():
+        import zip_files
+
+        arg_spec = inspect.getargspec(zip_files.zip_files)
+        req_args = arg_spec.args
+
+        params = list()
+        params.append({'name': req_args[0], 'type': 'VoyagerResults', 'required': 'True'})
+        param_info = {'task': 'zip_files', 'params': params}
+        sys.stdout.write(json.dumps(param_info))
+        sys.stdout.flush()
+
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('task', help='The path to the task.')
-    args = parser.parse_args()
-    parameter_info(args.task)
+    task_info = TaskInfo()
+    parser = argparse.ArgumentParser(description='Provide parameter information for a processing task.')
+    parser.add_argument('--all_info', action='store_true')
+    parser.add_argument('--clip_data', action='store_true')
+    parser.add_argument('--zip_files', action='store_true')
+    args = vars(parser.parse_args())
+    if args['all_info']:
+        task_info()
+    elif args['clip_data']:
+        task_info.clip_data_info()
+    elif args['zip_files']:
+        task_info.zip_files_info()

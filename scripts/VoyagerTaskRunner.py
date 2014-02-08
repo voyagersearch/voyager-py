@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import urllib
+import argparse
 
 
 __author__ = 'VoyagerSearch'
@@ -114,6 +115,16 @@ def run_task(json_file):
 # End run_task function
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--info', action='store_true', help='Get all task parameter information.')
+    parser.add_argument('json', help='Provide a json file with parameter information.')
+    args = vars(parser.parse_args())
+    if args['info']:
+        import get_parameter_info
+        task_info = get_parameter_info.TaskInfo()
+        task_info()
+    else:
+        run_task(args['json'])
     #run_job(r"C:\NewfoundGEO\Clients\Voyager\voyager-processing\scripts\zipfilestask.json")
-    run_task(sys.argv[1])
+
 
