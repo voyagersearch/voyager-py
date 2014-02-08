@@ -45,10 +45,6 @@ def zip_data(data_location, name):
                     absf = join(root, f)
                     zf = absf[len(data_location) + len(os.sep):]
                     z.write(absf, join(basename(data_location), zf))
-
-        ## Add any and all .mpk or .mxd files to the .zip.
-        #for m in glob.glob(join(dirname(workspace), '*.m*')):
-            #z.write(m, basename(m))
     return zfile
 # End zip_data function
 
