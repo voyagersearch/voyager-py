@@ -219,7 +219,7 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
 # End create_map_package function
 
 
-def clip_data(datasets,
+def clip_data(input_items,
               out_workspace,
               clip_area,
               out_coordinate_system=None,
@@ -230,10 +230,10 @@ def clip_data(datasets,
     a distributable file."""
     try:
         # Voyager Job Runner: passes a dictionary of inputs and output names.
-        datasets = eval(datasets)
+        input_items = eval(input_items)
     except SyntaxError:
         # If not output names are passed in.
-        datasets = dict((k, '') for k in datasets.split(';'))
+        input_items = dict((k, '') for k in input_items.split(';'))
 
     if out_coordinate_system is not None:
         out_sr = arcpy.SpatialReference(out_coordinate_system)
@@ -257,11 +257,11 @@ def clip_data(datasets,
     arcpy.env.workspace = out_workspace
 
     i = 1.
-    count = len(datasets)
+    count = len(input_items)
     files_to_package = list()
     status_writer= status.Writer()
     status_writer.send_status('Starting the clipping process...')
-    for ds, out_name in datasets.iteritems():
+    for ds, out_name in input_items.iteritems():
         try:
             dsc = arcpy.Describe(ds)
 
