@@ -130,7 +130,7 @@ def clip_mxd_layers(mxd_path, aoi):
     else:
         new_mxd = join(arcpy.env.workspace, basename(mxd.filePath))
     mxd.saveACopy(new_mxd)
-    del layer, layers, mxd
+    del mxd
 # End clip_mxd_layers function
 
 
@@ -259,7 +259,7 @@ def clip_data(input_items,
     i = 1.
     count = len(input_items)
     files_to_package = list()
-    status_writer= status.Writer()
+    status_writer = status.Writer()
     status_writer.send_status('Starting the clipping process...')
     for ds, out_name in input_items.iteritems():
         try:
@@ -374,7 +374,11 @@ def clip_data(input_items,
         # Continue if an error. Process as many as possible.
         except Exception:
             tbinfo = traceback.format_tb(sys.exc_info()[2])[0]
-            status_writer.send_percent(i/count, 'Traceback info: {0}.\n Error info: {1}.\n'.format(tbinfo, str(sys.exc_info()[1])), 'clip_data')
+            status_writer.send_percent(
+                i/count,
+                'Traceback info: {0}.\n Error info: {1}.\n'.format(tbinfo, str(sys.exc_info()[1])),
+                'clip_data'
+            )
             i += 1.
             pass
 
