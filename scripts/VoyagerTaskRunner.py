@@ -42,6 +42,30 @@ def get_feature_data(item):
 # End get_item function
 
 
+def add_to_geodatabase_task(request, parameters):
+    """Runs the add to geodatabase task."""
+    import add_to_geodatabase
+
+    # Retrieve input items to be clipped.
+    input_items = find(lambda p: p['name'] == 'input_items', parameters)
+    docs = input_items.get('response').get('docs')
+    in_data = dict((get_feature_data(v), v['name']) for v in docs)
+
+    # Retrieve the coordinate system code.
+    sr_code = find(lambda p: p['name'] == 'output_projection', parameters)['code']
+
+    output_location = request['folder']
+
+    # Execute task.
+    try:
+        add_to_geodatabase.add_to_gdb(str(in_data), output_location, int(sr_code))
+    except Exception as ex:
+        sys.stderr.write(ex.message)
+        sys.stderr.flush()
+        sys.exit(1)
+# End add_to_geodatabase_task function
+
+
 def clip_data_task(request, parameters):
     """Runs the clip data task."""
     import clip_data
@@ -72,6 +96,27 @@ def clip_data_task(request, parameters):
         sys.stderr.flush()
         sys.exit(1)
 # End clip_data_task function
+
+
+def convert_to_kml_task(request, parameters):
+    """Runs the convert to kml task."""
+    import convert_to_kml
+
+    # Retrieve input items to be clipped.
+    input_items = find(lambda p: p['name'] == 'input_items', parameters)
+    docs = input_items.get('response').get('docs')
+    in_data = dict((get_feature_data(v), v['name']) for v in docs)
+    extent = find(lambda p: p['name'] == 'extent', parameters)['wkt']
+    output_location = request['folder']
+
+    # Execute task.
+    try:
+        convert_to_kml.convert_to_kml(str(in_data), output_location, extent)
+    except Exception as ex:
+        sys.stderr.write(ex.message)
+        sys.stderr.flush()
+        sys.exit(1)
+# End convert_to_kml_task function
 
 
 def zip_files_task(request, parameters):
@@ -105,8 +150,12 @@ def run_task(json_file):
         # Retrieve the list of parameters.
         parameters = request['params']
 
-        if os.path.basename(request['task']) == 'clip_data':
+        if os.path.basename(request['task']) == 'add_to_geodatabase':
+            add_to_geodatabase_task(request, parameters)
+        elif os.path.basename(request['task']) == 'clip_data':
             clip_data_task(request, parameters)
+        elif os.path.basename(request['task']) == 'convert_to_kml':
+            convert_to_kml_task(request, parameters)
         elif os.path.basename(request['task']) == 'zip_files':
             zip_files_task(request, parameters)
 
