@@ -158,9 +158,6 @@ def run_task(json_file):
             convert_to_kml_task(request, parameters)
         elif os.path.basename(request['task']) == 'zip_files':
             zip_files_task(request, parameters)
-
-        # Success
-        sys.exit(0)
 # End run_task function
 
 if __name__ == '__main__':
@@ -174,6 +171,6 @@ if __name__ == '__main__':
         task_info()
     else:
         run_task(args['json'])
-    #run_job(r"C:\NewfoundGEO\Clients\Voyager\voyager-processing\scripts\zipfilestask.json")
+    sys.exit(0)
 
 
