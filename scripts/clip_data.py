@@ -7,6 +7,7 @@ import os
 from os.path import basename, dirname, join, splitext
 import sys
 import glob
+import logging
 import shutil
 import zipfile
 import traceback
@@ -44,7 +45,10 @@ def zip_data(data_location, name):
                 if not f.endswith('zip'):
                     absf = join(root, f)
                     zf = absf[len(data_location) + len(os.sep):]
-                    z.write(absf, join(basename(data_location), zf))
+                    try:
+                        z.write(absf, join(basename(data_location), zf))
+                    except Exception:
+                        pass
     return zfile
 # End zip_data function
 
@@ -57,7 +61,7 @@ def create_unique_name(name, gdb):
 # End create_unique_name function
 
 
-def clip_layer_file(layer_file, aoi, output_name=''):
+def clip_layer_file(layer_file, aoi):
     """Clips each layer in the layer file to the output workspace
     and re-sources each layer and saves a copy of the layer file."""
     if arcpy.env.workspace.endswith('.gdb'):
@@ -69,10 +73,7 @@ def clip_layer_file(layer_file, aoi, output_name=''):
     layers = arcpy.mapping.ListLayers(layer_from_file)
     for layer in layers:
         if layer.isFeatureLayer:
-            if output_name == '':
-                name = create_unique_name(layer.name, arcpy.env.workspace)
-            else:
-                name = create_unique_name(output_name, arcpy.env.workspace)
+            name = create_unique_name(layer.name, arcpy.env.workspace)
             arcpy.analysis.Clip(layer.dataSource, aoi, name)
             if arcpy.env.workspace.endswith('.gdb'):
                 layer.replaceDataSource(arcpy.env.workspace, 'FILEGDB_WORKSPACE', splitext(basename(name))[0], False)
@@ -84,10 +85,7 @@ def clip_layer_file(layer_file, aoi, output_name=''):
             else:
                 extent = arcpy.Describe(aoi).extent
             ext = '{0} {1} {2} {3}'.format(extent.XMin, extent.YMin, extent.XMax, extent.YMax)
-            if output_name == '':
-                name = create_unique_name(layer.name, arcpy.env.workspace)
-            else:
-                name = create_unique_name(output_name, arcpy.env.workspace)
+            name = create_unique_name(layer.name, arcpy.env.workspace)
             arcpy.management.Clip(layer.dataSource, ext, name)
             if arcpy.env.workspace.endswith('.gdb'):
                 layer.replaceDataSource(arcpy.env.workspace, 'FILEGDB_WORKSPACE', splitext(basename(name))[0], False)
@@ -96,8 +94,13 @@ def clip_layer_file(layer_file, aoi, output_name=''):
 
         if layer.description == '':
             layer.description == layer.name
-        layer.save()
-        del layer, layers
+
+        # Catch assertion error if a group layer.
+        try:
+            layer.save()
+        except AssertionError:
+            layers[0].save()
+            pass
 # End clip_layer_file function
 
 
@@ -326,7 +329,7 @@ def clip_data(input_items,
 
             # Layer file
             elif dsc.dataType == 'Layer':
-                clip_layer_file(dsc.catalogPath, clip_poly, out_name)
+                clip_layer_file(dsc.catalogPath, clip_poly)
 
             # Cad drawing dataset
             elif dsc.dataType == 'CadDrawingDataset':
@@ -380,6 +383,9 @@ def clip_data(input_items,
                 'clip_data'
             )
             i += 1.
+            # For testing purposes.
+            logger = logging.getLogger('test_logger')
+            logger.error('Failed to clip {0}.'.format(ds))
             pass
 
     if arcpy.env.workspace.endswith('.gdb'):
