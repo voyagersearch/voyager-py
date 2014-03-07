@@ -17,7 +17,7 @@ def run_task(json_file):
 
 if __name__ == '__main__':
     if sys.argv[1] == '--info':
-        for task in voyager_tasks.__all__:
+        for task in voyager_tasks.__tasks__:
             param_info = getattr(sys.modules[task], "get_info")()
             sys.stdout.write(json.dumps(param_info))
             sys.stdout.flush()
