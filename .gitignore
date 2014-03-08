@@ -3,3 +3,14 @@
 .settings/
 target/
 *.pyc
+.idea/.name
+.idea/encodings.xml
+.idea/dictionaries/Jason.xml
+.idea/inspectionProfiles/Project_Default.xml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/scopes/scope_settings.xml
+.idea/vcs.xml
+.idea/voyager-processing.iml
+.idea/workspace.xml
