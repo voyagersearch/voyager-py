@@ -1,8 +1,8 @@
 voyager-processing
 =====
 
-VoyagerProcessingTools.tbx -- contains tools for voyager processing framework.
-
 VoyagerUtilityTools.tbx    -- contains tools for data management such as MakeLayerFiles and AddWKT.
 
-Scripts Folder -- Python scripts required for each tool.
+Scripts Folder -- Python scripts required for each utility tool.
+
+voyager_tasks folder -- contains the processing framework scripts.
