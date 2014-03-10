@@ -1,0 +1,25 @@
+{
+  "lang": {
+    "en": {
+      "error": {
+        "no_results_found": "No Results Found",
+        "missing_query": "Missing Query"
+      },
+      "category_display": {
+        "reports": "Reports",
+        "services": "Services",
+        "imagery": "Imagery"
+      }
+    },
+    "es": {
+      "error": {
+        "no_results_found": "No se han encontrado resultados"
+      },
+      "category_display": {
+        "reports": "Informes",
+        "services": "Servicios",
+        "imagery": "Imágenes"
+      }
+    }
+  }
+}
