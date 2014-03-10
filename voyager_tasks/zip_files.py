@@ -1,8 +1,8 @@
 from __future__ import unicode_literals
 import os
 import zipfile
-import voyager_tasks
 from voyager_tasks.utils import status
+from voyager_tasks.utils import task_utils
 
 
 def get_info():
@@ -17,8 +17,6 @@ def execute(request):
     """Zips all input files to output.zip
     :param request: json as a dict.
     """
-    from voyager_tasks.utils import task_utils
-    # Retrieve input items to be clipped.
     in_data = task_utils.find(lambda p: p['name'] == 'input_items', request['params'])
     docs = in_data.get('response').get('docs')
     input_items = [v['path'] for v in docs]

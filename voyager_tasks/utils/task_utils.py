@@ -1,17 +1,13 @@
 """Utility functions for voyager tasks."""
 import os
-import glob
 import shutil
 import urllib
 import zipfile
-try:
-    import arcpy
-except ImportError:
-    pass
 
 
 def create_unique_name(name, gdb):
     """Creates and returns a valid and unique name for the geodatabase."""
+    import arcpy
     valid_name = arcpy.ValidateTableName(name, gdb)
     unique_name = arcpy.CreateUniqueName(valid_name, gdb)
     return unique_name
@@ -45,6 +41,7 @@ def get_feature_data(item):
     Describe will fail if the layer file does not exist or
     if the layer's datasource does not exist.
     """
+    import arcpy
     try:
         dsc = arcpy.Describe(item['[lyrFile]'])
         return item['[lyrFile]']
@@ -61,6 +58,7 @@ def get_feature_data(item):
 def from_wkt(wkt, sr):
     """Return the clip geometry from a list
     of well-known text coordinates."""
+    import arcpy
     coordinates = wkt[wkt.find('(') + 2: wkt.find(')')].split(',')
     array = arcpy.Array()
     for p in coordinates:
