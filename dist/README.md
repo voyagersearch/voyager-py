@@ -1,1 +1,0 @@
-TODO... run a script that copies the files we want on the final distribution to this folder
