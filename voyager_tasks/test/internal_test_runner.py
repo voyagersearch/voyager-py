@@ -7,6 +7,7 @@ import xmlrunner
 
 if __name__ == '__main__':
     testLocation = os.getcwd()
+    os.mkdir(os.path.join(testLocation, 'test-reports'))
     testPath = os.path.abspath(testLocation)
     testScripts = glob.glob('{0}/test_*.py'.format(testLocation))
     scriptToModuleName = lambda f: os.path.splitext(os.path.basename(f))[0]
