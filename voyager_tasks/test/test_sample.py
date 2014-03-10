@@ -18,7 +18,7 @@ class SampleTestCase(unittest.TestCase):
             fileTemp.write('Hello World!')
             fileTemp.close()
             b = os.path.getsize(fileTemp.name)
-            self.assertEqual(12, b)
+            self.assertEqual(10, b)
         finally:
             os.remove(fileTemp.name)
 
