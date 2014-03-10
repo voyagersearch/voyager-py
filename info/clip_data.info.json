@@ -1,0 +1,36 @@
+{
+  "name": "clip_data",
+  "runner": "python",
+  "categories": ["download"],
+  "params": [
+    {
+      "type": "Geometry",
+      "name": "clip_geometry"
+    },
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "Projection",
+      "name": "output_projection"
+    },
+    {
+      "type": "StringChoice",
+      "name": "output_format",
+      "value": "FileGDB",
+      "choices": [
+        "FileGDB",
+        "SHP"
+      ]
+    }
+  ],
+  "display": {
+    "en": {
+      "display": "Clip Data",
+      "description": "Take input data and clip it to various formats (FileGDB, etc)",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#clip_data"
+    }
+  }
+}
