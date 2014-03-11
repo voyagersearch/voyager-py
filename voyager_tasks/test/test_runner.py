@@ -10,6 +10,7 @@ if __name__ == '__main__':
     if not os.path.exists(report_location):
         os.mkdir(report_location)
     test_file_strings = glob.glob('test_*.py')
+    test_file_strings.remove('test_runner.py')
     module_strings = [test_name[0:len(test_name)-3] for test_name in test_file_strings]
     suites = [unittest.defaultTestLoader.loadTestsFromName(test_name) for test_name in module_strings]
     testSuite = unittest.TestSuite(suites)
