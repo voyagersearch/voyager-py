@@ -5,14 +5,6 @@ from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
 
 
-def get_info():
-    """Returns the parameter information for this geoprocessing task."""
-    params = list()
-    params.append({'name': 'input_items', 'type': 'VoyagerResults', 'required': 'True'})
-    param_info = {'task': 'zip_files', 'params': params}
-    return param_info
-
-
 def execute(request):
     """Zips all input files to output.zip
     :param request: json as a dict.

@@ -2,6 +2,7 @@
 Clips each input feature class or layer against the
 clip area and creates a compressed zip file, map package, or layer package.
 """
+from __future__ import unicode_literals
 import sys
 sys.dont_write_bytecode = True
 import os
@@ -9,6 +10,8 @@ import glob
 import logging
 import shutil
 import traceback
+import arcpy
+from voyager_tasks.utils import task_utils
 from voyager_tasks.utils import status
 
 
@@ -179,34 +182,10 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
 # End create_map_package function
 
 
-def get_info():
-    """Returns the parameter information for this geoprocessing task."""
-    params = list()
-    params.append({'name': 'input_items', 'type': 'VoyagerResults', 'required': 'True'})
-    params.append({'name': 'clip_geometry', 'type': 'Geometry', 'required': 'True'})
-    params.append({'name': 'output_projection', 'type': 'Projection', 'code': None, 'required': 'false'})
-    params.append({'name': 'out_format',
-                   'type': 'StringChoice',
-                   'value': 'FileGDB',
-                   'required': 'false',
-                   'choices': [['FileGDB', 'File Geodatabase'],
-                               ['SHP', 'Shapefile'],
-                               ['LPK', 'Layer Package'],
-                               ['MPK', 'Map Package']]})
-
-    param_info = {'task': 'clip_data', 'params': params}
-    return param_info
-
-
 def execute(request):
     """Clips data to a new or existing geodatabase.
     :param request: json as a dict.
     """
-    global arcpy
-    import arcpy
-    global task_utils
-    from voyager_tasks.utils import task_utils
-
     # Parse parameters.
     parameters = request['params']
     in_data = task_utils.find(lambda p: p['name'] == 'input_items', parameters)

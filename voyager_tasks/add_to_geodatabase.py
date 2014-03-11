@@ -1,26 +1,14 @@
 """Copies data to a new or existing geodatabase."""
-import sys
-sys.dont_write_bytecode = True
 import os
-
-
-def get_info():
-    """Returns the parameter information for this geoprocessing task."""
-    params = list()
-    params.append({'name': 'input_items', 'type': 'VoyagerResults', 'required': 'True'})
-    params.append({'name': 'output_projection', 'type': 'Projection', 'code': None, 'required': 'false'})
-    param_info = {'task': 'add_to_geodatabase', 'params': params}
-    return param_info
+import arcpy
+from voyager_tasks.utils import status
+from voyager_tasks.utils import task_utils
 
 
 def execute(request):
     """Copies data to a new or existing geodatabase.
     :param request: json as a dict.
     """
-    import arcpy
-    from voyager_tasks.utils import status
-    from voyager_tasks.utils import task_utils
-
     # Retrieve input items to be clipped.
     parameters = request['params']
     in_data = task_utils.find(lambda p: p['name'] == 'input_items', parameters)

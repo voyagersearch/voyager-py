@@ -1,26 +1,14 @@
 """Converts data to kml (.kmz)."""
-import sys
-sys.dont_write_bytecode = True
 import os
-
-
-def get_info():
-    """Returns the parameter information for this geoprocessing task."""
-    params = list()
-    params.append({'name': 'input_items', 'type': 'VoyagerResults', 'required': 'True'})
-    params.append({'name': 'extent', 'type': 'Geometry', 'required': 'false'})
-    param_info = {'task': 'convert_to_kml', 'params': params}
-    return param_info
+import arcpy
+from voyager_tasks.utils import status
+from voyager_tasks.utils import task_utils
 
 
 def execute(request):
     """Converts each input dataset to kml (.kmz).
     :param request: json as a dict.
     """
-    import arcpy
-    from voyager_tasks.utils import status
-    from voyager_tasks.utils import task_utils
-
     # Retrieve input items to be clipped.
     parameters = request['params']
     in_data = task_utils.find(lambda p: p['name'] == 'input_items', parameters)
