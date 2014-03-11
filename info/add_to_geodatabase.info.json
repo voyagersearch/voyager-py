@@ -1,0 +1,23 @@
+{
+  "name": "add_to_geodatabase",
+  "runner": "python",
+  "categories": ["download"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "Projection",
+      "name": "output_projection"
+    }
+  ],
+  "display": {
+    "en": {
+      "display": "Add to Geodatabase",
+      "description": "Add input data to an existing or new geodatabase.",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#add_to_geodatabase"
+    }
+  }
+}

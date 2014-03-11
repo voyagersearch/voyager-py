@@ -1,0 +1,23 @@
+{
+  "name": "convert_to_kml",
+  "runner": "python",
+  "categories": ["download"],
+  "params": [
+    {
+      "type": "Geometry",
+      "name": "processing_extent"
+    },
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    }
+  ],
+  "display": {
+    "en": {
+      "display": "Convert to KML",
+      "description": "Converts input data into Keyhole Markup Language (KML). Each KML is distributed as a .kmz file.",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#convert_to_kml"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "zip_files",
+  "runner": "python",
+  "categories": ["download"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    }
+  ],
+  "display": {
+    "en": {
+      "display": "Zip Files",
+      "description": "Compresses input files into a single zip file.",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#zip_files"
+    }
+  }
+}
