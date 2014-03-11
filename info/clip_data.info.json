@@ -22,7 +22,9 @@
       "value": "FileGDB",
       "choices": [
         "FileGDB",
-        "SHP"
+        "SHP",
+        "MPK",
+        "LPK"
       ]
     }
   ],

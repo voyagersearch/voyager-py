@@ -1,0 +1,41 @@
+{
+  "display": {
+    "en": {
+      "error": {
+        "no_results_found": "No Results Found",
+        "missing_query": "Missing Query"
+      },
+      "category_display": {
+        "reports": "Reports",
+        "services": "Services",
+        "imagery": "Imagery"
+      },
+      "params": {
+        "output_format": {
+          "display": "Output Format",
+          "description": "Pick the destination format",
+          "values": {
+            "FileGDB": "File Geodatabase",
+            "SHP": "Shapefile (.shp)",
+            "MPK": "Map Package (.mpk)",
+            "LPK": "Layer Package (.lpk)"
+          }
+        },
+        "output_projection": {
+          "display": "Projection",
+          "description": "Choose the output format projection"
+        }
+      }
+    },
+    "es": {
+      "error": {
+        "no_results_found": "No se han encontrado resultados"
+      },
+      "category_display": {
+        "reports": "Informes",
+        "services": "Servicios",
+        "imagery": "Imágenes"
+      }
+    }
+  }
+}
