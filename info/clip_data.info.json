@@ -5,7 +5,8 @@
   "params": [
     {
       "type": "Geometry",
-      "name": "clip_geometry"
+      "name": "clip_geometry",
+      "extentParam": false
     },
     {
       "type": "VoyagerResults",

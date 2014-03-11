@@ -5,7 +5,8 @@
   "params": [
     {
       "type": "Geometry",
-      "name": "processing_extent"
+      "name": "processing_extent",
+      "extentParam": true
     },
     {
       "type": "VoyagerResults",
