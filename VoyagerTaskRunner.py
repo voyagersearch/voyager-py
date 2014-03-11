@@ -27,9 +27,9 @@ if __name__ == '__main__':
         for task in voyager_tasks.__tasks__:
             try:
                 __import__(task)
-                task_info['tasks'].append({'name': task, 'enabled': True})
+                task_info['tasks'].append({'name': task, 'available': True})
             except ImportError as ie:
-                task_info['tasks'].append({'name': task, 'enabled': False, 'warning': ie.message})
+                task_info['tasks'].append({'name': task, 'available': False, 'warning': ie.message})
         sys.stdout.write(json.dumps(task_info))
         sys.stdout.flush()
     else:
