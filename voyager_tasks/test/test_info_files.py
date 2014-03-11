@@ -3,7 +3,7 @@ import sys
 import glob
 import json
 import unittest
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.getcwd())))
 import voyager_tasks
 
 
