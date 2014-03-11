@@ -1,0 +1,61 @@
+{
+  "name": "pretend_task2",
+  "runner": "pretend",
+  "categories": ["testing"],
+  "params": [
+    {
+      "type": "TextArea",
+      "name": "long_text_area",
+      "required": true
+    },
+    {
+      "type": "String",
+      "name": "a_string_field",
+      "value": "look a default value here"
+    },
+    {
+      "type": "Geometry",
+      "name": "clip_geometry"
+    }
+    {
+      "type": "StringChoice",
+      "name": "output_format",
+      "value": "FileGDB",
+      "choices": [
+        "FileGDB",
+        "SHP"
+      ]
+    },
+    {
+      "type": "CheckBox",
+      "name": "check_a",
+      "advanced": true
+    },
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "Projection",
+      "name": "output_projection"
+    },
+    {
+      "type": "CheckBox",
+      "name": "check_b",
+      "advanced": true,
+      "value": true
+    },
+    {
+      "type": "String",
+      "name": "string_b"
+    },
+  ],
+  "display": {
+    "en": {
+      "display": "Another Pretend Task",
+      "description": "a different task that simulates lots of parameter types",
+    }
+  }
+}
+
