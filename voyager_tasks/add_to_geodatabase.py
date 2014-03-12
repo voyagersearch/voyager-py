@@ -18,6 +18,8 @@ def execute(request):
     # Retrieve the coordinate system code.
     out_coordinate_system = task_utils.find(lambda p: p['name'] == 'output_projection', parameters)['code']
     output_workspace = request['folder']
+    if not os.path.exists(output_workspace):
+        os.makedirs(output_workspace)
 
     try:
         # Voyager Job Runner: passes a dictionary of inputs and output names.

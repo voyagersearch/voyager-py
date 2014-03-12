@@ -13,6 +13,8 @@ def execute(request):
     docs = in_data.get('response').get('docs')
     input_items = [v['path'] for v in docs]
     zip_file_location = request['folder']
+    if not os.path.exists(zip_file_location):
+        os.makedirs(request['folder'])
     file_count = len(input_items)
     i = 1.
     status_writer = status.Writer()
@@ -24,7 +26,7 @@ def execute(request):
                 zipper.write(in_file, os.path.basename(in_file))
                 status_writer.send_percent(i/file_count, 'Zipped {0}.'.format(in_file), 'zip_files')
             else:
-                status_writer.send_percent(i/file_count, '{0} is not a file.'.format(in_file), 'zip_files')
-            i += 1.
+                status_writer.send_percent(i/file_count, '{0} is not a file or does not exist.'.format(in_file), 'zip_files')
+            i += 1.0
 
     status_writer.send_status('Completed.')

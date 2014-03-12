@@ -11,8 +11,6 @@ def run_task(json_file):
     """Main function for running processing tasks."""
     with open(json_file) as data_file:
         request = json.load(data_file)
-        if not os.path.exists(request['folder']):
-            os.makedirs(request['folder'])
         try:
             __import__(request['task'])
         except ImportError as ie:

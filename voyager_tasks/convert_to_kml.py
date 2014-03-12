@@ -14,8 +14,9 @@ def execute(request):
     in_data = task_utils.find(lambda p: p['name'] == 'input_items', parameters)
     docs = in_data.get('response').get('docs')
     input_items = str(dict((task_utils.get_feature_data(v), v['name']) for v in docs))
-    extent = task_utils.find(lambda p: p['name'] == 'extent', parameters)['wkt']
     out_workspace = request['folder']
+    if not os.path.exists(out_workspace):
+        os.makedirs(out_workspace)
 
     try:
         # Voyager Job Runner: passes a dictionary of inputs and output names.
@@ -24,8 +25,16 @@ def execute(request):
         # If not output names are passed in.
         input_items = dict((k, '') for k in input_items.split(';'))
 
-    if not extent == '':
-        extent = task_utils.from_wkt(extent, 4326)
+    # Retrieve boundary box extent for input to KML tools.
+    extent = ''
+    try:
+        ext = task_utils.find(lambda p: p['name'] == 'processing_extent', parameters)['wkt']
+        if not ext == '':
+            extent = task_utils.from_wkt(ext, 4326)
+    except KeyError:
+        ext = task_utils.find(lambda p: p['name'] == 'processing', parameters)['feature']
+        if not ext == '':
+            extent = arcpy.Describe(ext).extent
 
     i = 1.
     count = len(input_items)

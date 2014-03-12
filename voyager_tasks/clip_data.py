@@ -204,6 +204,8 @@ def execute(request):
     # Retrieve the output format type.
     out_format = task_utils.find(lambda p: p['name'] == 'output_format', parameters)['value']
     out_workspace = request['folder']
+    if not os.path.exists(out_workspace):
+        os.makedirs(out_workspace)
 
     try:
         # Voyager Job Runner: passes a dictionary of inputs and output names.
@@ -224,13 +226,8 @@ def execute(request):
     else:
         clip_poly = clip_area
 
-    # Create a valid output workspace if it does not exist.
-    #working_folder = os.path.join(out_workspace, 'Work')
-    #os.mkdir(working_folder)
     if not out_format == 'SHP':
         out_workspace = arcpy.management.CreateFileGDB(out_workspace, 'output.gdb').getOutput(0)
-    #else:
-    #    out_workspace = working_folder
     arcpy.env.workspace = out_workspace
 
     i = 1.
@@ -337,7 +334,6 @@ def execute(request):
                     status_writer.send_percent(i/count, 'copied file {0}.'.format(ds), 'clip_data')
                     if out_format in ('LPK', 'MPK'):
                         files_to_package.append(f.getOutput(0))
-                    status_writer.send_percent(i/count, '{0} cannot be packaged.'.format(ds), 'clip_data')
                     i += 1.
                     continue
 
