@@ -8,7 +8,8 @@
       "category_display": {
         "reports": "Reports",
         "services": "Services",
-        "imagery": "Imagery"
+        "imagery": "Imagery",
+        "download": "Download"
       },
       "params": {
         "output_format": {
@@ -34,7 +35,8 @@
       "category_display": {
         "reports": "Informes",
         "services": "Servicios",
-        "imagery": "Imágenes"
+        "imagery": "Imágenes",
+        "download": "Descargar"
       }
     }
   }

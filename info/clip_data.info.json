@@ -33,7 +33,24 @@
     "en": {
       "display": "Clip Data",
       "description": "Take input data and clip it to various formats (FileGDB, etc)",
-      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#clip_data"
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#clip_data",
+      "params": {
+        "clip_geometry": {
+          "display": "Clip Geometry",
+          "description": "Select a region to clip"
+        }
+      }
+    },
+    "es": {
+      "display": "Recortar Datos",
+      "description": "Toma de datos de entrada y el clip a varios formatos (FileGDB, etc)",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#clip_data_es",
+      "params": {
+        "clip_geometry": {
+          "display": "Geometría del clip",
+          "description": "Seleccione una región para recortar"
+        }
+      }
     }
   }
 }
