@@ -32,8 +32,8 @@ class TestZipFilesTask(unittest.TestCase):
         self.request['params'][0]['response']['docs'][1]['path'] = dbf_file
         self.request['params'][0]['response']['docs'][2]['path'] = kml_file
         self.request['params'][0]['response']['docs'][3]['path'] = non_file
-        __import__(self.request['task'])
-        getattr(sys.modules[self.request['task']], "execute")(self.request)
+        __import__(self.request['type'])
+        getattr(sys.modules[self.request['type']], "execute")(self.request)
         byte_size = os.path.getsize(os.path.join(self.temp_folder, 'output.zip'))
         self.assertEqual(19615, byte_size)
 
