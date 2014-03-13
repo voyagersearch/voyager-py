@@ -37,7 +37,7 @@ class TestAddToGeodatabase(unittest.TestCase):
         __import__(self.request['task'])
         getattr(sys.modules[self.request['task']], "execute")(self.request)
         byte_size = os.path.getsize(os.path.join(self.temp_folder, 'output.zip'))
-        self.assertAlmostEquals(196767, byte_size, delta=25)
+        self.assertAlmostEquals(196767, byte_size, delta=5000)
 
 
 if __name__ == '__main__':
