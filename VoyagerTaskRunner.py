@@ -12,11 +12,11 @@ def run_task(json_file):
     with open(json_file) as data_file:
         request = json.load(data_file)
         try:
-            __import__(request['type'])
+            __import__(request['task'])
         except ImportError as ie:
             sys.stderr.write('Error: {0}.'.format(ie.message))
             sys.exit(1)
-        getattr(sys.modules[request['type']], "execute")(request)
+        getattr(sys.modules[request['task']], "execute")(request)
 
 
 if __name__ == '__main__':

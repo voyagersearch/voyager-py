@@ -1,7 +1,8 @@
 {
     "id": "ZIP6ZFA258AE08B5",
-    "type": "zip_files",
+    "type": "task",
     "state": "RUNNING",
+    "task": "zip_files",
     "folder": "",
     "owner": {
         "ip": "127.0.0.1"
