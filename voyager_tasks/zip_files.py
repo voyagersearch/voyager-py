@@ -11,7 +11,7 @@ class ZipFileManager(zipfile.ZipFile):
 
     def __enter__(self):
         """Return object created in __init__ part"""
-        return(self)
+        return self
 
     def __exit__(self, exc_type, exc_value, trace_back):
         """Close zipfile.ZipFile"""
