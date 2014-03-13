@@ -5,6 +5,19 @@ from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
 
 
+class ZipFileManager(zipfile.ZipFile):
+    def __init__(self, zip_file, mode='r', compression=zipfile.ZIP_DEFLATED):
+        zipfile.ZipFile.__init__(self, zip_file, mode, compression)
+
+    def __enter__(self):
+        """Return object created in __init__ part"""
+        return(self)
+
+    def __exit__(self, exc_type, exc_value, trace_back):
+        """Close zipfile.ZipFile"""
+        self.close()
+
+
 def execute(request):
     """Zips all input files to output.zip
     :param request: json as a dict.
@@ -20,7 +33,7 @@ def execute(request):
     status_writer = status.Writer()
     status_writer.send_status('Starting to zip files...')
     zip_file = os.path.join(zip_file_location, 'output.zip')
-    with zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED) as zipper:
+    with ZipFileManager(zip_file, 'w', zipfile.ZIP_DEFLATED) as zipper:
         for in_file in input_items:
             if os.path.isfile(in_file):
                 zipper.write(in_file, os.path.basename(in_file))
