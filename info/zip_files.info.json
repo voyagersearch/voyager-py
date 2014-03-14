@@ -7,7 +7,11 @@
       "type": "VoyagerResults",
       "name": "input_items",
       "required": true
-    }
+    },
+    {
+      "type": "CheckBox",
+      "name": "flatten_results"
+    },
   ],
   "display": {
     "en": {

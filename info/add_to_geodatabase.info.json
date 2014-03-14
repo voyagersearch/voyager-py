@@ -9,6 +9,10 @@
       "required": true
     },
     {
+      "type": "CatalogPath",
+      "name": "target_workspace"
+    },	
+    {
       "type": "Projection",
       "name": "output_projection"
     }
@@ -17,7 +21,14 @@
     "en": {
       "display": "Add to Geodatabase",
       "description": "Add input data to an existing or new geodatabase.",
-      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#add_to_geodatabase"
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#add_to_geodatabase",
+	  
+	  "params": {
+		"target_workspace": {
+			"display": "Target Workspace",
+			"description": "geodatabase or feature dataset where data will be copied."
+		}
+	  }	  
     }
   }
 }

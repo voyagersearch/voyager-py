@@ -25,7 +25,11 @@
         "output_projection": {
           "display": "Projection",
           "description": "Choose the output format projection"
-        }
+        },
+		"flatten_results": {
+          "display": "Flatten Results",
+          "description": "Write results to single folder"
+		},
       }
     },
     "es": {

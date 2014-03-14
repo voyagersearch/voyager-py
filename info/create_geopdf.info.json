@@ -1,0 +1,65 @@
+{
+  "name": "create_geopdf",
+  "runner": "pretend",
+  "categories": ["TODO"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "StringChoice",
+      "name": "map_template,
+      "choices": [
+        "Portrait",
+        "Landscape"
+      ]	  
+    },
+    {
+      "type": "MapView",
+      "name": "map_view"
+    },
+    {
+      "type": "StringChoice",
+      "name": "attribute_settings",
+      "choices": [
+        "none",
+        "layers",
+        "layers_and_features"
+      ],
+	  "advanced":true,
+	  "value": "layers_and_features"
+    }	
+  ],
+  "display": {
+    "en": {
+      "display": "Create GeoPDF",
+      "description": "Take input data and clip it to various formats (FileGDB, etc)",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#clip_data",
+      "params": {
+        "map_template": {
+          "display": "Map Template",
+          "description": "pick a map template with surrounds",
+          "values": {
+            "portrait": "todo",
+            "landscape": "todo"
+          }		  
+        },
+		"map_view": {
+          "display": "Map View",
+          "description": "Will send center point, zoom level, and lower left and upper right coordinates."
+		},
+		"attribute_settings": {
+          "display": "Attribute Settings",
+          "description": "...",
+          "values": {
+            "none": "copy from arcmap none",
+            "layers": "copy from arcmap none",
+            "layers_and_features": "copy from arcmap none"
+          }
+		}		
+      }
+    }
+  }
+}
