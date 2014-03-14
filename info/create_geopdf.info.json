@@ -10,7 +10,7 @@
     },
     {
       "type": "StringChoice",
-      "name": "map_template,
+      "name": "map_template",
       "choices": [
         "Portrait",
         "Landscape"
