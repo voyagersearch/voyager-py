@@ -56,7 +56,7 @@ def execute(request):
                     out_name = dsc.name
                 arcpy.conversion.LayerToKML(dsc.name,
                                             '{0}.kmz'.format(os.path.join(out_workspace, out_name)),
-                                            0,
+                                            1,
                                             boundary_box_extent=extent)
 
             elif dsc.dataType == 'ShapeFile':
@@ -65,7 +65,7 @@ def execute(request):
                     out_name = dsc.name[:-4]
                 arcpy.conversion.LayerToKML(dsc.name[:-4],
                                             '{0}.kmz'.format(os.path.join(out_workspace, out_name)),
-                                            0,
+                                            1,
                                             boundary_box_extent=extent)
 
             elif dsc.dataType == 'RasterDataset':
@@ -74,7 +74,7 @@ def execute(request):
                     out_name = dsc.name
                 arcpy.conversion.LayerToKML(dsc.name,
                                             '{0}.kmz'.format(os.path.join(out_workspace, out_name)),
-                                            0,
+                                            1,
                                             boundary_box_extent=extent)
 
             elif dsc.dataType == 'Layer':
@@ -85,7 +85,7 @@ def execute(request):
                         out_name = dsc.name
                 arcpy.conversion.LayerToKML(ds,
                                             '{0}.kmz'.format(os.path.join(out_workspace, out_name)),
-                                            0,
+                                            1,
                                             boundary_box_extent=extent)
 
             elif dsc.dataType == 'FeatureDataset':
@@ -94,7 +94,7 @@ def execute(request):
                     arcpy.management.MakeFeatureLayer(fc, 'tmp_lyr')
                     arcpy.conversion.LayerToKML('tmp_lyr',
                                                 '{0}.kmz'.format(os.path.join(out_workspace, fc)),
-                                                0,
+                                                1,
                                                 boundary_box_extent=extent)
 
             elif dsc.dataType == 'CadDrawingDataset':
@@ -110,14 +110,14 @@ def execute(request):
                         name = '{0}_{1}'.format(dsc.name[:-4], cad_fc)
                         arcpy.conversion.LayerToKML('cad_lyr',
                                                     '{0}.kmz'.format(os.path.join(out_workspace, name)),
-                                                    0,
+                                                    1,
                                                     boundary_box_extent=extent)
                     else:
                         arcpy.management.MakeFeatureLayer(cad_fc, 'cad_lyr')
                         name = '{0}_{1}'.format(dsc.name[:-4], cad_fc)
                         arcpy.conversion.LayerToKML('cad_lyr',
                                                     '{0}.kmz'.format(os.path.join(out_workspace, name)),
-                                                    0,
+                                                    1,
                                                     boundary_box_extent=extent)
 
             # Map document to KML.
