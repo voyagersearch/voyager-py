@@ -1,5 +1,6 @@
 """Utility functions for voyager tasks."""
 import os
+import functools
 import json
 import shutil
 import urllib
@@ -79,6 +80,21 @@ def get_projection_file(factory_code):
     return prj_file
 
 
+def report(report_file, task_name, num_processed, num_skipped):
+    """Create markdown report of inputs processed or skipped.
+    :param report_file: path of the .md file
+    :param task_name:  name of the task
+    :param num_processed: number of items processed
+    :param num_skipped: number of items skipped
+    """
+    with open(report_file, 'w') as r:
+        r.write('### {0}\n'.format(task_name))
+        r.write('| Action    | Count |\n')
+        r.write('| ------    | ----- |\n')
+        r.write('| Processed | {0} |\n'.format(num_processed))
+        r.write('| Skipped   | {0} |\n'.format(num_skipped))
+
+
 def zip_data(data_location, name):
     """Creates a compressed zip file of the entire data location."""
     zfile = os.path.join(data_location, name)
@@ -89,7 +105,8 @@ def zip_data(data_location, name):
                     absf = os.path.join(root, f)
                     zf = absf[len(data_location) + len(os.sep):]
                     try:
-                        z.write(absf, os.path.join(os.path.basename(data_location), zf))
+                        #z.write(absf, os.path.join(os.path.basename(data_location), zf))
+                        z.write(absf, zf)
                     except Exception:
                         pass
     return zfile
