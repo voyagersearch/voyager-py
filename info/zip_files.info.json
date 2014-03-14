@@ -11,7 +11,7 @@
     {
       "type": "CheckBox",
       "name": "flatten_results"
-    },
+    }
   ],
   "display": {
     "en": {
