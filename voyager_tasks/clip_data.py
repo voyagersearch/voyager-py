@@ -7,7 +7,6 @@ import sys
 import os
 import glob
 import shutil
-import traceback
 import arcpy
 from voyager_tasks.utils import task_utils
 from voyager_tasks.utils import status
@@ -151,12 +150,14 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
         arcpy.env.workspace = file_gdb
         for fc in arcpy.ListFeatureClasses():
             layer = arcpy.management.MakeFeatureLayer(fc, '{0}_'.format(fc))
-            arcpy.mapping.AddLayer(mxd_template.activeDataFrame, layer.getOutput(0))
+            df = arcpy.mapping.ListDataFrames(mxd_template)[0]
+            arcpy.mapping.AddLayer(df, layer.getOutput(0))
 
     # Add all layer files to the mxd template.
     layer_files = glob.glob(os.path.join(data_location, '*.lyr'))
     for layer_file in layer_files:
-        arcpy.mapping.AddLayer(mxd_template.activeDataFrame, arcpy.mapping.Layer(layer_file))
+        df = arcpy.mapping.ListDataFrames(mxd_template)[0]
+        arcpy.mapping.AddLayer(df, arcpy.mapping.Layer(layer_file))
 
     # Add all layers from all map documents to the map template.
     mxd_files = glob.glob(os.path.join(data_location, '*.mxd'))
@@ -164,7 +165,8 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
         mxd = arcpy.mapping.MapDocument(mxd_file)
         layers = arcpy.mapping.ListLayers(mxd)
         for layer in layers:
-            arcpy.mapping.AddLayer(mxd_template.activeDataFrame, layer)
+            df = arcpy.mapping.ListDataFrames(mxd_template)[0]
+            arcpy.mapping.AddLayer(df, layer)
 
     # Package the map template.
     new_mxd = os.path.join(data_location, 'output.mxd')
@@ -356,13 +358,9 @@ def execute(request):
             i += 1.
 
         # Continue if an error. Process as many as possible.
-        except Exception:
-            tbinfo = traceback.format_tb(sys.exc_info()[2])[0]
-            status_writer.send_percent(
-                i/count,
-                'Traceback info: {0}.\n Error info: {1}.\n'.format(tbinfo, str(sys.exc_info()[1])),
-                'clip_data'
-            )
+        except Exception as ex:
+            status_writer.send_percent(i/count, '--Error: {0}.\n Failed to clip: {1}.\n'.format(ex, ds), 'convert_to_kml')
+            status_writer.send_percent(i/count, 'Error: {0}.'.format(ex.message), 'clip_data')
             i += 1.
             pass
 
