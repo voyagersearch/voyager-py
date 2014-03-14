@@ -1,5 +1,6 @@
 """Converts data to kml (.kmz)."""
 import os
+import shutil
 import arcpy
 from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
@@ -9,21 +10,27 @@ def execute(request):
     """Converts each input dataset to kml (.kmz).
     :param request: json as a dict.
     """
-    # Retrieve input items to be clipped.
+    converted = 0
+    skipped = 0
+
     parameters = request['params']
     in_data = task_utils.find(lambda p: p['name'] == 'input_items', parameters)
     docs = in_data.get('response').get('docs')
     input_items = str(dict((task_utils.get_feature_data(v), v['name']) for v in docs))
-    out_workspace = request['folder']
-    if not os.path.exists(out_workspace):
-        os.makedirs(out_workspace)
-
     try:
         # Voyager Job Runner: passes a dictionary of inputs and output names.
         input_items = eval(input_items)
     except SyntaxError:
         # If not output names are passed in.
         input_items = dict((k, '') for k in input_items.split(';'))
+
+    count = len(input_items)
+    if count > 1:
+        out_workspace = os.path.join(request['folder'], 'temp')
+    else:
+        out_workspace = request['folder']
+    if not os.path.exists(out_workspace):
+        os.makedirs(out_workspace)
 
     # Retrieve boundary box extent for input to KML tools.
     extent = ''
@@ -37,7 +44,6 @@ def execute(request):
             extent = arcpy.Describe(ext).extent
 
     i = 1.
-    count = len(input_items)
     status_writer = status.Writer()
     status_writer.send_status('Converting to kml...')
     for ds, out_name in input_items.iteritems():
@@ -127,15 +133,17 @@ def execute(request):
 
             status_writer.send_percent(i/count, 'Converted {0}.'.format(ds), 'convert_to_kml')
             i += 1.
+            converted += 1
         except Exception as ex:
-            status_writer.send_percent(i/count,
-                                       '--Error: {0}.\n Failed to convert: {1}.\n'.format(ex, ds),
-                                       'convert_to_kml')
+            status_writer.send_percent(i/count, 'Failed to convert: {0}. {1}.'.format(ds, ex.message), 'convert_to_kml')
+            i += 1
+            skipped += 1
             pass
 
     if count > 1:
         status_writer.send_status('Creating the output zip file: {0}...'.format(os.path.join(out_workspace, 'output.zip')))
         zip_file = task_utils.zip_data(out_workspace, 'output.zip')
-        task_utils.clean_up(os.path.dirname(zip_file))
-# End convert_to_kml function
+        shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
 
+    task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], converted, skipped)
+# End execute function
