@@ -1,5 +1,6 @@
 """Utility functions for voyager tasks."""
 import os
+import json
 import shutil
 import urllib
 import zipfile
@@ -11,7 +12,6 @@ def create_unique_name(name, gdb):
     valid_name = arcpy.ValidateTableName(name, gdb)
     unique_name = arcpy.CreateUniqueName(valid_name, gdb)
     return unique_name
-# End create_unique_name function
 
 
 def clean_up(data_location):
@@ -25,7 +25,6 @@ def clean_up(data_location):
                     pass
         for name in dirs:
             shutil.rmtree(os.path.join(root, name), True)
-# End clean_up function
 
 
 def find(f, seq):
@@ -67,7 +66,17 @@ def from_wkt(wkt, sr):
 
     poly = arcpy.Polygon(array, sr)
     return poly
-# End from_wkt function
+
+
+def get_projection_file(factory_code):
+    """Returns the projection file using the factory code as a lookup."""
+    import arcpy
+    lu_file = os.path.join(os.getcwd(), 'voyager_tasks/supportfiles/projection_files.json')
+    with open(lu_file) as fp:
+        prj_lu = json.load(fp)
+        arcgis_folder = arcpy.GetInstallInfo()['InstallDir']
+        prj_file = os.path.join(arcgis_folder, prj_lu['{0}'.format(factory_code)])
+    return prj_file
 
 
 def zip_data(data_location, name):
@@ -84,4 +93,3 @@ def zip_data(data_location, name):
                     except Exception:
                         pass
     return zfile
-# End zip_data function

@@ -4,10 +4,8 @@ clip area and creates a compressed zip file, map package, or layer package.
 """
 from __future__ import unicode_literals
 import sys
-sys.dont_write_bytecode = True
 import os
 import glob
-import logging
 import shutil
 import traceback
 import arcpy
@@ -215,7 +213,10 @@ def execute(request):
         input_items = dict((k, '') for k in input_items.split(';'))
 
     if out_coordinate_system is not None:
-        out_sr = arcpy.SpatialReference(out_coordinate_system)
+        try:
+            out_sr = arcpy.SpatialReference(out_coordinate_system)
+        except RuntimeError:
+            out_sr = arcpy.SpatialReference(task_utils.get_projection_file(out_coordinate_system))
         arcpy.env.outputCoordinateSystem = out_sr
 
     if clip_area.startswith('POLYGON'):
@@ -245,7 +246,10 @@ def execute(request):
                     out_sr = dsc.spatialReference
                     arcpy.env.outputCoordinateSystem = out_sr
                 except AttributeError:
-                    out_sr = arcpy.SpatialReference(4326)
+                    try:
+                        out_sr = arcpy.SpatialReference(4326)
+                    except RuntimeError:
+                        out_sr = arcpy.SpatialReference(task_utils.get_projection_file(4326))
                     arcpy.env.outputCoordinateSystem = out_sr
 
             # If a file, no need to project the clip area.
@@ -353,9 +357,6 @@ def execute(request):
                 'clip_data'
             )
             i += 1.
-            # For testing purposes.
-            logger = logging.getLogger('test_logger')
-            logger.error('Failed to clip {0}.'.format(ds))
             pass
 
     if arcpy.env.workspace.endswith('.gdb'):
