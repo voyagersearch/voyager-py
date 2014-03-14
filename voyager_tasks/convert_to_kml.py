@@ -119,9 +119,9 @@ def execute(request):
                 mxd = arcpy.mapping.MapDocument(ds)
                 data_frames = arcpy.mapping.ListDataFrames(mxd)
                 for df in data_frames:
-                    name = '{0}_{1}'.format(dsc.name[:-4], df)
+                    name = '{0}_{1}'.format(dsc.name[:-4], df.name)
                     arcpy.conversion.MapToKML(ds,
-                                              df,
+                                              df.name,
                                               '{0}.kmz'.format(os.path.join(out_workspace, name)),
                                               extent_to_export=extent)
 
