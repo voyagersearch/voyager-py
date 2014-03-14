@@ -184,6 +184,7 @@ def execute(request):
     """Clips data to a new or existing geodatabase.
     :param request: json as a dict.
     """
+    status_writer = status.Writer()
     # Parse parameters.
     parameters = request['params']
     in_data = task_utils.find(lambda p: p['name'] == 'input_items', parameters)
@@ -194,7 +195,11 @@ def execute(request):
     try:
         clip_area = task_utils.find(lambda p: p['name'] == 'clip_geometry', parameters)['wkt']
     except KeyError:
-        clip_area = task_utils.find(lambda p: p['name'] == 'clip_geometry', parameters)['feature']
+        try:
+            clip_area = task_utils.find(lambda p: p['name'] == 'clip_geometry', parameters)['feature']
+        except KeyError:
+            status_writer.send_status('Cannot clip data. No clip extent.')
+            sys.exit(1)
 
     # Retrieve the coordinate system code.
     out_coordinate_system = int(task_utils.find(lambda p: p['name'] == 'output_projection', parameters)['code'])
@@ -220,7 +225,10 @@ def execute(request):
         arcpy.env.outputCoordinateSystem = out_sr
 
     if clip_area.startswith('POLYGON'):
-        gcs_sr = arcpy.SpatialReference(4326)
+        try:
+            gcs_sr = arcpy.SpatialReference(4326)
+        except RuntimeError:
+            gcs_sr = arcpy.SpatialReference(task_utils.get_projection_file(4326))
         gcs_clip_poly = task_utils.from_wkt(clip_area, gcs_sr)
         if not gcs_clip_poly.area > 0:
             gcs_clip_poly = task_utils.from_wkt('POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))', gcs_sr)
@@ -234,7 +242,6 @@ def execute(request):
     i = 1.
     count = len(input_items)
     files_to_package = list()
-    status_writer = status.Writer()
     status_writer.send_status('Starting the clipping process...')
     for ds, out_name in input_items.iteritems():
         try:
