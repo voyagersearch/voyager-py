@@ -23,6 +23,7 @@ class TestInfoFiles(unittest.TestCase):
         for name in files_to_test:
             test_file = os.path.join(self.info_dir, '{0}.info.json'.format(name))
             with open(test_file) as f:
+                print test_file
                 d = json.load(f)
                 self.names.append(d['name'])
                 self.runner.add(d['runner'])
