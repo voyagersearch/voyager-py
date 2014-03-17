@@ -22,8 +22,8 @@
                 "numFound": 4,
                 "docs": [
                     {
-                        "id": "",                        
-                        "path": ""                      
+                        "id": "",
+                        "path": ""
                     },
 					{
 						"id": "",
@@ -39,6 +39,11 @@
 					}
                 ]
             }
-        }      
+        },
+        {
+            "name": "flatten_results",
+            "type": "CheckBox",
+            "value": "true"
+        }
     ]
 }
