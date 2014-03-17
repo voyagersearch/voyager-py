@@ -34,7 +34,7 @@ class Writer:
     def __init__(self, wrappedio=None):
         """Create a new one.
 
-        wrappedio - Something that behaves list sys.stdout, if not specified
+        wrappedio - Something that behaves like sys.stdout, if not specified
         we use stdout.
         """
         if wrappedio:
