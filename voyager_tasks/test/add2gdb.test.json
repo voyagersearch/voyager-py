@@ -57,7 +57,7 @@
         {
             "name": "target_workspace",
             "type": "CatalogPath",
-            "path": ""
+            "value": ""
         },
         {
             "name": "output_projection",

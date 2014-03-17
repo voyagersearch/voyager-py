@@ -19,7 +19,7 @@ def execute(request):
     input_items = str(dict((task_utils.get_feature_data(v), v['name']) for v in docs))
 
     # Get the target workspace location.
-    output_workspace = task_utils.find(lambda p: p['name'] == 'target_workspace', parameters)['path']
+    output_workspace = task_utils.find(lambda p: p['name'] == 'target_workspace', parameters)['value']
 
     # Retrieve the coordinate system code.
     out_coordinate_system = task_utils.find(lambda p: p['name'] == 'output_projection', parameters)['code']
