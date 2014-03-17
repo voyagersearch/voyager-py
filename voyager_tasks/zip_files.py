@@ -22,6 +22,8 @@ def execute(request):
     """Zips all input files to output.zip
     :param request: json as a dict.
     """
+    zipped = 0
+    skipped = 0
     in_data = task_utils.find(lambda p: p['name'] == 'input_items', request['params'])
     docs = in_data.get('response').get('docs')
     input_items = [v['path'] for v in docs]
@@ -38,8 +40,14 @@ def execute(request):
             if os.path.isfile(in_file):
                 zipper.write(in_file, os.path.basename(in_file))
                 status_writer.send_percent(i/file_count, 'Zipped {0}.'.format(in_file), 'zip_files')
+                zipped += 1
             else:
                 status_writer.send_percent(i/file_count, '{0} is not a file or does not exist.'.format(in_file), 'zip_files')
+                skipped += 1
             i += 1.0
 
-    status_writer.send_status('Completed.')
+    if zipped == 0:
+        status_writer.send_status('No files were zipped.')
+    else:
+        status_writer.send_status('Zipped {0} files.'.format(zipped))
+    task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], zipped, skipped)
