@@ -135,14 +135,14 @@ def execute(request):
             i += 1.
             converted += 1
         except Exception as ex:
-            status_writer.send_percent(i/count, 'Failed to convert: {0}. {1}.'.format(ds, ex.message), 'convert_to_kml')
+            status_writer.send_percent(i/count, 'Skipped: {0}. {1}.'.format(dsc.name, repr(ex)), 'convert_to_kml')
             i += 1
             skipped += 1
             pass
 
     if count > 1:
-        status_writer.send_status('Creating the output zip file: {0}...'.format(os.path.join(out_workspace, 'output.zip')))
         zip_file = task_utils.zip_data(out_workspace, 'output.zip')
+        status_writer.send_status('Created zip file: {0}...'.format(os.path.join(out_workspace, 'output.zip')))
         shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
 
     task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], converted, skipped)

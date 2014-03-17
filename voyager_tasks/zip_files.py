@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 import os
 import zipfile
 from voyager_tasks.utils import status
