@@ -22,7 +22,7 @@ def run_task(json_file):
 if __name__ == '__main__':
     if sys.argv[1] == '--info':
         task_info = collections.defaultdict(list)
-        for task in voyager_tasks.__tasks__:
+        for task in voyager_tasks.__all__:
             try:
                 __import__(task)
                 task_info['tasks'].append({'name': task, 'available': True})

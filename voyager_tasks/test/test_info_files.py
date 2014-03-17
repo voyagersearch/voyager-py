@@ -13,7 +13,7 @@ class TestInfoFiles(unittest.TestCase):
     """
     @classmethod
     def setUpClass(self):
-        self.tasks = set(voyager_tasks.__tasks__)
+        self.tasks = set(voyager_tasks.__all__)
         self.info_dir = os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), '..', 'info'))
         self.json_files = set([os.path.basename(f).split('.')[0] for f in glob.glob(os.path.join(self.info_dir, '*.info.json'))])
         self.names = []
