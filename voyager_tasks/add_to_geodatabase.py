@@ -9,17 +9,23 @@ def execute(request):
     """Copies data to a new or existing geodatabase.
     :param request: json as a dict.
     """
+    added = 0
+    skipped = 0
+
     # Retrieve input items to be clipped.
     parameters = request['params']
     in_data = task_utils.find(lambda p: p['name'] == 'input_items', parameters)
     docs = in_data.get('response').get('docs')
     input_items = str(dict((task_utils.get_feature_data(v), v['name']) for v in docs))
 
+    # Get the target workspace location.
+    output_workspace = task_utils.find(lambda p: p['name'] == 'target_workspace', parameters)['path']
+
     # Retrieve the coordinate system code.
     out_coordinate_system = task_utils.find(lambda p: p['name'] == 'output_projection', parameters)['code']
-    output_workspace = request['folder']
-    if not os.path.exists(output_workspace):
-        os.makedirs(output_workspace)
+    task_folder = request['folder']
+    if not os.path.exists(task_folder):
+        os.makedirs(task_folder)
 
     try:
         # Voyager Job Runner: passes a dictionary of inputs and output names.
@@ -123,18 +129,14 @@ def execute(request):
 
             status_writer.send_percent(i/count, 'Added {0}.'.format(ds), 'add_to_geodatabase')
             i += 1.
-
+            added += 1
         # Continue if an error. Process as many as possible.
         except Exception as ex:
-            status_writer.send_percent(i/count,
-                                       '--Error: {0}.\n Failed to add: {1}.\n'.format(ex, ds),
-                                       'add_to_geodatabase')
+            status_writer.send_percent(i/count, 'Failed to add: {0}. {1}.'.format(os.path.basename(ds), repr(ex)), 'add_to_geodatabase')
+            skipped += 0
             pass
 
-    # Zip the output gdb and log file.
-    zip_name = os.path.splitext(os.path.basename(out_gdb))[0]
-    zip_file = task_utils.zip_data(os.path.dirname(out_gdb), '{0}.zip'.format(zip_name))
-    task_utils.clean_up(os.path.dirname(zip_file))
+    task_utils.report(os.path.join(task_folder, '_report.md'), request['task'], added, skipped)
     status_writer.send_status('Completed.')
 # End add_to_gdb function
 

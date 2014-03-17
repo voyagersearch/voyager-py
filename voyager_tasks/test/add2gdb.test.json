@@ -28,7 +28,7 @@
                         "name": "USStates",
                         "path": "",
                         "[lyrFile]": "",
-                        "[lyrURL]": ""						
+                        "[lyrURL]": ""
                     },
                     {
                         "id": "c9b94cba0c099512",
@@ -53,6 +53,11 @@
 					}
                 ]
             }
+        },
+        {
+            "name": "target_workspace",
+            "type": "CatalogPath",
+            "path": ""
         },
         {
             "name": "output_projection",

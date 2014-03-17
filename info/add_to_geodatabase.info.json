@@ -10,7 +10,8 @@
     },
     {
       "type": "CatalogPath",
-      "name": "target_workspace"
+      "name": "target_workspace",
+	  "required": true
     },	
     {
       "type": "Projection",
@@ -26,7 +27,13 @@
 	  "params": {
 		"target_workspace": {
 			"display": "Target Workspace",
-			"description": "geodatabase or feature dataset where data will be copied."
+			"description": "A geodatabase or feature dataset where data will be copied."
+		},
+		{
+		"output_projection": {
+			"display": "Projection",
+			"description": "The projection factory code for setting the output coordinate system."
+		}
 		}
 	  }	  
     }
