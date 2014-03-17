@@ -1,6 +1,6 @@
 """Utility functions for voyager tasks."""
 import os
-import functools
+import glob
 import json
 import shutil
 import urllib
@@ -93,6 +93,39 @@ def report(report_file, task_name, num_processed, num_skipped):
         r.write('| ------    | ----- |\n')
         r.write('| Processed | {0} |\n'.format(num_processed))
         r.write('| Skipped   | {0} |\n'.format(num_skipped))
+
+
+def save_to_layer_file(data_location, arcgis_version='10', include_mxd_layers=True):
+    """Saves all data from the data location to layer files."""
+    import arcpy
+
+    file_gdbs = glob.glob(os.path.join(data_location, '*.gdb'))
+    for file_gdb in file_gdbs:
+        arcpy.env.workspace = file_gdb
+        for fc in arcpy.ListFeatureClasses():
+            fl = arcpy.management.MakeFeatureLayer(fc, '{0}_'.format(fc))
+            arcpy.management.SaveToLayerFile(fl,
+                                             os.path.join(data_location, '{0}.lyr'.format(fc)),
+                                             version=arcgis_version)
+        for raster in arcpy.ListRasters():
+            rl = arcpy.MakeRasterLayer_management(raster, '{0}_'.format(raster))
+            arcpy.management.SaveToLayerFile(rl,
+                                             os.path.join(data_location, '{0}.lyr'.format(raster)),
+                                             version=arcgis_version)
+
+    if include_mxd_layers:
+        mxd_files = glob.glob(os.path.join(data_location, '*.mxd'))
+        for mxd_file in mxd_files:
+            mxd = arcpy.mapping.MapDocument(mxd_file)
+            layers = arcpy.mapping.ListLayers(mxd)
+            for layer in layers:
+                if layer.description == '':
+                    layer.description = layer.name
+                arcpy.management.SaveToLayerFile(layer,
+                                                 os.path.join(data_location, '{0}.lyr'.format(layer.name)),
+                                                 version=arcgis_version)
+
+
 
 
 def zip_data(data_location, name):
