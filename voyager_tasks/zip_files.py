@@ -26,6 +26,7 @@ def execute(request):
     in_data = task_utils.find(lambda p: p['name'] == 'input_items', request['params'])
     docs = in_data.get('response').get('docs')
     input_items = [v['path'] for v in docs]
+    flatten_results = task_utils.find(lambda p: p['name'] == 'flatten_results', request['params'])['value']
     zip_file_location = request['folder']
     if not os.path.exists(zip_file_location):
         os.makedirs(request['folder'])
@@ -37,7 +38,13 @@ def execute(request):
     with ZipFileManager(zip_file, 'w', zipfile.ZIP_DEFLATED) as zipper:
         for in_file in input_items:
             if os.path.isfile(in_file):
-                zipper.write(in_file, os.path.basename(in_file))
+                if flatten_results == 'true':
+                    zipper.write(in_file, os.path.basename(in_file))
+                else:
+                    zipper.write(
+                        in_file,
+                        os.path.join(os.path.abspath(os.path.join(in_file, os.pardir)), os.path.basename(in_file))
+                    )
                 status_writer.send_percent(i/file_count, 'Zipped {0}.'.format(in_file), 'zip_files')
                 zipped += 1
             else:
