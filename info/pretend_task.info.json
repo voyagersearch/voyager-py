@@ -48,7 +48,8 @@
     },
     {
       "type": "Geometry",
-      "name": "clip_geometry"
+      "name": "clip_geometry",
+      "initWithItemExtent": true
     }
   ],
   "display": {

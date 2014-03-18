@@ -6,7 +6,8 @@
     {
       "type": "Geometry",
       "name": "processing_extent",
-      "extentParam": true
+      "extentParam": true,
+      "initWithItemExtent": true
     },
     {
       "type": "VoyagerResults",
