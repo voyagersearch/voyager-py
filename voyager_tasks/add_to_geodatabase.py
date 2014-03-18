@@ -1,4 +1,4 @@
-"""Copies data to a new or existing geodatabase."""
+"""Copies data to an existing geodatabase."""
 import os
 import arcpy
 from voyager_tasks.utils import status
@@ -31,7 +31,7 @@ def execute(request):
         # Voyager Job Runner: passes a dictionary of inputs and output names.
         input_items = eval(input_items)
     except SyntaxError:
-        # If not output names are passed in.
+        # If no output names are passed in.
         input_items = dict((k, '') for k in input_items.split(';'))
 
     # Create the geodatabase if it does not exist.
@@ -57,28 +57,34 @@ def execute(request):
                     arcpy.management.CopyFeatures(ds, task_utils.create_unique_name(dsc.name, out_gdb))
                 else:
                     arcpy.management.CopyFeatures(ds, task_utils.create_unique_name(out_name, out_gdb))
+
             elif dsc.dataType == 'ShapeFile':
                 if out_name == '':
                     arcpy.management.CopyFeatures(ds, task_utils.create_unique_name(dsc.name[:-4], out_gdb))
                 else:
                     arcpy.management.CopyFeatures(ds, task_utils.create_unique_name(out_name, out_gdb))
+
             elif dsc.dataType == 'FeatureDataset':
-                fds = arcpy.management.CreateFeatureDataset(out_gdb, dsc.name)
+                fds_name = os.path.basename(task_utils.create_unique_name(dsc.name, out_gdb))
+                fds = arcpy.management.CreateFeatureDataset(out_gdb, fds_name)
                 arcpy.env.workspace = dsc.catalogPath
                 for fc in arcpy.ListFeatureClasses():
                     name = os.path.basename(task_utils.create_unique_name(fc, out_gdb))
                     arcpy.management.CopyFeatures(fc, os.path.join(fds.getOutput(0), name))
                 arcpy.env.workspace = out_gdb
+
             elif dsc.dataType == 'RasterDataset':
                 if out_name == '':
                     arcpy.management.CopyRaster(ds, task_utils.create_unique_name(dsc.name, out_gdb))
                 else:
                     arcpy.management.CopyRaster(ds, task_utils.create_unique_name(out_name, out_gdb))
+
             elif dsc.dataType == 'RasterCatalog':
                 if out_name == '':
                     arcpy.management.CopyRasterCatalogItems(ds, task_utils.create_unique_name(dsc.name, out_gdb))
                 else:
                     arcpy.management.CopyRasterCatalogItems(ds, task_utils.create_unique_name(out_name, out_gdb))
+
             elif dsc.dataType == 'Layer':
                 layer_from_file = arcpy.mapping.Layer(dsc.catalogPath)
                 layers = arcpy.mapping.ListLayers(layer_from_file)
@@ -91,6 +97,7 @@ def execute(request):
                         arcpy.management.CopyFeatures(layer.dataSource, name)
                     elif layer.isRasterLayer:
                         arcpy.management.CopyRaster(layer.dataSource, name)
+
             elif dsc.dataType == 'CadDrawingDataset':
                 arcpy.env.workspace = dsc.catalogPath
                 cad_wks_name = os.path.splitext(dsc.name)[0]
@@ -100,6 +107,7 @@ def execute(request):
                         task_utils.create_unique_name('{0}_{1}'.format(cad_wks_name, cad_fc), out_gdb)
                     )
                 arcpy.env.workspace = out_gdb
+
             elif dsc.dataType == 'File':
                 if dsc.catalogPath.endswith('.kml') or dsc.catalogPath.endswith('.kmz'):
                     name = os.path.splitext(dsc.name)[0]
@@ -111,6 +119,7 @@ def execute(request):
                     # Clean up temp KML results.
                     arcpy.management.Delete(os.path.join(arcpy.env.scratchFolder, '{}.lyr'.format(name)))
                     arcpy.management.Delete(kml_layer[1])
+
             elif dsc.dataType == 'MapDocument':
                 mxd = arcpy.mapping.MapDocument(dsc.catalogPath)
                 layers = arcpy.mapping.ListLayers(mxd)
@@ -121,6 +130,7 @@ def execute(request):
                     elif layer.isRasterLayer:
                         arcpy.management.CopyRaster(layer.dataSource,
                                                     task_utils.create_unique_name(layer.name, out_gdb))
+
             elif dsc.dataType.find('Table') > 0:
                 if out_name == '':
                     arcpy.management.CopyRows(ds, task_utils.create_unique_name(dsc.name, out_gdb))
