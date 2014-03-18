@@ -287,10 +287,14 @@ def execute(request):
 
             # Geodatabase feature dataset
             elif dsc.dataType == 'FeatureDataset':
-                fds = arcpy.management.CreateFeatureDataset(out_workspace, dsc.name)
+                fds_name = os.path.basename(task_utils.create_unique_name(dsc.name, out_workspace))
+                fds = arcpy.management.CreateFeatureDataset(out_workspace, fds_name)
                 arcpy.env.workspace = ds
                 for fc in arcpy.ListFeatureClasses():
-                    arcpy.analysis.Clip(fc, clip_poly, task_utils.create_unique_name(fc, fds))
+                    try:
+                        arcpy.analysis.Clip(fc, clip_poly, task_utils.create_unique_name(fc, fds))
+                    except arcpy.ExecuteError:
+                        pass
                 arcpy.env.workspace = out_workspace
 
             # Shapefile
@@ -369,18 +373,20 @@ def execute(request):
     if arcpy.env.workspace.endswith('.gdb'):
         out_workspace = os.path.dirname(arcpy.env.workspace)
 
-    if out_format == 'MPK':
-        create_mxd_or_mpk(out_workspace, files_to_package, True)
-        status_writer.send_status('Created output map package.')
-        shutil.move(os.path.join(out_workspace, 'output.mpk'), os.path.join(os.path.dirname(out_workspace), 'output.mpk'))
-    elif out_format == 'LPK':
-        create_lpk(out_workspace, files_to_package)
-        status_writer.send_status('Created output layer package.')
+    if clipped > 0:
+        if out_format == 'MPK':
+            create_mxd_or_mpk(out_workspace, files_to_package, True)
+            status_writer.send_status('Created output map package.')
+            shutil.move(os.path.join(out_workspace, 'output.mpk'), os.path.join(os.path.dirname(out_workspace), 'output.mpk'))
+        elif out_format == 'LPK':
+            create_lpk(out_workspace, files_to_package)
+            status_writer.send_status('Created output layer package.')
+        else:
+            create_mxd_or_mpk(out_workspace)
+            zip_file = task_utils.zip_data(out_workspace, 'output.zip')
+            status_writer.send_status('Created the output zip file.')
+            shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
     else:
-        create_mxd_or_mpk(out_workspace)
-        zip_file = task_utils.zip_data(out_workspace, 'output.zip')
-        status_writer.send_status('Created the output zip file.')
-        shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
-
+        status_writer.send_status('No clip results.')
     task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], clipped, skipped)
 # End clip_data function
