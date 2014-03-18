@@ -4,6 +4,9 @@ Voyager Tasks
 TODO: provide a nicer description of the task framework here
 
 
+See more task documentaiton in [/docs](docs)
+
+
 voyager_tasks folder -- contains the processing framework scripts.
 
 VoyagerTaskRunner.py -- Used to execute a voyager task. --info option returns parameter information for all tasks. Passing in .json file will execute a task.
