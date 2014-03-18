@@ -126,20 +126,19 @@ def save_to_layer_file(data_location, arcgis_version='10', include_mxd_layers=Tr
                                                  version=arcgis_version)
 
 
-
-
 def zip_data(data_location, name):
     """Creates a compressed zip file of the entire data location."""
     zfile = os.path.join(data_location, name)
-    with zipfile.ZipFile(zfile, 'w', zipfile.ZIP_DEFLATED) as z:
-        for root, dirs, files in os.walk(data_location):
-            for f in files:
-                if not f.endswith('zip'):
-                    absf = os.path.join(root, f)
-                    zf = absf[len(data_location) + len(os.sep):]
-                    try:
-                        #z.write(absf, os.path.join(os.path.basename(data_location), zf))
-                        z.write(absf, zf)
-                    except Exception:
-                        pass
+    z = zipfile.ZipFile(zfile, 'w', zipfile.ZIP_DEFLATED)
+    for root, dirs, files in os.walk(data_location):
+        for f in files:
+            if not f.endswith('zip'):
+                absf = os.path.join(root, f)
+                zf = absf[len(data_location) + len(os.sep):]
+                try:
+                    #z.write(absf, os.path.join(os.path.basename(data_location), zf))
+                    z.write(absf, zf)
+                except Exception:
+                    pass
+    z.close()
     return zfile
