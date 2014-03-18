@@ -26,7 +26,10 @@ def execute(request):
     in_data = task_utils.find(lambda p: p['name'] == 'input_items', request['params'])
     docs = in_data.get('response').get('docs')
     input_items = [v['path'] for v in docs]
-    flatten_results = task_utils.find(lambda p: p['name'] == 'flatten_results', request['params'])['value']
+    try:
+        flatten_results = task_utils.find(lambda p: p['name'] == 'flatten_results', request['params'])['value']
+    except KeyError:
+        flatten_results = 'false'
     zip_file_location = request['folder']
     if not os.path.exists(zip_file_location):
         os.makedirs(request['folder'])
