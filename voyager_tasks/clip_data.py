@@ -163,10 +163,11 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
             arcpy.mapping.AddLayer(df, arcpy.mapping.Layer(ds))
         elif ds.endswith('.mxd') and not ds == mxd.filePath:
             # Add all layers from all map documents to the map template.
-            mxd = arcpy.mapping.MapDocument(ds)
-            layers = arcpy.mapping.ListLayers(mxd)
+            temp_mxd = arcpy.mapping.MapDocument(ds)
+            layers = arcpy.mapping.ListLayers(temp_mxd)
             for layer in layers:
                 arcpy.mapping.AddLayer(df, layer)
+            del temp_mxd
 
     mxd.save()
     if mpk:
@@ -201,8 +202,9 @@ def execute(request):
         try:
             clip_area = task_utils.find(lambda p: p['name'] == 'clip_geometry', parameters)['feature']
         except KeyError:
-            status_writer.send_status('Cannot clip data. No clip extent.')
-            sys.exit(1)
+            clip_area = 'POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))'
+            #status_writer.send_status('Cannot clip data. No clip extent.')
+            #sys.exit(1)
 
     # Retrieve the coordinate system code.
     out_coordinate_system = int(task_utils.find(lambda p: p['name'] == 'output_projection', parameters)['code'])
