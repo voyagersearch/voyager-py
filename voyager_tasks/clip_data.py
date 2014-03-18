@@ -131,10 +131,14 @@ def create_lpk(data_location, additional_files):
 
 def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
     """Creates a map document (.mxd) or map package (.mpk) for all the clipped datasets."""
-    mxd_template = arcpy.mapping.MapDocument(os.path.join(os.path.dirname(__file__), r'supportfiles\MapTemplate.mxd'))
-    if mxd_template.description == '':
-        mxd_template.description = os.path.basename(mxd_template.filePath)
-    df = arcpy.mapping.ListDataFrames(mxd_template)[0]
+    shutil.copyfile(
+        os.path.join(os.path.dirname(__file__), r'supportfiles\MapTemplate.mxd'),
+        os.path.join(data_location, 'output.mxd')
+    )
+    mxd = arcpy.mapping.MapDocument(os.path.join(data_location, 'output.mxd'))
+    if mxd.description == '':
+        mxd.description = os.path.basename(mxd.filePath)
+    df = arcpy.mapping.ListDataFrames(mxd)[0]
 
     types = ('*.shp', '*.gdb', '*.mxd', '*.lyr')
     all_data = []
@@ -157,24 +161,22 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
         elif ds.endswith('.lyr'):
             # Add all layer files to the mxd template.
             arcpy.mapping.AddLayer(df, arcpy.mapping.Layer(ds))
-        elif ds.endswith('.mxd'):
+        elif ds.endswith('.mxd') and not ds == mxd.filePath:
             # Add all layers from all map documents to the map template.
             mxd = arcpy.mapping.MapDocument(ds)
             layers = arcpy.mapping.ListLayers(mxd)
             for layer in layers:
                 arcpy.mapping.AddLayer(df, layer)
 
-    # Package the map template.
-    new_mxd = os.path.join(data_location, 'output.mxd')
-    mxd_template.saveACopy(new_mxd)
+    mxd.save()
     if mpk:
-        arcpy.management.PackageMap(new_mxd,
-                                    new_mxd.replace('.mxd', '.mpk'),
+        # Package the map template.
+        arcpy.management.PackageMap(mxd,
+                                    mxd.replace('.mxd', '.mpk'),
                                     'PRESERVE',
                                     version='10',
                                     additional_files=additional_files)
-        del mxd_template
-        os.unlink(new_mxd)
+        del mxd
 # End create_map_package function
 
 
@@ -277,7 +279,7 @@ def execute(request):
                         clip_poly = arcpy.management.Project(clip_poly, 'clip_features', out_sr)
                     extent = arcpy.Describe(clip_poly).extent
 
-            # Geodatabase feature class
+            # Feature class
             if dsc.dataType == 'FeatureClass':
                 if out_name == '':
                     name = task_utils.create_unique_name(dsc.name, out_workspace)
@@ -285,7 +287,7 @@ def execute(request):
                     name = task_utils.create_unique_name(out_name, out_workspace)
                 arcpy.analysis.Clip(ds, clip_poly, name)
 
-            # Geodatabase feature dataset
+            # Feature dataset
             elif dsc.dataType == 'FeatureDataset':
                 fds_name = os.path.basename(task_utils.create_unique_name(dsc.name, out_workspace))
                 fds = arcpy.management.CreateFeatureDataset(out_workspace, fds_name)
@@ -363,7 +365,7 @@ def execute(request):
             status_writer.send_percent(i/count, 'clipped {0}.'.format(dsc.name), 'clip_data')
             i += 1.
             clipped += 1
-        # Continue if an error. Process as many as possible.
+        # Continue. Process as many as possible.
         except Exception as ex:
             status_writer.send_percent(i/count, 'Skipped: {0}. {1}.'.format(os.path.basename(ds), repr(ex)), 'clip_data')
             i += 1.
