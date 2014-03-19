@@ -117,7 +117,7 @@ def create_lpk(data_location, additional_files):
             layer.save()
 
     # Save data to layer files.
-    task_utils.save_to_layer_file(data_location, '10', True)
+    task_utils.save_to_layer_file(data_location, True)
 
     # Package all layer files.
     layer_files = glob.glob(os.path.join(data_location, '*.lyr'))

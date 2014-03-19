@@ -95,7 +95,7 @@ def report(report_file, task_name, num_processed, num_skipped):
         r.write('| Skipped   | {0} |\n'.format(num_skipped))
 
 
-def save_to_layer_file(data_location, arcgis_version='10', include_mxd_layers=True):
+def save_to_layer_file(data_location, include_mxd_layers=True):
     """Saves all data from the data location to layer files."""
     import arcpy
 
@@ -104,14 +104,10 @@ def save_to_layer_file(data_location, arcgis_version='10', include_mxd_layers=Tr
         arcpy.env.workspace = file_gdb
         for fc in arcpy.ListFeatureClasses():
             fl = arcpy.management.MakeFeatureLayer(fc, '{0}_'.format(fc))
-            arcpy.management.SaveToLayerFile(fl,
-                                             os.path.join(data_location, '{0}.lyr'.format(fc)),
-                                             version=arcgis_version)
+            arcpy.management.SaveToLayerFile(fl, os.path.join(data_location, '{0}.lyr'.format(fc)))
         for raster in arcpy.ListRasters():
             rl = arcpy.MakeRasterLayer_management(raster, '{0}_'.format(raster))
-            arcpy.management.SaveToLayerFile(rl,
-                                             os.path.join(data_location, '{0}.lyr'.format(raster)),
-                                             version=arcgis_version)
+            arcpy.management.SaveToLayerFile(rl, os.path.join(data_location, '{0}.lyr'.format(raster)))
 
     if include_mxd_layers:
         mxd_files = glob.glob(os.path.join(data_location, '*.mxd'))
@@ -121,9 +117,7 @@ def save_to_layer_file(data_location, arcgis_version='10', include_mxd_layers=Tr
             for layer in layers:
                 if layer.description == '':
                     layer.description = layer.name
-                arcpy.management.SaveToLayerFile(layer,
-                                                 os.path.join(data_location, '{0}.lyr'.format(layer.name)),
-                                                 version=arcgis_version)
+                arcpy.management.SaveToLayerFile(layer, os.path.join(data_location, '{0}.lyr'.format(layer.name)))
 
 
 def zip_data(data_location, name):
