@@ -7,8 +7,29 @@ import urllib
 import zipfile
 
 
+class ZipFileManager(zipfile.ZipFile):
+    """Context manager for zip files. Added to support using
+    a with statement with Python 2.6 installed with ArcGIS 10.0.
+    """
+    def __init__(self, zip_file, mode='r', compression=zipfile.ZIP_DEFLATED):
+        zipfile.ZipFile.__init__(self, zip_file, mode, compression)
+
+    def __enter__(self):
+        """Return object created in __init__ part"""
+        return self
+
+    def __exit__(self, exc_type, exc_value, trace_back):
+        """Close zipfile.ZipFile"""
+        self.close()
+
+
 def create_unique_name(name, gdb):
-    """Creates and returns a valid and unique name for the geodatabase."""
+    """Creates and returns a valid and unique name for the geodatabase.
+
+    :param name: name to be validated
+    :param gdb: workspace path
+    :rtype : str
+    """
     import arcpy
     valid_name = arcpy.ValidateTableName(name, gdb)
     unique_name = arcpy.CreateUniqueName(valid_name, gdb)
@@ -16,7 +37,10 @@ def create_unique_name(name, gdb):
 
 
 def clean_up(data_location):
-    """Deletes intermediate data created during the task process."""
+    """Deletes intermediate data created during the task process.
+
+    :param data_location: folder path
+    """
     for root, dirs, files in os.walk(data_location):
         for name in files:
             if not name.endswith('.zip'):
@@ -29,7 +53,11 @@ def clean_up(data_location):
 
 
 def find(f, seq):
-    """Return first item in sequence where f(item) == True."""
+    """Return first item in sequence where f(item) == True.
+    :param f: lambda function
+    :param seq: list of items
+    :rtype : str
+    """
     for item in seq:
         if f(item):
             return item
@@ -37,9 +65,11 @@ def find(f, seq):
 
 def get_feature_data(item):
     """Return a valid layer file or dataset path.
-
     Describe will fail if the layer file does not exist or
     if the layer's datasource does not exist.
+
+    :param item: dataset path
+    :rtype : str
     """
     import arcpy
     try:
@@ -56,8 +86,12 @@ def get_feature_data(item):
 
 
 def from_wkt(wkt, sr):
-    """Return the clip geometry from a list
-    of well-known text coordinates."""
+    """Creates a polygon geometry from a list of well-known text coordinates.
+
+    :param wkt: well-known text
+    :param sr: arcpy spatial reference object
+    :rtype : arcpy.Polygon
+    """
     import arcpy
     coordinates = wkt[wkt.find('(') + 2: wkt.find(')')].split(',')
     array = arcpy.Array()
@@ -70,7 +104,12 @@ def from_wkt(wkt, sr):
 
 
 def get_projection_file(factory_code):
-    """Returns the projection file using the factory code as a lookup."""
+    """Returns a projection file using the factory code as a lookup.
+    This function adds support for ArcGIS 10.0.
+
+    :param factory_code: The projection's factory code - i.e. 4326 is the code for WGS84
+    :rtype : str
+    """
     import arcpy
     lu_file = os.path.join(os.getcwd(), 'voyager_tasks/supportfiles/projection_files.json')
     with open(lu_file) as fp:
@@ -81,7 +120,8 @@ def get_projection_file(factory_code):
 
 
 def report(report_file, task_name, num_processed, num_skipped):
-    """Create markdown report of inputs processed or skipped.
+    """Create a markdown report of inputs processed or skipped.
+
     :param report_file: path of the .md file
     :param task_name:  name of the task
     :param num_processed: number of items processed
@@ -96,7 +136,11 @@ def report(report_file, task_name, num_processed, num_skipped):
 
 
 def save_to_layer_file(data_location, include_mxd_layers=True):
-    """Saves all data from the data location to layer files."""
+    """Saves all data from the data location to layer files.
+
+    :param data_location: folder containing data to be saved as layer files
+    :param include_mxd_layers: save layers in mxd's to layer files - default is True
+    """
     import arcpy
 
     file_gdbs = glob.glob(os.path.join(data_location, '*.gdb'))
@@ -121,18 +165,21 @@ def save_to_layer_file(data_location, include_mxd_layers=True):
 
 
 def zip_data(data_location, name):
-    """Creates a compressed zip file of the entire data location."""
+    """Creates a compressed zip file of the entire data location.
+
+    :param data_location: folder containing data to be zipped
+    :param name: name of zip file
+    :rtype : str
+    """
     zfile = os.path.join(data_location, name)
-    z = zipfile.ZipFile(zfile, 'w', zipfile.ZIP_DEFLATED)
-    for root, dirs, files in os.walk(data_location):
-        for f in files:
-            if not f.endswith('zip'):
-                absf = os.path.join(root, f)
-                zf = absf[len(data_location) + len(os.sep):]
-                try:
-                    #z.write(absf, os.path.join(os.path.basename(data_location), zf))
-                    z.write(absf, zf)
-                except Exception:
-                    pass
-    z.close()
+    with ZipFileManager(zfile, 'w', zipfile.ZIP_DEFLATED) as z:
+        for root, dirs, files in os.walk(data_location):
+            for f in files:
+                if not f.endswith('zip'):
+                    absf = os.path.join(root, f)
+                    zf = absf[len(data_location) + len(os.sep):]
+                    try:
+                        z.write(absf, zf)
+                    except Exception:
+                        pass
     return zfile
