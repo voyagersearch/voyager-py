@@ -17,6 +17,6 @@ new_build_num = build_num + 1
 
 in_readme = open(os.path.join(readme_dir, 'README.md')).read()
 out_readme = open(os.path.join(readme_dir, 'README.md'), 'w')
-in_readme = in_readme.replace(str(build_num), str(new_build_num))
+in_readme = in_readme.replace('BUILD_NUMBER', str(new_build_num))
 out_readme.write(in_readme)
 out_readme.close()
