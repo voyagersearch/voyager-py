@@ -1,5 +1,6 @@
 """Copies data to an existing geodatabase."""
 import os
+import shutil
 import arcpy
 from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
@@ -145,8 +146,9 @@ def execute(request):
             status_writer.send_percent(i/count, 'Failed to add: {0}. {1}.'.format(os.path.basename(ds), repr(ex)), 'add_to_geodatabase')
             skipped += 0
             pass
-
+    shutil.copyfile(
+        os.path.join(os.path.dirname(__file__), r'supportfiles\_thumb.png'),
+        os.path.join(request['folder'], '_thumb.png')
+    )
     task_utils.report(os.path.join(task_folder, '_report.md'), request['task'], added, skipped)
-    status_writer.send_status('Completed.')
 # End add_to_gdb function
-

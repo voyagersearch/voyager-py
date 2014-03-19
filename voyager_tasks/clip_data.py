@@ -172,7 +172,7 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
     mxd.save()
     if mpk:
         # Package the map template.
-        arcpy.management.PackageMap(mxd,
+        arcpy.management.PackageMap(mxd.filePath,
                                     mxd.filePath.replace('.mxd', '.mpk'),
                                     'PRESERVE',
                                     version='10',
@@ -381,7 +381,8 @@ def execute(request):
         if out_format == 'MPK':
             create_mxd_or_mpk(out_workspace, files_to_package, True)
             status_writer.send_status('Created output map package.')
-            shutil.move(os.path.join(out_workspace, 'output.mpk'), os.path.join(os.path.dirname(out_workspace), 'output.mpk'))
+            shutil.move(os.path.join(out_workspace, 'output.mpk'),
+                        os.path.join(os.path.dirname(out_workspace), 'output.mpk'))
         elif out_format == 'LPK':
             create_lpk(out_workspace, files_to_package)
             status_writer.send_status('Created output layer package.')
@@ -392,5 +393,10 @@ def execute(request):
             shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
     else:
         status_writer.send_status('No clip results.')
+
+    shutil.copyfile(
+        os.path.join(os.path.dirname(__file__), r'supportfiles\_thumb.png'),
+        os.path.join(request['folder'], '_thumb.png')
+    )
     task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], clipped, skipped)
 # End clip_data function
