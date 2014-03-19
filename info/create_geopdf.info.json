@@ -12,10 +12,10 @@
       "type": "StringChoice",
       "name": "map_template",
       "choices": [
-        "ANSI_D_LND.mxd",
-        "ANSI_E_LND.mxd",
         "LETTER_LND.mxd",
-        "POWER_POINT.mxd"
+        "POWER_POINT.mxd",
+        "ANSI_D_LND.mxd",
+        "ANSI_E_LND.mxd"
       ]	  
     },
     {
@@ -44,9 +44,9 @@
           "display": "Map Template",
           "description": "pick a map template with surrounds",
           "values": {
-            "ANSI_D_LND.mxd": "???x???? (ANSI D)",
-            "ANSI_E_LND.mxd": "???x???? (ANSI E)",
-            "LETTER_LND.mxd": "???x???? (LETTER)",
+            "ANSI_D_LND.mxd": "Small Poster (32\" X 24\")",
+            "ANSI_E_LND.mxd": "Large Poster (42\" X 32\")",
+            "LETTER_LND.mxd": "Page (8.5\" X 11\")",
             "POWER_POINT.mxd": "Powerpoint"
           }		  
         },
