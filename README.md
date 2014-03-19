@@ -4,7 +4,7 @@ Voyager Tasks
 TODO: provide a nicer description of the task framework here
 
 
-See more task documentaiton in [/docs](docs)
+See more task documentation in [/docs](docs)
 
 
 voyager_tasks folder -- contains the processing framework scripts.
