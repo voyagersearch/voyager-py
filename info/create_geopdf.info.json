@@ -30,8 +30,8 @@
         "layers",
         "layers_and_features"
       ],
-	  "advanced":true,
-	  "value": "layers_and_features"
+  	  "advanced":true,
+  	  "value": "layers_and_features"
     }	
   ],
   "display": {
@@ -50,19 +50,19 @@
             "POWER_POINT.mxd": "Powerpoint"
           }		  
         },
-		"map_view": {
+    		"map_view": {
           "display": "Map View",
           "description": "Will send center point, zoom level, and lower left and upper right coordinates."
-		},
-		"attribute_settings": {
+    		},
+    		"attribute_settings": {
           "display": "Attribute Settings",
           "description": "...",
           "values": {
-            "none": "copy from arcmap none",
-            "layers": "copy from arcmap none",
-            "layers_and_features": "copy from arcmap none"
+            "none": "TODO, copy from arcmap none",
+            "layers": "TODO, copy from arcmap none",
+            "layers_and_features": "TODO, copy from arcmap none"
           }
-		}		
+    		}		
       }
     }
   }
