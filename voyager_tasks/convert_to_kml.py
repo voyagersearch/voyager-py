@@ -21,7 +21,7 @@ def execute(request):
         # Voyager Job Runner: passes a dictionary of inputs and output names.
         input_items = eval(input_items)
     except SyntaxError:
-        # If not output names are passed in.
+        # If no output names are passed in.
         input_items = dict((k, '') for k in input_items.split(';'))
 
     count = len(input_items)
@@ -99,7 +99,6 @@ def execute(request):
 
             elif dsc.dataType == 'CadDrawingDataset':
                 arcpy.env.workspace = dsc.catalogPath
-                #cad_wks_name = os.path.splitext(dsc.name)[0]
                 for cad_fc in arcpy.ListFeatureClasses():
                     if cad_fc.lower() == 'annotation':
                         cad_anno = arcpy.conversion.ImportCADAnnotation(
@@ -140,6 +139,7 @@ def execute(request):
             skipped += 1
             pass
 
+    # Zip up kmz files if more than one.
     if count > 1:
         zip_file = task_utils.zip_data(out_workspace, 'output.zip')
         status_writer.send_status('Created zip file: {0}...'.format(os.path.join(out_workspace, 'output.zip')))
