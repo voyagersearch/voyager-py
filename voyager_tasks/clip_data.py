@@ -173,7 +173,7 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
     if mpk:
         # Package the map template.
         arcpy.management.PackageMap(mxd,
-                                    mxd.replace('.mxd', '.mpk'),
+                                    mxd.filePath.replace('.mxd', '.mpk'),
                                     'PRESERVE',
                                     version='10',
                                     additional_files=additional_files)
