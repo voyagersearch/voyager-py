@@ -12,7 +12,7 @@ readme_dir = os.getcwd()
 #                 build_num = int(result[0])
 #                 new_build_num = build_num + 1
 #                 break
-build_num = int(os.environ['BUILD_NUM'])
+build_num = int(os.environ['BUILD_NUMBER'])
 new_build_num = build_num + 1
 
 in_readme = open(os.path.join(readme_dir, 'README.md')).read()
