@@ -12,8 +12,10 @@
       "type": "StringChoice",
       "name": "map_template",
       "choices": [
-        "Portrait",
-        "Landscape"
+        "ANSI_D_LND.mxd",
+        "ANSI_E_LND.mxd",
+        "LETTER_LND.mxd",
+        "POWER_POINT.mxd"
       ]	  
     },
     {
@@ -35,15 +37,17 @@
   "display": {
     "en": {
       "display": "Create GeoPDF",
-      "description": "Take input data and clip it to various formats (FileGDB, etc)",
-      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#clip_data",
+      "description": "Add selected data to a GeoPDF document",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#create_geopdf",
       "params": {
         "map_template": {
           "display": "Map Template",
           "description": "pick a map template with surrounds",
           "values": {
-            "portrait": "todo",
-            "landscape": "todo"
+            "ANSI_D_LND.mxd": "???x???? (ANSI D)",
+            "ANSI_E_LND.mxd": "???x???? (ANSI E)",
+            "LETTER_LND.mxd": "???x???? (LETTER)",
+            "POWER_POINT.mxd": "Powerpoint"
           }		  
         },
 		"map_view": {
