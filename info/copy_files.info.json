@@ -1,5 +1,5 @@
 {
-  "name": "copy_file_data",
+  "name": "copy_files",
   "runner": "python",
   "categories": ["download"],
   "params": [
@@ -19,9 +19,9 @@
   ],
   "display": {
     "en": {
-      "display": "Copy File Data",
-      "description": "copies data to a target folder",
-      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#copy_data"
+      "display": "Copy Files",
+      "description": "copies files to a target folder",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#copy_files"
     },
 	"params": {
 	  "target_folder": {
