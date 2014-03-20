@@ -12,9 +12,12 @@
         "download": "Download"
       },
       "params": {
+        "input_items": {
+          "display": "Selected Results"
+        },
         "output_format": {
           "display": "Output Format",
-          "description": "Pick the destination format",
+          "description": "Choose the destination format",
           "values": {
             "FileGDB": "File Geodatabase",
             "SHP": "Shapefile (.shp)",
@@ -24,12 +27,12 @@
         },
         "output_projection": {
           "display": "Projection",
-          "description": "Choose the output format projection"
+          "description": "Choose the output projection"
         },
-		"flatten_results": {
+    		"flatten_results": {
           "display": "Flatten Results",
           "description": "Write results to single folder"
-		},
+    		},
       }
     },
     "es": {
