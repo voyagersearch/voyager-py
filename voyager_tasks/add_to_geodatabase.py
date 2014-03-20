@@ -12,12 +12,11 @@ def execute(request):
     """
     added = 0
     skipped = 0
-
-    # Retrieve input items to be clipped.
     parameters = request['params']
+
     in_data = task_utils.find(lambda p: p['name'] == 'input_items', parameters)
     docs = in_data.get('response').get('docs')
-    input_items = str(dict((task_utils.get_feature_data(v), v['name']) for v in docs))
+    input_items = dict((task_utils.get_feature_data(v), v['name']) for v in docs)
 
     # Get the target workspace location.
     output_workspace = task_utils.find(lambda p: p['name'] == 'target_workspace', parameters)['value']
@@ -27,13 +26,6 @@ def execute(request):
     task_folder = request['folder']
     if not os.path.exists(task_folder):
         os.makedirs(task_folder)
-
-    try:
-        # Voyager Job Runner: passes a dictionary of inputs and output names.
-        input_items = eval(input_items)
-    except SyntaxError:
-        # If no output names are passed in.
-        input_items = dict((k, '') for k in input_items.split(';'))
 
     # Create the geodatabase if it does not exist.
     if not output_workspace.endswith('.gdb'):

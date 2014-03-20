@@ -77,7 +77,6 @@ def get_feature_data(item):
         return item['[lyrFile]']
     except Exception:
         pass
-
     try:
         layer_file = urllib.urlretrieve(item['[lyrURL]'])[0]
         return layer_file
