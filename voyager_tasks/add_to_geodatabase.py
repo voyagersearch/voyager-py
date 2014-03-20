@@ -1,5 +1,6 @@
 """Copies data to an existing geodatabase."""
 import os
+import shutil
 import arcpy
 from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
@@ -11,12 +12,11 @@ def execute(request):
     """
     added = 0
     skipped = 0
-
-    # Retrieve input items to be clipped.
     parameters = request['params']
+
     in_data = task_utils.find(lambda p: p['name'] == 'input_items', parameters)
     docs = in_data.get('response').get('docs')
-    input_items = str(dict((task_utils.get_feature_data(v), v['name']) for v in docs))
+    input_items = dict((task_utils.get_feature_data(v), v['name']) for v in docs)
 
     # Get the target workspace location.
     output_workspace = task_utils.find(lambda p: p['name'] == 'target_workspace', parameters)['value']
@@ -26,13 +26,6 @@ def execute(request):
     task_folder = request['folder']
     if not os.path.exists(task_folder):
         os.makedirs(task_folder)
-
-    try:
-        # Voyager Job Runner: passes a dictionary of inputs and output names.
-        input_items = eval(input_items)
-    except SyntaxError:
-        # If no output names are passed in.
-        input_items = dict((k, '') for k in input_items.split(';'))
 
     # Create the geodatabase if it does not exist.
     if not output_workspace.endswith('.gdb'):
@@ -145,8 +138,9 @@ def execute(request):
             status_writer.send_percent(i/count, 'Failed to add: {0}. {1}.'.format(os.path.basename(ds), repr(ex)), 'add_to_geodatabase')
             skipped += 0
             pass
-
+    shutil.copyfile(
+        os.path.join(os.path.dirname(__file__), r'supportfiles\_thumb.png'),
+        os.path.join(request['folder'], '_thumb.png')
+    )
     task_utils.report(os.path.join(task_folder, '_report.md'), request['task'], added, skipped)
-    status_writer.send_status('Completed.')
 # End add_to_gdb function
-

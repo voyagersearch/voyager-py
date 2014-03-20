@@ -77,7 +77,6 @@ def get_feature_data(item):
         return item['[lyrFile]']
     except Exception:
         pass
-
     try:
         layer_file = urllib.urlretrieve(item['[lyrURL]'])[0]
         return layer_file
@@ -117,6 +116,27 @@ def get_projection_file(factory_code):
         arcgis_folder = arcpy.GetInstallInfo()['InstallDir']
         prj_file = os.path.join(arcgis_folder, prj_lu['{0}'.format(factory_code)])
     return prj_file
+
+
+def make_thumbnail(layer_or_mxd, output_folder):
+    """Creates a thumbnail PNG file for the layer file or map document.
+
+    :param dataset: a layer file or document.
+    :param output_folder: the output folder where PNG files are saved
+    """
+    import arcpy
+    arcpy.env.overwriteOutput = True
+    if layer_or_mxd.endswith('.mxd'):
+        mxd = arcpy.mapping.MapDocument(layer_or_mxd)
+        arcpy.mapping.ExportToPNG(mxd, os.path.join(output_folder, '_thumb.png'), '', 150, 150)
+    else:
+        support_files_dir = os.path.abspath(os.path.join(os.getcwd(), 'voyager_tasks', 'supportfiles'))
+        map_template = os.path.join(support_files_dir, 'MapTemplate.mxd')
+        mxd = arcpy.mapping.MapDocument(map_template)
+        data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
+        layer = arcpy.mapping.Layer(layer_or_mxd)
+        arcpy.mapping.AddLayer(data_frame, layer)
+        arcpy.mapping.ExportToPNG(mxd, os.path.join(output_folder, '_thumb.png'), data_frame, 150, 150)
 
 
 def report(report_file, task_name, num_processed, num_skipped):

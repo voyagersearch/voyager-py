@@ -172,7 +172,7 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
     mxd.save()
     if mpk:
         # Package the map template.
-        arcpy.management.PackageMap(mxd,
+        arcpy.management.PackageMap(mxd.filePath,
                                     mxd.filePath.replace('.mxd', '.mpk'),
                                     'PRESERVE',
                                     version='10',
@@ -187,13 +187,12 @@ def execute(request):
     """
     clipped = 0
     skipped = 0
-
     status_writer = status.Writer()
-    # Parse parameters.
     parameters = request['params']
+
     in_data = task_utils.find(lambda p: p['name'] == 'input_items', parameters)
     docs = in_data.get('response').get('docs')
-    input_items = str(dict((task_utils.get_feature_data(v), v['name']) for v in docs))
+    input_items = dict((task_utils.get_feature_data(v), v['name']) for v in docs)
 
     # Retrieve clip geometry.
     try:
@@ -203,8 +202,6 @@ def execute(request):
             clip_area = task_utils.find(lambda p: p['name'] == 'clip_geometry', parameters)['feature']
         except KeyError:
             clip_area = 'POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))'
-            #status_writer.send_status('Cannot clip data. No clip extent.')
-            #sys.exit(1)
 
     # Retrieve the coordinate system code.
     out_coordinate_system = int(task_utils.find(lambda p: p['name'] == 'output_projection', parameters)['code'])
@@ -214,13 +211,6 @@ def execute(request):
     out_workspace = os.path.join(request['folder'], 'temp')
     if not os.path.exists(out_workspace):
         os.makedirs(out_workspace)
-
-    try:
-        # Voyager Job Runner: passes a dictionary of inputs and output names.
-        input_items = eval(input_items)
-    except SyntaxError:
-        # If not output names are passed in.
-        input_items = dict((k, '') for k in input_items.split(';'))
 
     if out_coordinate_system is not None:
         try:
@@ -381,7 +371,8 @@ def execute(request):
         if out_format == 'MPK':
             create_mxd_or_mpk(out_workspace, files_to_package, True)
             status_writer.send_status('Created output map package.')
-            shutil.move(os.path.join(out_workspace, 'output.mpk'), os.path.join(os.path.dirname(out_workspace), 'output.mpk'))
+            shutil.move(os.path.join(out_workspace, 'output.mpk'),
+                        os.path.join(os.path.dirname(out_workspace), 'output.mpk'))
         elif out_format == 'LPK':
             create_lpk(out_workspace, files_to_package)
             status_writer.send_status('Created output layer package.')
@@ -392,5 +383,10 @@ def execute(request):
             shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
     else:
         status_writer.send_status('No clip results.')
+
+    shutil.copyfile(
+        os.path.join(os.path.dirname(__file__), r'supportfiles\_thumb.png'),
+        os.path.join(request['folder'], '_thumb.png')
+    )
     task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], clipped, skipped)
 # End clip_data function

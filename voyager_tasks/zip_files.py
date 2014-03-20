@@ -1,4 +1,5 @@
 import os
+import shutil
 import zipfile
 from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
@@ -6,7 +7,7 @@ from voyager_tasks.utils import task_utils
 
 def execute(request):
     """Zips all input files to output.zip.
-    
+
     :param request: json as a dict.
     """
     zipped = 0
@@ -47,4 +48,9 @@ def execute(request):
         status_writer.send_status('No files were zipped.')
     else:
         status_writer.send_status('Zipped {0} files.'.format(zipped))
+
+    shutil.copyfile(
+        os.path.join(os.path.dirname(__file__), r'supportfiles\_thumb.png'),
+        os.path.join(request['folder'], '_thumb.png')
+    )
     task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], zipped, skipped)
