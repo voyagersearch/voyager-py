@@ -1,7 +1,7 @@
 {
   "name": "create_geopdf",
   "runner": "pretend",
-  "categories": ["TODO"],
+  "categories": ["PDF", "Download"],
   "params": [
     {
       "type": "VoyagerResults",
