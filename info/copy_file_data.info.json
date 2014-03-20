@@ -1,0 +1,33 @@
+{
+  "name": "copy_file_data",
+  "runner": "python",
+  "categories": ["download"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "CheckBox",
+      "name": "flatten_results"
+    },
+    {
+      "type": "FolderLocation",
+      "name": "target_folder"
+    }
+  ],
+  "display": {
+    "en": {
+      "display": "Copy File Data",
+      "description": "copies data to a target folder",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#copy_data"
+    },
+	"params": {
+	  "target_folder": {
+	    "display": "Target Folder",
+	    "description": "folder where all data is copied"
+	  }
+	}
+  }
+}
