@@ -10,13 +10,13 @@ import voyager_tasks
 def run_task(json_file):
     """Main function for running processing tasks."""
     with open(json_file) as data_file:
-        request = json.load(data_file)
         try:
+            request = json.load(data_file)
             __import__(request['task'])
-        except ImportError as ie:
-            sys.stderr.write('Error: {0}.'.format(ie.message))
+            getattr(sys.modules[request['task']], "execute")(request)
+        except (ImportError, ValueError) as ex:
+            sys.stderr.write(repr(ex))
             sys.exit(1)
-        getattr(sys.modules[request['task']], "execute")(request)
 
 
 if __name__ == '__main__':
@@ -33,5 +33,3 @@ if __name__ == '__main__':
     else:
         run_task(sys.argv[1])
     sys.exit(0)
-
-
