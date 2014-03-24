@@ -56,6 +56,8 @@ def execute(request):
                     if not os.path.exists(target_folder):
                         dst = target_folder
                         os.makedirs(dst)
+                    else:
+                        dst = target_folder
                 if os.path.isfile(src_file):
                     if src_file.endswith('.shp'):
                         all_files = get_files(src_file, shp_files)
