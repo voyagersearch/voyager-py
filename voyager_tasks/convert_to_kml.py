@@ -13,10 +13,7 @@ def execute(request):
     converted = 0
     skipped = 0
     parameters = request['params']
-
-    in_data = task_utils.find(lambda p: p['name'] == 'input_items', parameters)
-    docs = in_data.get('response').get('docs')
-    input_items = dict((task_utils.get_feature_data(v), v['name']) for v in docs)
+    input_items = task_utils.get_parameter_value(parameters, 'input_items')
     count = len(input_items)
     if count > 1:
         out_workspace = os.path.join(request['folder'], 'temp')
@@ -28,11 +25,11 @@ def execute(request):
     # Retrieve boundary box extent for input to KML tools.
     extent = ''
     try:
-        ext = task_utils.find(lambda p: p['name'] == 'processing_extent', parameters)['wkt']
+        ext = task_utils.get_parameter_value(parameters, 'processing_extent', 'wkt')
         if not ext == '':
             extent = task_utils.from_wkt(ext, 4326)
     except KeyError:
-        ext = task_utils.find(lambda p: p['name'] == 'processing', parameters)['feature']
+        ext = task_utils.get_parameter_value(parameters, 'processing_extent', 'feature')
         if not ext == '':
             extent = arcpy.Describe(ext).extent
 

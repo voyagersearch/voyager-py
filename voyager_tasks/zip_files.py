@@ -12,11 +12,10 @@ def execute(request):
     """
     zipped = 0
     skipped = 0
-    in_data = task_utils.find(lambda p: p['name'] == 'input_items', request['params'])
-    docs = in_data.get('response').get('docs')
-    input_items = [v['path'] for v in docs]
+    parameters = request['params']
+    input_items = task_utils.get_parameter_value(parameters, 'input_items')
     try:
-        flatten_results = task_utils.find(lambda p: p['name'] == 'flatten_results', request['params'])['value']
+        flatten_results = task_utils.get_parameter_value(parameters, 'flatten_results', 'value')
     except KeyError:
         flatten_results = 'false'
     zip_file_location = request['folder']

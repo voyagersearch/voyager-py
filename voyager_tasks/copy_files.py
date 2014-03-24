@@ -24,19 +24,12 @@ def execute(request):
     :param request: json as a dict.
     """
     parameters = request['params']
-
-    in_data = task_utils.find(lambda p: p['name'] == 'input_items', parameters)
-    docs = in_data.get('response').get('docs')
-    input_items = [v['path'] for v in docs]
-
-    target_folder = task_utils.find(lambda p: p['name'] == 'target_folder', parameters)['value']
-
-    task_folder = request['folder']
-    if not os.path.exists(task_folder):
-        os.makedirs(task_folder)
-
+    input_items = task_utils.get_parameter_value(parameters, 'input_items')
+    target_folder = task_utils.get_parameter_value(parameters, 'target_folder', 'value')
+    if not os.path.exists(request['folder']):
+        os.makedirs(request['folder'])
     try:
-        flatten_results = task_utils.find(lambda p: p['name'] == 'flatten_results', request['params'])['value']
+        flatten_results = task_utils.get_parameter_value(parameters, 'flatten_results', 'value')
     except KeyError:
         target_dirs = os.path.splitdrive(target_folder)[1]
         flatten_results = 'false'
@@ -96,5 +89,4 @@ def execute(request):
         os.path.join(os.path.dirname(__file__), r'supportfiles\_thumb.png'),
         os.path.join(request['folder'], '_thumb.png')
     )
-    task_utils.report(os.path.join(task_folder, '_report.md'), request['task'], copied, skipped)
-    
+    task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], copied, skipped)

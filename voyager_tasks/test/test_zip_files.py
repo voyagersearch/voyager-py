@@ -37,7 +37,7 @@ class TestZipFilesTask(unittest.TestCase):
         __import__(self.request['task'])
         getattr(sys.modules[self.request['task']], "execute")(self.request)
         kmz_files = zipfile.ZipFile(os.path.join(self.temp_folder, 'output.zip')).namelist()
-        self.assertEqual(kmz_files, base_kmz_files)
+        self.assertEqual(sorted(kmz_files), sorted(base_kmz_files))
 
 
 if __name__ == '__main__':

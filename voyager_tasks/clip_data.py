@@ -189,25 +189,22 @@ def execute(request):
     skipped = 0
     status_writer = status.Writer()
     parameters = request['params']
-
-    in_data = task_utils.find(lambda p: p['name'] == 'input_items', parameters)
-    docs = in_data.get('response').get('docs')
-    input_items = dict((task_utils.get_feature_data(v), v['name']) for v in docs)
+    input_items = task_utils.get_parameter_value(parameters, 'input_items')
 
     # Retrieve clip geometry.
     try:
-        clip_area = task_utils.find(lambda p: p['name'] == 'clip_geometry', parameters)['wkt']
+        clip_area = task_utils.get_parameter_value(parameters, 'clip_geometry', 'wkt')
     except KeyError:
         try:
-            clip_area = task_utils.find(lambda p: p['name'] == 'clip_geometry', parameters)['feature']
+            clip_area = task_utils.get_parameter_value(parameters, 'clip_geometry', 'feature')
         except KeyError:
             clip_area = 'POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))'
 
     # Retrieve the coordinate system code.
-    out_coordinate_system = int(task_utils.find(lambda p: p['name'] == 'output_projection', parameters)['code'])
+    out_coordinate_system = int(task_utils.get_parameter_value(parameters, 'output_projection', 'code'))
 
     # Retrieve the output format type.
-    out_format = task_utils.find(lambda p: p['name'] == 'output_format', parameters)['value']
+    out_format = task_utils.get_parameter_value(parameters, 'output_format', 'value')
     out_workspace = os.path.join(request['folder'], 'temp')
     if not os.path.exists(out_workspace):
         os.makedirs(out_workspace)

@@ -13,16 +13,13 @@ def execute(request):
     added = 0
     skipped = 0
     parameters = request['params']
-
-    in_data = task_utils.find(lambda p: p['name'] == 'input_items', parameters)
-    docs = in_data.get('response').get('docs')
-    input_items = dict((task_utils.get_feature_data(v), v['name']) for v in docs)
+    input_items = task_utils.get_parameter_value(parameters, 'input_items')
 
     # Get the target workspace location.
-    output_workspace = task_utils.find(lambda p: p['name'] == 'target_workspace', parameters)['value']
+    output_workspace = task_utils.get_parameter_value(parameters, 'target_workspace', 'value')
 
     # Retrieve the coordinate system code.
-    out_coordinate_system = task_utils.find(lambda p: p['name'] == 'output_projection', parameters)['code']
+    out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
     task_folder = request['folder']
     if not os.path.exists(task_folder):
         os.makedirs(task_folder)

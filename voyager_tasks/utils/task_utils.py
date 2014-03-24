@@ -52,35 +52,40 @@ def clean_up(data_location):
             shutil.rmtree(os.path.join(root, name), True)
 
 
-def find(f, seq):
-    """Return first item in sequence where f(item) == True.
-    :param f: lambda function
-    :param seq: list of items
+def get_parameter_value(parameters, parameter_name, value_key=''):
+    """Returns the parameter value.
+    :param parameters: parameter list
+    :param parameter_name: parameter name
+    :param value_key: parameter key containing the value
     :rtype : str
     """
-    for item in seq:
-        if f(item):
-            return item
+    for item in parameters:
+        if item['name'] == parameter_name:
+            if parameter_name == 'input_items':
+                docs = item['response']['docs']
+                try:
+                    param_value = dict((get_data_path(i), i['name']) for i in docs)
+                except KeyError:
+                    param_value = dict((get_data_path(i), '') for i in docs)
+            else:
+                param_value = item[value_key]
+    return param_value
 
 
-def get_feature_data(item):
-    """Return a valid layer file or dataset path.
-    Describe will fail if the layer file does not exist or
-    if the layer's datasource does not exist.
-
+def get_data_path(item):
+    """Return the layer file or dataset path.
     :param item: dataset path
     :rtype : str
     """
-    import arcpy
     try:
-        dsc = arcpy.Describe(item['[lyrFile]'])
-        return item['[lyrFile]']
-    except Exception:
+        if os.path.exists(item['[lyrFile]']):
+            return item['[lyrFile]']
+    except KeyError:
         pass
     try:
         layer_file = urllib.urlretrieve(item['[lyrURL]'])[0]
         return layer_file
-    except Exception:
+    except (KeyError, IOError):
         return item['path']
 
 
