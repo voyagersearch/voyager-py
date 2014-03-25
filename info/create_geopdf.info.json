@@ -26,12 +26,12 @@
       "type": "StringChoice",
       "name": "attribute_settings",
       "choices": [
-        "none",
-        "layers",
-        "layers_and_features"
+        "NONE",
+        "LAYERS_ONLY",
+        "LAYERS_AND_ATTRIBUTES"
       ],
   	  "advanced":true,
-  	  "value": "layers_and_features"
+  	  "value": "LAYERS_AND_ATTRIBUTES"
     }	
   ],
   "display": {
