@@ -133,7 +133,7 @@ def execute(request):
         # Continue if an error. Process as many as possible.
         except Exception as ex:
             status_writer.send_percent(i/count, 'Failed to add: {0}. {1}.'.format(os.path.basename(ds), repr(ex)), 'add_to_geodatabase')
-            skipped += 0
+            skipped += 1
             pass
     shutil.copyfile(
         os.path.join(os.path.dirname(__file__), r'supportfiles\_thumb.png'),
