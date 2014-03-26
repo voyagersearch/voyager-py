@@ -152,6 +152,14 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
         elif ds.endswith('.gdb'):
             # Add all feature classes to the mxd template.
             arcpy.env.workspace = ds
+            feature_datasets = arcpy.ListDatasets('*', 'Feature')
+            if feature_datasets:
+                for fds in feature_datasets:
+                    arcpy.env.workspace = fds
+                    for fc in arcpy.ListFeatureClasses():
+                        layer = arcpy.management.MakeFeatureLayer(fc, '{0}_'.format(fc))
+                        arcpy.mapping.AddLayer(df, layer.getOutput(0))
+                arcpy.env.workspace = ds
             for fc in arcpy.ListFeatureClasses():
                 layer = arcpy.management.MakeFeatureLayer(fc, '{0}_'.format(fc))
                 arcpy.mapping.AddLayer(df, layer.getOutput(0))
