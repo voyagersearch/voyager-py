@@ -171,6 +171,14 @@ def save_to_layer_file(data_location, include_mxd_layers=True):
     file_gdbs = glob.glob(os.path.join(data_location, '*.gdb'))
     for file_gdb in file_gdbs:
         arcpy.env.workspace = file_gdb
+        feature_datasets = arcpy.ListDatasets('*', 'Feature')
+        if feature_datasets:
+            for fds in feature_datasets:
+                arcpy.env.workspace = fds
+                for fc in arcpy.ListFeatureClasses():
+                    fl = arcpy.management.MakeFeatureLayer(fc, '{0}_'.format(fc))
+                    arcpy.management.SaveToLayerFile(fl, os.path.join(data_location, '{0}.lyr'.format(fc)))
+            arcpy.env.workspace = file_gdb
         for fc in arcpy.ListFeatureClasses():
             fl = arcpy.management.MakeFeatureLayer(fc, '{0}_'.format(fc))
             arcpy.management.SaveToLayerFile(fl, os.path.join(data_location, '{0}.lyr'.format(fc)))
