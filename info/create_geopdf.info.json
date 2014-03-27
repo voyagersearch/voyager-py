@@ -1,6 +1,6 @@
 {
   "name": "create_geopdf",
-  "runner": "pretend",
+  "runner": "python",
   "categories": ["PDF", "Download"],
   "params": [
     {
