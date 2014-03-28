@@ -23,14 +23,14 @@
     "en": 
 	{
       "display": "Add to Geodatabase",
-      "description": "Add input data to an existing or new geodatabase.",
+      "description": "Add input data to an existing geodatabase.",
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#add_to_geodatabase",	  
 	  "params": 
 	  {
 		"target_workspace": 
 		{
 			"display": "Target Workspace",
-			"description": "A geodatabase or feature dataset where data will be copied."
+			"description": "The geodatabase or feature dataset where data will be copied."
 		},		
 		"output_projection": 
 		{
