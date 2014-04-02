@@ -1,6 +1,6 @@
 {
   "name": "write_metadata",
-  "runner": "pretend",
+  "runner": "python",
   "categories": ["metadata"],
   "params": [
       {
