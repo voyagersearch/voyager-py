@@ -68,8 +68,10 @@ def get_parameter_value(parameters, parameter_name, value_key=''):
                     param_value = dict((get_data_path(i), i['name']) for i in docs)
                 except KeyError:
                     param_value = dict((get_data_path(i), '') for i in docs)
+                break
             else:
                 param_value = item[value_key]
+                break
     return param_value
 
 

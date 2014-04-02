@@ -55,7 +55,6 @@ def execute(request):
                 src_xml = os.path.join(arcpy.Describe(item).path, '{0}.xml'.format(os.path.basename(item)))
                 shutil.copyfile(template_xml, src_xml)
                 arcpy.conversion.XSLTransform(src_xml, xslt_file, temp_xml)
-                overwrite = 'true'
 
             # Read in XML
             tree = eTree.parse(temp_xml)
