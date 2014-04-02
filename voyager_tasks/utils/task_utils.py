@@ -59,6 +59,7 @@ def get_parameter_value(parameters, parameter_name, value_key=''):
     :param value_key: parameter key containing the value
     :rtype : str
     """
+    param_value = None
     for item in parameters:
         if item['name'] == parameter_name:
             if parameter_name == 'input_items':
@@ -126,7 +127,7 @@ def get_projection_file(factory_code):
 def make_thumbnail(layer_or_mxd, output_folder):
     """Creates a thumbnail PNG file for the layer file or map document.
 
-    :param dataset: a layer file or document.
+    :param layer_or_mxd: a layer file or document.
     :param output_folder: the output folder where PNG files are saved
     """
     import arcpy
