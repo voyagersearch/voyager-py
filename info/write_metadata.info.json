@@ -1,7 +1,7 @@
 {
   "name": "write_metadata",
   "runner": "pretend",
-  "categories": ["TODO"],
+  "categories": ["metadata"],
   "params": [
       {
       "type": "VoyagerResults",
@@ -11,7 +11,7 @@
     {
       "type": "CheckBox",
       "name": "overwrite"
-    },	
+    },
     {
       "type": "TextArea",
       "name": "summary"
@@ -28,7 +28,7 @@
   "display": {
     "en": {
       "display": "Write metadata",
-      "description": "create or update existing metadata"	  
+      "description": "create or update existing metadata"
     }
   }
 }
