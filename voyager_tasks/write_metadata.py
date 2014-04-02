@@ -122,10 +122,11 @@ def execute(request):
                 # Import the XML file to the item; existing metadata is replaced.
                 arcpy.conversion.MetadataImporter(temp_xml, item)
                 status_writer.send_percent(i/item_count, 'Metadata changed for: {0}.'.format(item), 'write_metadata')
+                updated += 1
             else:
                 status_writer.send_percent(i/item_count, 'No Metadata changes for: {0}.'.format(item), 'write_metadata')
+                skipped += 1
 
-            updated += 1
         except Exception as ex:
             status_writer.send_percent(
                 i/item_count,
