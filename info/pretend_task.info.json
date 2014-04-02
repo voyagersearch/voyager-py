@@ -50,6 +50,11 @@
       "type": "Geometry",
       "name": "clip_geometry",
       "initWithItemExtent": true
+    },
+    {
+      "type": "MapView",
+      "name": "map_view",
+      "initWithItemExtent": true
     }
   ],
   "display": {
