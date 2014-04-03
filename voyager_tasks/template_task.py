@@ -14,8 +14,8 @@ from voyager_tasks.utils import task_utils
 The request is a dictionary loaded from a .json file and contains the parameter information necessary
 to perform the operation. The info folder contains json files that define the parameters of the task.
 Refer to the pretend_task.info.json file for list of parameter types. Create a new json file that
-contains the name of the task with suffix .info.json (e.g. clip_data.info.json). The task_utils module
-contains utility functions and any functions that can be used by multiple tasks should be added there.
+contains the name of the task with the suffix, .info.json (e.g. clip_data.info.json). The task_utils module
+contains utility functions and additional functions that can be used by multiple tasks should be added there.
 The status module can be use to add status to your task."""
 def execute(request):
     """TODO: add documentation string.
