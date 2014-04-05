@@ -27,11 +27,18 @@ def execute(request):
     try:
         ext = task_utils.get_parameter_value(parameters, 'processing_extent', 'wkt')
         if not ext == '':
-            extent = task_utils.from_wkt(ext, 4326)
+            try:
+                sr = arcpy.SpatialReference(4326)
+            except RuntimeError:
+                sr = arcpy.SpatialReference(task_utils.get_projection_file(4326))
+            extent = task_utils.from_wkt(ext, sr)
     except KeyError:
-        ext = task_utils.get_parameter_value(parameters, 'processing_extent', 'feature')
-        if not ext == '':
-            extent = arcpy.Describe(ext).extent
+        try:
+            ext = task_utils.get_parameter_value(parameters, 'processing_extent', 'feature')
+            if not ext == '':
+                extent = arcpy.Describe(ext).extent
+        except KeyError:
+            pass
 
     i = 1.
     status_writer = status.Writer()
