@@ -110,6 +110,19 @@ def from_wkt(wkt, sr):
     return poly
 
 
+def get_spatial_reference(factory_code):
+    """Returns spatial reference object.
+    :param factory_code: The projection's factory code - i.e. 4326 for WGS84
+    :rtype : arcpy.SpatialReference
+    """
+    import arcpy
+    try:
+        sr = arcpy.SpatialReference(int(factory_code))
+    except RuntimeError:
+        sr = arcpy.SpatialReference(get_projection_file(factory_code))
+    return sr
+
+
 def get_projection_file(factory_code):
     """Returns a projection file using the factory code as a lookup.
     This function adds support for ArcGIS 10.0.
@@ -118,7 +131,7 @@ def get_projection_file(factory_code):
     :rtype : str
     """
     import arcpy
-    lu_file = os.path.join(os.getcwd(), 'voyager_tasks/supportfiles/projection_files.json')
+    lu_file = os.path.join(os.path.dirname(os.getcwd()), 'supportfiles/projection_files.json')
     with open(lu_file) as fp:
         prj_lu = json.load(fp)
         arcgis_folder = arcpy.GetInstallInfo()['InstallDir']
