@@ -33,6 +33,8 @@ def execute(request):
 
     # Retrieve the coordinate system code.
     out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
+    if out_coordinate_system:
+        arcpy.env.outputCoordinateSystem = task_utils.get_spatial_reference(out_coordinate_system)
 
     task_folder = request['folder']
     if not os.path.exists(task_folder):
@@ -51,10 +53,6 @@ def execute(request):
     if out_gdb.endswith('.sde') or os.path.dirname(out_gdb).endswith('.sde'):
         status_writer.send_status('Connecting to {0}...'.format(out_gdb))
     arcpy.env.workspace = out_gdb
-
-    # Set the output coordinate system environment.
-    if out_coordinate_system is not None:
-        arcpy.env.outputCoordinateSystem = int(out_coordinate_system)
 
     i = 1.
     count = len(input_items)

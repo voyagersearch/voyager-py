@@ -218,17 +218,11 @@ def execute(request):
         os.makedirs(out_workspace)
 
     if out_coordinate_system is not None:
-        try:
-            out_sr = arcpy.SpatialReference(out_coordinate_system)
-        except RuntimeError:
-            out_sr = arcpy.SpatialReference(task_utils.get_projection_file(out_coordinate_system))
+        out_sr = task_utils.get_spatial_reference(out_coordinate_system)
         arcpy.env.outputCoordinateSystem = out_sr
 
     if clip_area.startswith('POLYGON'):
-        try:
-            gcs_sr = arcpy.SpatialReference(4326)
-        except RuntimeError:
-            gcs_sr = arcpy.SpatialReference(task_utils.get_projection_file(4326))
+        gcs_sr = task_utils.get_spatial_reference(4326)
         gcs_clip_poly = task_utils.from_wkt(clip_area, gcs_sr)
         if not gcs_clip_poly.area > 0:
             gcs_clip_poly = task_utils.from_wkt('POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))', gcs_sr)
@@ -253,10 +247,7 @@ def execute(request):
                     out_sr = dsc.spatialReference
                     arcpy.env.outputCoordinateSystem = out_sr
                 except AttributeError:
-                    try:
-                        out_sr = arcpy.SpatialReference(4326)
-                    except RuntimeError:
-                        out_sr = arcpy.SpatialReference(task_utils.get_projection_file(4326))
+                    out_sr = task_utils.get_spatial_reference(4326)
                     arcpy.env.outputCoordinateSystem = out_sr
 
             # If a file, no need to project the clip area.

@@ -22,20 +22,17 @@ def execute(request):
     if not os.path.exists(out_workspace):
         os.makedirs(out_workspace)
 
-    # Retrieve boundary box extent for input to KML tools.
+    # Get the boundary box extent for input to KML tools.
     extent = ''
     try:
         ext = task_utils.get_parameter_value(parameters, 'processing_extent', 'wkt')
-        if not ext == '':
-            try:
-                sr = arcpy.SpatialReference(4326)
-            except RuntimeError:
-                sr = arcpy.SpatialReference(task_utils.get_projection_file(4326))
+        if ext:
+            sr = task_utils.get_spatial_reference("4326")
             extent = task_utils.from_wkt(ext, sr)
     except KeyError:
         try:
             ext = task_utils.get_parameter_value(parameters, 'processing_extent', 'feature')
-            if not ext == '':
+            if ext:
                 extent = arcpy.Describe(ext).extent
         except KeyError:
             pass
