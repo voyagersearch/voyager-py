@@ -141,6 +141,11 @@ def execute(request):
                     # Clean up temp KML results.
                     arcpy.management.Delete(os.path.join(temp_dir, '{}.lyr'.format(name)))
                     arcpy.management.Delete(kml_layer)
+                else:
+                    status_writer.send_percent(i/count, 'Cannot add {0}.'.format(ds), 'add_to_geodatabase')
+                    i += 1.
+                    skipped += 1
+                    continue
 
             elif dsc.dataType == 'MapDocument':
                 mxd = arcpy.mapping.MapDocument(dsc.catalogPath)
