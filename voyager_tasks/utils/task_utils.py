@@ -81,15 +81,16 @@ def get_data_path(item):
     :rtype : str
     """
     try:
-        if os.path.exists(item['[lyrFile]']):
+        if os.path.exists(item['path']):
+            return item['path']
+        elif os.path.exists(item['[lyrFile]']):
             return item['[lyrFile]']
     except KeyError:
-        pass
-    try:
-        layer_file = urllib.urlretrieve(item['[lyrURL]'])[0]
-        return layer_file
-    except (KeyError, IOError):
-        return item['path']
+        try:
+            layer_file = urllib.urlretrieve(item['[lyrURL]'])[0]
+            return layer_file
+        except (KeyError, IOError):
+            return ''
 
 
 def from_wkt(wkt, sr):
