@@ -17,7 +17,7 @@ def execute(request):
     try:
         flatten_results = task_utils.get_parameter_value(parameters, 'flatten_results', 'value')
     except KeyError:
-        flatten_results = 'false'
+        flatten_results = False
     zip_file_location = request['folder']
     if not os.path.exists(zip_file_location):
         os.makedirs(request['folder'])
@@ -29,7 +29,7 @@ def execute(request):
     with task_utils.ZipFileManager(zip_file, 'w', zipfile.ZIP_DEFLATED) as zipper:
         for in_file in input_items:
             if os.path.isfile(in_file):
-                if flatten_results == 'true':
+                if flatten_results:
                     zipper.write(in_file, os.path.basename(in_file))
                 else:
                     zipper.write(
