@@ -44,7 +44,7 @@
         "LZ77",
         "JPEG",
         "JPEG2000",
-		"PackBits",
+		    "PackBits",
         "LZW",
         "RLE",
         "CCITT_G3",
@@ -60,44 +60,41 @@
       "type": "Integer",
       "name": "compression_quality",
       "advanced":true,
-      "value": 75
+      "value": 75,
+      "min": 1,
+      "max": 100,
     }
   ],
   "display":
   {
-    "en":
-	{
+    "en": 
+    {
       "display": "Mosaic",
       "description": "Mosaic input rasters to a new raster dataset.",
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#mosaic",
-	  "params":
-	  {
-		"processing_extent":
-		{
-			"display": "Clip Region",
-			"description": "Select the clip region"
-		},
-		"output_projection":
-		{
-			"display": "Projection",
-			"description": "The projection factory code for setting the output coordinate system"
-		},
-		"raster_type":
-		{
-			"display": "Output Raster Type",
-			"description": "The type of raster to create."
-		},
-		"compression_method":
-		{
-			"display": "Compression Method",
-			"description": "choose compression method"
-		},
-		"compression_quality":
-		{
-		    "display": "Compression Quality",
-		    "description": "compression quality (1 - 100). Default is 75."
-		}
+  	  "params":
+  	  {
+    		"processing_extent": {
+    			"display": "Clip Region",
+    			"description": "Select the clip region"
+    		},
+    		"output_projection": {
+    			"display": "Projection",
+    			"description": "The projection factory code for setting the output coordinate system"
+    		},
+    		"raster_type": {
+    			"display": "Output Raster Type",
+    			"description": "The type of raster to create."
+    		},
+    		"compression_method": {
+    			"display": "Compression Method",
+    			"description": "choose compression method"
+    		},
+    		"compression_quality": {
+  		    "display": "Compression Quality",
+  		    "description": "compression quality (1 - 100). Default is 75."
+    		}
 	    }
-	 }
+	  }
   }
 }
