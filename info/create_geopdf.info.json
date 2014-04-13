@@ -16,11 +16,21 @@
         "POWER_POINT.mxd",
         "ANSI_D_LND.mxd",
         "ANSI_E_LND.mxd"
-      ]	  
+      ]
     },
     {
       "type": "MapView",
       "name": "map_view"
+    },
+    {
+      "type": "String",
+      "name": "map_title",
+      "value": "My Map"
+     },
+{
+      "type": "String",
+      "name": "map_author",
+      "value": "your name"
     },
     {
       "type": "StringChoice",
@@ -32,7 +42,7 @@
       ],
   	  "advanced":true,
   	  "value": "LAYERS_AND_ATTRIBUTES"
-    }	
+    }
   ],
   "display": {
     "en": {
@@ -48,7 +58,7 @@
             "ANSI_E_LND.mxd": "Large Poster (42\" X 32\")",
             "LETTER_LND.mxd": "Page (8.5\" X 11\")",
             "POWER_POINT.mxd": "Powerpoint"
-          }		  
+          }
         },
     		"map_view": {
           "display": "Map View",
@@ -62,7 +72,7 @@
             "layers": "TODO, copy from arcmap none",
             "layers_and_features": "TODO, copy from arcmap none"
           }
-    		}		
+    		}
       }
     }
   }
