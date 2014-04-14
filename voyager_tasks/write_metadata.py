@@ -26,7 +26,7 @@ def execute(request):
     try:
         overwrite = task_utils.get_parameter_value(parameters, 'overwrite', 'value')
     except KeyError:
-        overwrite = 'false'
+        overwrite = False
 
     if not os.path.exists(request['folder']):
         os.makedirs(request['folder'])
@@ -76,7 +76,7 @@ def execute(request):
                     changes += 1
                 else:
                     for element in summary_element:
-                        if overwrite == 'true' or element.text is None:
+                        if overwrite or element.text is None:
                             element.text = summary
                             changes += 1
 
@@ -88,7 +88,7 @@ def execute(request):
                     changes += 1
                 else:
                     for element in description_element:
-                        if overwrite == 'true' or element.text is None:
+                        if overwrite or element.text is None:
                             element.text = description
                             changes += 1
 
@@ -100,7 +100,7 @@ def execute(request):
                         new_tag = eTree.SubElement(search_element, "keyword")
                         new_tag.text = tag
                         changes += 1
-                elif overwrite == 'false':
+                elif not overwrite:
                     for search_element in search_keys:
                         keyword_elements = search_element.findall('.//keyword')
                         if not keyword_elements:
