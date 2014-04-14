@@ -87,10 +87,14 @@ def get_data_path(item):
             return item['[lyrFile]']
     except KeyError:
         try:
-            layer_file = urllib.urlretrieve(item['[lyrURL]'])[0]
-            return layer_file
-        except (KeyError, IOError):
-            return item['path']
+            import arcpy
+            if arcpy.Exists(item['path']):
+                return item['path']
+            else:
+                layer_file = urllib.urlretrieve(item['[lyrURL]'])[0]
+                return layer_file
+        except (KeyError, IOError, ImportError):
+            return ''
 
 
 def from_wkt(wkt, sr):
