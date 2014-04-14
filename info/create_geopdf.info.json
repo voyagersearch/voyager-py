@@ -26,11 +26,11 @@
       "type": "String",
       "name": "map_title",
       "value": "My Map"
-     },
-{
+    },
+    {
       "type": "String",
       "name": "map_author",
-      "value": "your name"
+      "value": "Your Name"
     },
     {
       "type": "StringChoice",
