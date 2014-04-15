@@ -40,7 +40,10 @@ def execute(request):
 
     input_items = task_utils.get_parameter_value(parameters, 'input_items')
     map_template = task_utils.get_parameter_value(parameters, 'map_template', 'value')
+    map_title = task_utils.get_parameter_value(parameters, 'map_title', 'value')
     attribute_setting = task_utils.get_parameter_value(parameters, 'attribute_settings', 'value')
+    author = task_utils.get_parameter_value(parameters, 'map_author', 'value')
+
     try:
         map_view = task_utils.get_parameter_value(parameters, 'map_view', 'extent')
     except KeyError:
@@ -114,6 +117,14 @@ def execute(request):
     date_element = arcpy.mapping.ListLayoutElements(mxd, 'TEXT_ELEMENT', 'date')
     if date_element:
         date_element[0].text = 'Date: {0}'.format(get_local_date())
+
+    title_element = arcpy.mapping.ListLayoutElements(mxd, 'TEXT_ELEMENT', 'title')
+    if title_element:
+        title_element[0].text = map_title
+
+    author_element = arcpy.mapping.ListLayoutElements(mxd, 'TEXT_ELEMENT', 'author')
+    if author_element:
+        author_element[0].text = '{0} {1}'.format(author_element[0].text, author)
 
     if map_template in ('ANSI_D_LND.mxd', 'ANSI_E_LND.mxd'):
         coord_elements = arcpy.mapping.ListLayoutElements(mxd, 'TEXT_ELEMENT', 'x*')
