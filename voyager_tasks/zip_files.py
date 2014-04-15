@@ -44,11 +44,6 @@ def execute(request):
                 skipped += 1
             i += 1.0
 
-    if zipped == 0:
-        status_writer.send_status('No files were zipped.')
-    else:
-        status_writer.send_status('Zipped {0} files.'.format(zipped))
-
     shutil.copyfile(
         os.path.join(os.path.dirname(__file__), r'supportfiles\_thumb.png'),
         os.path.join(request['folder'], '_thumb.png')
