@@ -40,8 +40,8 @@
         "LAYERS_ONLY",
         "LAYERS_AND_ATTRIBUTES"
       ],
-  	  "advanced":true,
-  	  "value": "LAYERS_AND_ATTRIBUTES"
+      "advanced":true,
+      "value": "LAYERS_AND_ATTRIBUTES"
     }
   ],
   "display": {
@@ -60,11 +60,11 @@
             "POWER_POINT.mxd": "Powerpoint"
           }
         },
-    		"map_view": {
+        "map_view": {
           "display": "Map View",
           "description": "Select the map view extent"
-    		},
-    		"attribute_settings": {
+        },
+        "attribute_settings": {
           "display": "Attribute Settings",
           "description": "Select Feature Attribute Settings",
           "values": {
@@ -72,7 +72,7 @@
             "layers": "Layer Information (TODO!)",
             "layers_and_features": "Layers and Features (TODO!)"
           }
-    		}
+        }
       }
     }
   }
