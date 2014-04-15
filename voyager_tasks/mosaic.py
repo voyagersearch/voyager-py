@@ -25,6 +25,7 @@ def execute(request):
     """Mosaics input raster datasets into a new raster dataset.
     :param request: json as a dict.
     """
+    status_writer = status.Writer()
     parameters = request['params']
     input_items = task_utils.get_parameter_value(parameters, 'input_items')
     out_coordinate_system = int(task_utils.get_parameter_value(parameters, 'output_projection', 'code'))
@@ -63,11 +64,10 @@ def execute(request):
     if not os.path.exists(out_workspace):
         os.makedirs(out_workspace)
 
-    if output_raster_format == 'FileGDB':
+    if output_raster_format == 'FileGDB' or output_raster_format == 'MosaicDataset':
         out_workspace = arcpy.management.CreateFileGDB(out_workspace, 'output.gdb').getOutput(0)
     arcpy.env.workspace = out_workspace
 
-    status_writer = status.Writer()
     pixels = []
     raster_items = []
     bands = collections.defaultdict(int)
@@ -79,9 +79,6 @@ def execute(request):
             raster_items.append(item)
             pixels.append(dsc.pixeltype)
             bands[dsc.bandcount] = 1
-            if len(bands) > 1:
-                status_writer.send_state(status.STAT_FAILED, 'Input rasters must have the same number of bands.')
-                sys.exit(1)
         else:
             status_writer.send_status('{0} is not a raster dataset and will not be processed.'.format(item))
             skipped += 1
@@ -92,42 +89,52 @@ def execute(request):
 
     # Get most common pixel type.
     pixel_type = pixel_types[max(set(pixels), key=pixels.count)]
-    if output_raster_format in ('FileGDB', 'GRID'):
+    if output_raster_format in ('FileGDB', 'GRID', 'MosaicDataset'):
         output_name = arcpy.ValidateTableName('mosaic', out_workspace)
     else:
         output_name = '{0}.{1}'.format(arcpy.ValidateTableName('mosaic', out_workspace), output_raster_format.lower())
 
-    try:
-        if clip_area is not None:
-            ext = '{0} {1} {2} {3}'.format(clip_area.XMin, clip_area.YMin, clip_area.XMax, clip_area.YMax)
-            status_writer.send_status('Running mosaic to new raster...')
-            tmp_mosaic = arcpy.MosaicToNewRaster_management(
-                raster_items,
-                out_workspace,
-                'tmpMosaic',
-                out_coordinate_system,
-                pixel_type,
-                number_of_bands=bands.keys()[0]
-            )
-            status_writer.send_status('Clipping output mosaic...')
-            arcpy.Clip_management(tmp_mosaic, ext, output_name)
-            arcpy.Delete_management(tmp_mosaic)
-        else:
-            status_writer.send_status('Running mosaic to new raster...')
-            arcpy.MosaicToNewRaster_management(raster_items,
-                                               out_workspace,
-                                               output_name,
-                                               out_coordinate_system,
-                                               pixel_type, number_of_bands=bands.keys()[0])
-    except arcpy.ExecuteError:
-        status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
-        task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], 0, len(raster_items))
-        sys.exit(1)
+    if output_raster_format == 'MosaicDataset':
+        try:
+            mosaic_ds = arcpy.CreateMosaicDataset_management(out_workspace, output_name, out_sr, max(bands), pixel_type)
+            arcpy.AddRastersToMosaicDataset_management(mosaic_ds, 'Raster Dataset', raster_items)
+        except arcpy.ExecuteError:
+            status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
+            sys.exit(1)
+    else:
+        try:
+            if len(bands) > 1:
+                status_writer.send_state(status.STAT_FAILED, 'Input rasters must have the same number of bands.')
+                sys.exit(1)
+            if clip_area is not None:
+                ext = '{0} {1} {2} {3}'.format(clip_area.XMin, clip_area.YMin, clip_area.XMax, clip_area.YMax)
+                status_writer.send_status('Running mosaic to new raster...')
+                tmp_mosaic = arcpy.MosaicToNewRaster_management(
+                    raster_items,
+                    out_workspace,
+                    'tmpMosaic',
+                    out_coordinate_system,
+                    pixel_type,
+                    number_of_bands=bands.keys()[0]
+                )
+                status_writer.send_status('Clipping output mosaic...')
+                arcpy.Clip_management(tmp_mosaic, ext, output_name)
+                arcpy.Delete_management(tmp_mosaic)
+            else:
+                status_writer.send_status('Running mosaic to new raster...')
+                arcpy.MosaicToNewRaster_management(raster_items,
+                                                   out_workspace,
+                                                   output_name,
+                                                   out_coordinate_system,
+                                                   pixel_type, number_of_bands=bands.keys()[0])
+        except arcpy.ExecuteError:
+            status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
+            task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], 0, len(raster_items))
+            sys.exit(1)
 
     if arcpy.env.workspace.endswith('.gdb'):
         out_workspace = os.path.dirname(arcpy.env.workspace)
     zip_file = task_utils.zip_data(out_workspace, 'output.zip')
-    status_writer.send_status('Created the output zip file.')
     shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
     shutil.copyfile(
         os.path.join(os.path.dirname(__file__), r'supportfiles\_thumb.png'),

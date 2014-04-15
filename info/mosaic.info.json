@@ -33,7 +33,8 @@
         "PNG",
         "TIF",
         "GRID",
-        "FileGDB"
+        "FileGDB",
+        "MosaicDataset"
       ],
   	  "value": "FileGDB"
     },
@@ -44,7 +45,7 @@
         "LZ77",
         "JPEG",
         "JPEG2000",
-		    "PackBits",
+		"PackBits",
         "LZW",
         "RLE",
         "CCITT_G3",
@@ -67,7 +68,7 @@
   ],
   "display":
   {
-    "en": 
+    "en":
     {
       "display": "Mosaic",
       "description": "Mosaic input rasters to a new raster dataset.",
