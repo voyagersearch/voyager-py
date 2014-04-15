@@ -1,10 +1,12 @@
 """Utility functions for voyager tasks."""
 import os
+import sys
 import glob
 import json
 import shutil
 import urllib
 import zipfile
+import status
 
 
 class ZipFileManager(zipfile.ZipFile):
@@ -61,17 +63,24 @@ def get_parameter_value(parameters, parameter_name, value_key=''):
     """
     param_value = None
     for item in parameters:
-        if item['name'] == parameter_name:
-            if parameter_name == 'input_items':
-                docs = item['response']['docs']
-                try:
-                    param_value = dict((get_data_path(i), i['name']) for i in docs)
-                except KeyError:
-                    param_value = dict((get_data_path(i), '') for i in docs)
-                break
-            else:
-                param_value = item[value_key]
-                break
+        try:
+            if item['name'] == parameter_name:
+                if parameter_name == 'input_items':
+                    docs = item['response']['docs']
+                    try:
+                        param_value = dict((get_data_path(i), i['name']) for i in docs)
+                    except KeyError:
+                        param_value = dict((get_data_path(i), '') for i in docs)
+                    break
+                else:
+                    param_value = item[value_key]
+                    break
+        except IOError:
+            pass
+    if param_value is None:
+        status_writer = status.Writer()
+        status_writer.send_state(status.STAT_FAILED, 'All results are invalid or do not exist.')
+        sys.exit(1)
     return param_value
 
 
@@ -85,16 +94,20 @@ def get_data_path(item):
             return item['path']
         elif os.path.exists(item['[lyrFile]']):
             return item['[lyrFile]']
+        else:
+            layer_file = urllib.urlretrieve(item['[lyrURL]'])[0]
+            return layer_file
     except KeyError:
         try:
-            import arcpy
-            if arcpy.Exists(item['path']):
-                return item['path']
-            else:
-                layer_file = urllib.urlretrieve(item['[lyrURL]'])[0]
-                return layer_file
+            # It may be Esri geodatabase data, Esri GRID or Esri Coverage.
+            if os.path.splitext(item['path'])[1] == '':
+                import arcpy
+                if arcpy.Exists(item['path']):
+                    return item['path']
+                else:
+                    raise IOError
         except (KeyError, IOError, ImportError):
-            return None
+            raise IOError
 
 
 def from_wkt(wkt, sr):
