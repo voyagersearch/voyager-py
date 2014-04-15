@@ -94,7 +94,7 @@ def get_data_path(item):
                 layer_file = urllib.urlretrieve(item['[lyrURL]'])[0]
                 return layer_file
         except (KeyError, IOError, ImportError):
-            return ''
+            return None
 
 
 def from_wkt(wkt, sr):
