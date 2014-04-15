@@ -81,7 +81,7 @@ def execute(request):
             bands[dsc.bandcount] = 1
             if len(bands) > 1:
                 status_writer.send_state(status.STAT_FAILED, 'Input rasters must have the same number of bands.')
-                return
+                sys.exit(1)
         else:
             status_writer.send_status('{0} is not a raster dataset and will not be processed.'.format(item))
             skipped += 1
