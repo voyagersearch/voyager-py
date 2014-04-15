@@ -156,8 +156,5 @@ def execute(request):
 
     status_writer.send_status('Creating output GeoPDF...')
     arcpy.mapping.ExportToPDF(mxd, os.path.join(request['folder'], 'output.pdf'), layers_attributes=attribute_setting)
-    shutil.copyfile(
-        os.path.join(os.path.dirname(__file__), r'supportfiles\_thumb.png'),
-        os.path.join(request['folder'], '_thumb.png')
-    )
+    shutil.copy2(os.path.join(os.path.dirname(os.getcwd()), '_thumb.png'), request['folder'])
     task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], added_to_map, skipped)
