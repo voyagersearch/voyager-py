@@ -27,6 +27,7 @@ STAT_SUCCESS = "SUCCESS"
 STAT_FAILED = "FAILED"
 STAT_IDLE = "IDLE"
 STAT_STOPPING = "STOPPING"
+STAT_WARNING = "WARNING"
 
 
 class Writer:
@@ -107,4 +108,3 @@ class Writer:
         self._send(S_KEY_STATE, statev)
         if msg:
             self._send(S_KEY_MSG, msg)
-
