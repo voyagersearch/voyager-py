@@ -86,6 +86,10 @@ def execute(request):
             status_writer.send_status('{0} is not a raster dataset and will not be processed.'.format(item))
             skipped += 1
 
+    if not raster_items:
+        status_writer.send_state(status.STAT_FAILED, 'All results are invalid and cannot mosaic.')
+        sys.exit(1)
+
     # Get most common pixel type.
     pixel_type = pixel_types[max(set(pixels), key=pixels.count)]
     if output_raster_format in ('FileGDB', 'GRID'):
@@ -130,3 +134,7 @@ def execute(request):
         os.path.join(request['folder'], '_thumb.png')
     )
     task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], len(raster_items), skipped)
+
+    # Update state if necessary.
+    if skipped > 0:
+        status_writer.send_state(status.STAT_WARNING, '{0} results could not mosaic.'.format(skipped))

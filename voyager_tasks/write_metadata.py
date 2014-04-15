@@ -1,5 +1,6 @@
 """Creates or updates existing metadata."""
 import os
+import sys
 import re
 import tempfile
 import xml.etree.cElementTree as eTree
@@ -141,3 +142,10 @@ def execute(request):
         os.path.join(request['folder'], '_thumb.png')
     )
     task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], updated, skipped)
+
+    # Update state if necessary.
+    if updated == 0:
+        status_writer.send_state(status.STAT_FAILED, 'Could not write metadata for all results.')
+        sys.exit(1)
+    if skipped > 0:
+        status_writer.send_state(status.STAT_WARNING, 'Could not write metadata for {0} results.'.format(skipped))

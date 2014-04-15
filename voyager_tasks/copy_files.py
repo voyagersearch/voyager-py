@@ -1,4 +1,5 @@
 import os
+import sys
 import glob
 import shutil
 from voyager_tasks.utils import status
@@ -92,3 +93,10 @@ def execute(request):
         os.path.join(request['folder'], '_thumb.png')
     )
     task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], copied, skipped)
+
+    # Update state if necessary.
+    if copied == 0:
+        status_writer.send_state(status.STAT_FAILED, 'All results failed to copy.')
+        sys.exit(1)
+    if skipped > 0:
+        status_writer.send_state(status.STAT_WARNING, '{0} results could not be copied.'.format(skipped))

@@ -1,5 +1,6 @@
 """Copies data to an existing geodatabase."""
 import os
+import sys
 import shutil
 import tempfile
 import arcpy
@@ -191,4 +192,10 @@ def execute(request):
         os.path.join(request['folder'], '_thumb.png')
     )
     task_utils.report(os.path.join(task_folder, '_report.md'), request['task'], added, skipped)
-# End add_to_gdb function
+
+    # Update state if necessary.
+    if added == 0:
+        status_writer.send_state(status.STAT_FAILED, 'All results failed to be added.')
+        sys.exit(1)
+    elif skipped > 0:
+        status_writer.send_state(status.STAT_WARNING, '{0} results could not be added.'.format(skipped))

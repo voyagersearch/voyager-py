@@ -1,5 +1,6 @@
 """Creates a GeoPDF document containing the input items."""
 import os
+import sys
 import datetime
 import locale
 import shutil
@@ -97,7 +98,7 @@ def execute(request):
                 layer = None
                 added_to_map += 1
             else:
-                print('{0} is not a supported dataset type.'.format(item))
+                status_writer.send_status('{0} is not a supported dataset type.'.format(item))
                 skipped += 1
         except Exception as ex:
             status_writer.send_status('Failed to add: {0}. {1}.'.format(os.path.basename(item), repr(ex)))
@@ -155,6 +156,15 @@ def execute(request):
                 e.text = new_text
 
     status_writer.send_status('Creating output GeoPDF...')
-    arcpy.mapping.ExportToPDF(mxd, os.path.join(request['folder'], 'output.pdf'), layers_attributes=attribute_setting)
+    if added_to_map > 0:
+        arcpy.mapping.ExportToPDF(mxd, os.path.join(request['folder'], 'output.pdf'), layers_attributes=attribute_setting)
+    else:
+        status_writer.send_state(status.STAT_FAILED, 'No results can be exported to PDF.')
+        sys.exit(1)
+
     shutil.copy2(os.path.join(os.path.dirname(os.getcwd()), '_thumb.png'), request['folder'])
     task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], added_to_map, skipped)
+
+    # Update state if necessary.
+    if skipped > 0:
+        status_writer.send_state(status.STAT_WARNING, '{0} results could not be added to the PDF.'.format(skipped))

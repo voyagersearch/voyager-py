@@ -1,5 +1,6 @@
 """Converts data to kml (.kmz)."""
 import os
+import sys
 import shutil
 import arcpy
 from voyager_tasks.utils import status
@@ -143,4 +144,9 @@ def execute(request):
         os.path.join(request['folder'], '_thumb.png')
     )
     task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], converted, skipped)
-# End execute function
+    # Update state if necessary.
+    if converted == 0:
+        status_writer.send_state(status.STAT_FAILED, 'All results failed to convert.')
+        sys.exit(1)
+    elif skipped > 0:
+        status_writer.send_state(status.STAT_WARNING, '{0} results could not be converted.'.format(skipped))

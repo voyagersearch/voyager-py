@@ -339,7 +339,7 @@ def execute(request):
                         f = arcpy.management.Copy(ds, os.path.join(os.path.dirname(out_workspace), out_name))
                     else:
                         f = arcpy.management.Copy(ds, os.path.join(out_workspace, out_name))
-                    status_writer.send_percent(i/count, 'copied file {0}.'.format(dsc.name), 'clip_data')
+                    status_writer.send_percent(i/count, 'copied file {0}'.format(dsc.name), 'clip_data')
                     clipped += 1
                     if out_format in ('LPK', 'MPK'):
                         files_to_package.append(f.getOutput(0))
@@ -350,12 +350,12 @@ def execute(request):
             elif dsc.dataType == 'MapDocument':
                 clip_mxd_layers(dsc.catalogPath, clip_poly)
 
-            status_writer.send_percent(i/count, 'clipped {0}.'.format(dsc.name), 'clip_data')
+            status_writer.send_percent(i/count, 'clipped {0}'.format(dsc.name), 'clip_data')
             i += 1.
             clipped += 1
         # Continue. Process as many as possible.
         except Exception as ex:
-            status_writer.send_percent(i/count, 'Skipped: {0}. {1}.'.format(os.path.basename(ds), repr(ex)), 'clip_data')
+            status_writer.send_percent(i/count, 'Skipped {0}: {1}'.format(os.path.basename(ds), repr(ex)), 'clip_data')
             i += 1.
             skipped += 1
             pass
@@ -377,12 +377,16 @@ def execute(request):
             zip_file = task_utils.zip_data(out_workspace, 'output.zip')
             status_writer.send_status('Created the output zip file.')
             shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
-    else:
-        status_writer.send_status('No clip results.')
 
     shutil.copyfile(
         os.path.join(os.path.dirname(__file__), r'supportfiles\_thumb.png'),
         os.path.join(request['folder'], '_thumb.png')
     )
     task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], clipped, skipped)
-# End clip_data function
+
+    # Update state if necessary.
+    if clipped == 0:
+        status_writer.send_state(status.STAT_FAILED, 'All results failed to clip.')
+        sys.exit(1)
+    elif skipped > 0:
+        status_writer.send_state(status.STAT_WARNING, '{0} results could not be clipped.'.format(skipped))
