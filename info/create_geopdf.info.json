@@ -68,9 +68,9 @@
           "display": "Attribute Settings",
           "description": "Select Feature Attribute Settings",
           "values": {
-            "none": "No Layers or Features (TODO!!!)",
-            "layers": "Layer Information (TODO!)",
-            "layers_and_features": "Layers and Features (TODO!)"
+            "NONE": "No Layers or Features (TODO - copy from ArcMap)",
+            "LAYERS_ONLY": "Layer Information (TODO - copy from ArcMap)",
+            "LAYERS_AND_ATTRIBUTES": "Layers and Features (TODO - copy from ArcMap)"
           }
         }
       }
