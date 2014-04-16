@@ -76,7 +76,7 @@
     "en":
     {
       "display": "Mosaic",
-      "description": "Mosaic input rasters to a new raster dataset or mosaic dataset.",
+      "description": "Mosaic input rasters to a new raster dataset or a mosaic dataset in an existing workspace.",
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#mosaic",
   	  "params":
   	  {
@@ -84,6 +84,11 @@
     			"display": "Clip Region",
     			"description": "Select the clip region"
     		},
+    		"target_workspace": {
+    		    "display": "Target Workspace",
+    		    "description": "The existing geodatabase or folder where the new output dataset is to be created."
+    		},
+    		}
     		"output_projection": {
     			"display": "Projection",
     			"description": "The projection factory code for setting the output coordinate system"
