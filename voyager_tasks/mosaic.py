@@ -27,43 +27,43 @@ def execute(request):
     """
     status_writer = status.Writer()
     parameters = request['params']
-    input_items = task_utils.get_parameter_value(parameters, 'input_items')
-    out_coordinate_system = int(task_utils.get_parameter_value(parameters, 'output_projection', 'code'))
-    # Get the clip region as an extent object.
-    try:
-        clip_area = task_utils.get_parameter_value(parameters, 'processing_extent', 'wkt')
-        # WKT coordinates for each task are always WGS84.
-        gcs_sr = task_utils.get_spatial_reference(4326)
-        clip_area = task_utils.from_wkt(clip_area, gcs_sr)
-        if not clip_area.area > 0:
-            clip_area = task_utils.from_wkt('POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))', gcs_sr)
-        if out_coordinate_system:
-            out_sr = task_utils.get_spatial_reference(out_coordinate_system)
-            if not out_sr.name == gcs_sr.name:
-                try:
-                    geo_transformation = arcpy.ListTransformations(gcs_sr, out_sr)[0]
-                    clip_area = clip_area.projectAs(out_sr, geo_transformation)
-                except AttributeError:
-                    clip_area = clip_area.projectAs(out_sr)
-        clip_area = clip_area.extent
-        arcpy.env.outputCoordinateSystem = out_sr
-    except KeyError:
-        try:
-            clip_area = task_utils.get_parameter_value(parameters, 'processing_extent', 'feature')
-            clip_area = arcpy.Describe(clip_area).extent
-        except KeyError:
-            clip_area = None
-
+    input_items = task_utils.get_input_items(parameters)
+    out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
     # Advanced options
     output_raster_format = task_utils.get_parameter_value(parameters, 'raster_format', 'value')
     compression_method = task_utils.get_parameter_value(parameters, 'compression_method', 'value')
     compression_quality = task_utils.get_parameter_value(parameters, 'compression_quality', 'value')
     arcpy.env.compression = '{0} {1}'.format(compression_method, compression_quality)
 
+    if not output_raster_format == 'MosaicDataset':
+        # Get the clip region as an extent object.
+        try:
+            clip_area = task_utils.get_parameter_value(parameters, 'processing_extent', 'wkt')
+            # WKT coordinates for each task are always WGS84.
+            gcs_sr = task_utils.get_spatial_reference(4326)
+            clip_area = task_utils.from_wkt(clip_area, gcs_sr)
+            if not clip_area.area > 0:
+                clip_area = task_utils.from_wkt('POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))', gcs_sr)
+            if out_coordinate_system:
+                out_sr = task_utils.get_spatial_reference(int(out_coordinate_system))
+                if not out_sr.name == gcs_sr.name:
+                    try:
+                        geo_transformation = arcpy.ListTransformations(gcs_sr, out_sr)[0]
+                        clip_area = clip_area.projectAs(out_sr, geo_transformation)
+                    except AttributeError:
+                        clip_area = clip_area.projectAs(out_sr)
+            clip_area = clip_area.extent
+            arcpy.env.outputCoordinateSystem = out_sr
+        except KeyError:
+            try:
+                clip_area = task_utils.get_parameter_value(parameters, 'processing_extent', 'feature')
+                clip_area = arcpy.Describe(clip_area).extent
+            except KeyError:
+                clip_area = None
+
     out_workspace = os.path.join(request['folder'], 'temp')
     if not os.path.exists(out_workspace):
         os.makedirs(out_workspace)
-
     if output_raster_format == 'FileGDB' or output_raster_format == 'MosaicDataset':
         out_workspace = arcpy.management.CreateFileGDB(out_workspace, 'output.gdb').getOutput(0)
     arcpy.env.workspace = out_workspace
@@ -77,7 +77,8 @@ def execute(request):
         dsc = arcpy.Describe(item)
         if dsc.datasettype == 'RasterDataset':
             raster_items.append(item)
-            pixels.append(dsc.pixeltype)
+            if hasattr(dsc, 'pixeltype'):
+                pixels.append(dsc.pixeltype)
             bands[dsc.bandcount] = 1
         else:
             status_writer.send_status('{0} is not a raster dataset and will not be processed.'.format(item))
@@ -96,7 +97,13 @@ def execute(request):
 
     if output_raster_format == 'MosaicDataset':
         try:
-            mosaic_ds = arcpy.CreateMosaicDataset_management(out_workspace, output_name, out_sr, max(bands), pixel_type)
+            if out_coordinate_system == '':
+                out_coordinate_system = raster_items[0]
+            mosaic_ds = arcpy.CreateMosaicDataset_management(out_workspace,
+                                                             output_name,
+                                                             out_coordinate_system,
+                                                             max(bands),
+                                                             pixel_type)
             arcpy.AddRastersToMosaicDataset_management(mosaic_ds, 'Raster Dataset', raster_items)
         except arcpy.ExecuteError:
             status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))

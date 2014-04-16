@@ -54,34 +54,46 @@ def clean_up(data_location):
             shutil.rmtree(os.path.join(root, name), True)
 
 
-def get_parameter_value(parameters, parameter_name, value_key=''):
+def get_parameter_value(parameters, parameter_name, value_key='value'):
     """Returns the parameter value.
     :param parameters: parameter list
     :param parameter_name: parameter name
     :param value_key: parameter key containing the value
     :rtype : str
     """
-    param_value = None
     for item in parameters:
-        try:
-            if item['name'] == parameter_name:
-                if parameter_name == 'input_items':
-                    docs = item['response']['docs']
-                    try:
-                        param_value = dict((get_data_path(i), i['name']) for i in docs)
-                    except KeyError:
-                        param_value = dict((get_data_path(i), '') for i in docs)
-                    break
-                else:
-                    param_value = item[value_key]
-                    break
-        except IOError:
-            pass
-    if param_value is None:
-        status_writer = status.Writer()
-        status_writer.send_state(status.STAT_FAILED, 'All results are invalid or do not exist.')
-        sys.exit(1)
-    return param_value
+        if item['name'] == parameter_name:
+            try:
+                param_value = item[value_key]
+                return param_value
+            except KeyError:
+                return ''
+
+
+def get_input_items(parameters):
+    """Get the input search result items and output names if supplied.
+    :param: parameters: parameter list
+    :rtype: dict
+    """
+    results = {}
+    for item in parameters:
+        if item['name'] == 'input_items':
+            docs = item['response']['docs']
+            try:
+                try:
+                    for i in docs:
+                        results[get_data_path(i)] = i['name']
+                except KeyError:
+                    for i in docs:
+                        results[get_data_path(i)] = ''
+            except IOError:
+                pass
+            if not results:
+                status_writer = status.Writer()
+                status_writer.send_state(status.STAT_FAILED, 'All results are invalid or do not exist.')
+                sys.exit(1)
+            break
+    return results
 
 
 def get_data_path(item):

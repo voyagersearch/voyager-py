@@ -25,7 +25,7 @@ def execute(request):
     :param request: json as a dict.
     """
     parameters = request['params']
-    input_items = task_utils.get_parameter_value(parameters, 'input_items')
+    input_items = task_utils.get_input_items(parameters)
     target_folder = task_utils.get_parameter_value(parameters, 'target_folder', 'value')
     if not os.path.exists(request['folder']):
         os.makedirs(request['folder'])

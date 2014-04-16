@@ -197,7 +197,7 @@ def execute(request):
     skipped = 0
     status_writer = status.Writer()
     parameters = request['params']
-    input_items = task_utils.get_parameter_value(parameters, 'input_items')
+    input_items = task_utils.get_input_items(parameters)
 
     # Retrieve clip geometry.
     try:
@@ -209,7 +209,7 @@ def execute(request):
             clip_area = 'POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))'
 
     # Retrieve the coordinate system code.
-    out_coordinate_system = int(task_utils.get_parameter_value(parameters, 'output_projection', 'code'))
+    out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
 
     # Retrieve the output format type.
     out_format = task_utils.get_parameter_value(parameters, 'output_format', 'value')
@@ -217,7 +217,7 @@ def execute(request):
     if not os.path.exists(out_workspace):
         os.makedirs(out_workspace)
 
-    if out_coordinate_system is not None:
+    if out_coordinate_system:
         out_sr = task_utils.get_spatial_reference(out_coordinate_system)
         arcpy.env.outputCoordinateSystem = out_sr
 
@@ -242,7 +242,7 @@ def execute(request):
             dsc = arcpy.Describe(ds)
 
             # If no output coord. system, get output spatial reference from input.
-            if out_coordinate_system is None:
+            if out_coordinate_system == '':
                 try:
                     out_sr = dsc.spatialReference
                     arcpy.env.outputCoordinateSystem = out_sr

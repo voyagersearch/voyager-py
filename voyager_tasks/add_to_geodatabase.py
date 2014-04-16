@@ -27,7 +27,7 @@ def execute(request):
     skipped = 0
     status_writer = status.Writer()
     parameters = request['params']
-    input_items = task_utils.get_parameter_value(parameters, 'input_items')
+    input_items = task_utils.get_input_items(parameters)
 
     # Get the target workspace location.
     out_gdb = task_utils.get_parameter_value(parameters, 'target_workspace', 'value')

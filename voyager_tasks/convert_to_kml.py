@@ -14,7 +14,7 @@ def execute(request):
     converted = 0
     skipped = 0
     parameters = request['params']
-    input_items = task_utils.get_parameter_value(parameters, 'input_items')
+    input_items = task_utils.get_input_items(parameters)
     count = len(input_items)
     if count > 1:
         out_workspace = os.path.join(request['folder'], 'temp')

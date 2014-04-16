@@ -39,7 +39,7 @@ def execute(request):
     status_writer = status.Writer()
     parameters = request['params']
 
-    input_items = task_utils.get_parameter_value(parameters, 'input_items')
+    input_items = task_utils.get_input_items(parameters)
     map_template = task_utils.get_parameter_value(parameters, 'map_template', 'value')
     map_title = task_utils.get_parameter_value(parameters, 'map_title', 'value')
     attribute_setting = task_utils.get_parameter_value(parameters, 'attribute_settings', 'value')

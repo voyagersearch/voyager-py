@@ -14,7 +14,7 @@ def execute(request):
     zipped = 0
     skipped = 0
     parameters = request['params']
-    input_items = task_utils.get_parameter_value(parameters, 'input_items')
+    input_items = task_utils.get_input_items(parameters)
     try:
         flatten_results = task_utils.get_parameter_value(parameters, 'flatten_results', 'value')
     except KeyError:

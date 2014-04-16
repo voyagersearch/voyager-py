@@ -18,7 +18,7 @@ def execute(request):
     :param request: json as a dict.
     """
     parameters = request['params']
-    input_items = task_utils.get_parameter_value(parameters, 'input_items')
+    input_items = task_utils.get_input_items(parameters)
     summary = task_utils.get_parameter_value(parameters, 'summary', 'value')
     description = task_utils.get_parameter_value(parameters, 'description', 'value')
     tags = task_utils.get_parameter_value(parameters, 'tags', 'value')
