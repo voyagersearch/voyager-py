@@ -25,10 +25,32 @@
       "name": "description"
     }
   ],
-  "display": {
-    "en": {
+  "display":
+  {
+    "en":
+    {
       "display": "Write metadata",
-      "description": "create or update existing metadata"
+      "description": "Create or update existing metadata",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#zip_files",
+      "params":
+      {
+      "overwrite": {
+        "display": "Overwrite",
+        "description": "Overwrite existing metadata information; default is do not overwrite."
+        },
+      "summary": {
+        "display": "Summary",
+        "description": "A short summary stating the purpose of this data."
+        },
+      "tags": {
+        "display": "Tags",
+        "description": "Keywords that can be used to search for this data."
+        },
+      "description": {
+        "display": "Description",
+        "description": "A brief narrative of the data, also known as an abstract."
+        }
+      }
     }
   }
 }

@@ -15,11 +15,21 @@
       "required": true
     }
   ],
-  "display": {
-    "en": {
+  "display":
+  {
+    "en":
+    {
       "display": "Convert to KML",
-      "description": "Converts input data into Keyhole Markup Language (KML). Each KML is distributed as a .kmz file.",
-      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#convert_to_kml"
+      "description": "Converts feature or raster data into Keyhole Markup Language",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#convert_to_kml",
+      "params":
+	  {
+		"processing_extent":
+		{
+			"display": "Processing Extent",
+			"description": "The geographic extent of the area to be exported (in the WGS84 coordinate system). If not specified, the full extent of inputs is used."
+		}
+	  }
     }
   }
 }

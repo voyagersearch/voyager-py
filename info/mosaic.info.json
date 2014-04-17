@@ -71,29 +71,29 @@
     "en":
     {
       "display": "Mosaic",
-      "description": "Mosaic input rasters to a new raster dataset.",
+      "description": "Mosaic input rasters to a new raster dataset where the result is to be downloaded",
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#mosaic",
   	  "params":
   	  {
     		"processing_extent": {
     			"display": "Clip Region",
-    			"description": "Select the clip region"
+    			"description": "The geographic extent of the rectangle or polygon used to clip the output mosaic dataset. This is not used when output format is a MosaicDataset"
     		},
     		"output_projection": {
     			"display": "Projection",
-    			"description": "The projection factory code for setting the output coordinate system"
+    			"description": "The output projection."
     		},
     		"raster_type": {
     			"display": "Output Raster Type",
-    			"description": "The type of raster to create."
+    			"description": "The type of output raster."
     		},
     		"compression_method": {
     			"display": "Compression Method",
-    			"description": "choose compression method"
+    			"description": "The compression method; default LZ77 preserves all raster cell values."
     		},
     		"compression_quality": {
   		    "display": "Compression Quality",
-  		    "description": "compression quality (1 - 100). Default is 75."
+  		    "description": "When JPEG, JPEG_2000, or JPEG_YCbCr, compression quality (1-100) can be chosen."
     		}
 	    }
 	  }

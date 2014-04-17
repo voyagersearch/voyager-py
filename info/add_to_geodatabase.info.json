@@ -12,31 +12,31 @@
       "type": "CatalogPath",
       "name": "target_workspace",
 	  "required": true
-    },	
+    },
     {
       "type": "Projection",
       "name": "output_projection"
     }
   ],
-  "display": 
+  "display":
   {
-    "en": 
+    "en":
 	{
       "display": "Add to Geodatabase",
       "description": "Add input data to an existing geodatabase.",
-      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#add_to_geodatabase",	  
-	  "params": 
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#add_to_geodatabase",
+	  "params":
 	  {
-		"target_workspace": 
+		"target_workspace":
 		{
 			"display": "Target Workspace",
-			"description": "The geodatabase or feature dataset where data will be copied."
-		},		
-		"output_projection": 
+			"description": "The geodatabase or feature dataset where the data will be copied."
+		},
+		"output_projection":
 		{
 			"display": "Projection",
-			"description": "The projection factory code for setting the output coordinate system."
-		}			  	  
+			"description": "The output projection."
+		}
 	  }
 	 }
   }

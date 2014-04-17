@@ -32,12 +32,20 @@
   "display": {
     "en": {
       "display": "Clip Data",
-      "description": "Take input data and clip it to various formats (FileGDB, etc)",
+      "description": "Clip data within the clip region; multiple output formats are supported",
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#clip_data",
       "params": {
         "clip_geometry": {
           "display": "Clip Geometry",
-          "description": "Select a region to clip"
+          "description": "The geographic extent or polygon used to clip the data. If not specified, the input results are copied."
+        },
+        "output_projection": {
+          "display": "Projection",
+          "description": "The output projection."
+        },
+        "output_format": {
+          "display": "Output Format",
+          "description": "The output format."
         }
       }
     },

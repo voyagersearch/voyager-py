@@ -17,17 +17,24 @@
       "name": "target_folder"
     }
   ],
-  "display": {
-    "en": {
+  "display":
+  {
+    "en":
+    {
       "display": "Copy Files",
-      "description": "copies files to a target folder",
-      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#copy_files"
-    },
-	"params": {
-	  "target_folder": {
-	    "display": "Target Folder",
-	    "description": "folder where all data is copied"
-	  }
-	}
+      "description": "Copies files to an existing folder",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#copy_files",
+	  "params":
+	  {
+	    "flatten_results": {
+	      "display": "Flatten Results",
+	      "description": "Flatten results; default is to maintain the file directory structure."
+	    },
+	    "target_folder": {
+	      "display": "Target Folder",
+	      "description": "An existing folder where all files are copied."
+	    }
+ 	  }
+    }
   }
 }

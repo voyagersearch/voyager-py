@@ -81,14 +81,14 @@
   {
     "en":
     {
-      "display": "Mosaic",
-      "description": "Mosaic input rasters to a new raster dataset or a mosaic dataset in an existing workspace.",
+      "display": "Mosaic to Workspace",
+      "description": "Mosaic input rasters to a new dataset in an existing workspace",
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#mosaic_to_workspace",
   	  "params":
   	  {
     		"target_workspace": {
   		    "display": "Target Workspace",
-  		    "description": "The existing geodatabase or folder where the new output dataset is to be created."
+  		    "description": "The existing geodatabase or folder where the new output dataset is to be created. When using output formats, FileGDB and MosaicDataset, the target must be a Geodatabase."
     		},
     		"output_dataset_name": {
     		"display": "Output Dataset Name",

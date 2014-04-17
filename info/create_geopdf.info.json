@@ -42,7 +42,7 @@
         "LAYERS_AND_ATTRIBUTES"
       ],
       "advanced":true,
-      "value": "LAYERS_AND_ATTRIBUTES"
+      "value": "LAYERS_ONLY"
     }
   ],
   "display": {
@@ -53,7 +53,7 @@
       "params": {
         "map_template": {
           "display": "Map Template",
-          "description": "pick a map template with surrounds",
+          "description": "The map template with surrounds.",
           "values": {
             "ANSI_D_LND.mxd": "Small Poster (32\" X 24\")",
             "ANSI_E_LND.mxd": "Large Poster (42\" X 32\")",
@@ -63,11 +63,19 @@
         },
         "map_view": {
           "display": "Map View",
-          "description": "Select the map view extent"
+          "description": "The geographic extent of the data to be displayed in the GeoPDF. If not specified, the full extent of inputs is used."
+        },
+        "map_title": {
+          "display": "Map Title",
+          "description": "The map title."
+        },
+        "map_author": {
+          "display": "Map Author",
+          "description": "The author's name."
         },
         "attribute_settings": {
           "display": "Attribute Settings",
-          "description": "Select Feature Attribute Settings",
+          "description": "The feature attribute settings.",
           "values": {
             "NONE": "No Layers or Features (TODO - copy from ArcMap)",
             "LAYERS_ONLY": "Layer Information (TODO - copy from ArcMap)",
