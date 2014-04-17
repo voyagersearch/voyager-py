@@ -76,9 +76,15 @@
   {
     "en":
     {
+<<<<<<< HEAD
       "display": "Mosaic",
       "description": "Mosaic input rasters to a new raster dataset or a mosaic dataset in an existing workspace.",
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#mosaic_to_workspace",
+=======
+      "display": "Mosaic to Workspace",
+      "description": "Mosaic input rasters to a new dataset in an existing workspace.",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#mosaic",
+>>>>>>> FETCH_HEAD
   	  "params":
   	  {
     		"target_workspace": {
