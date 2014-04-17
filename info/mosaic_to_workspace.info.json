@@ -12,7 +12,12 @@
     {
       "type": "CatalogPath",
       "name": "target_workspace",
-	    "required": true
+	  "required": true
+    },
+    {
+      "type": "String",
+      "name": "output_dataset_name",
+      "required": true
     },
     {
       "type": "Geometry",
@@ -84,6 +89,10 @@
     		"target_workspace": {
   		    "display": "Target Workspace",
   		    "description": "The existing geodatabase or folder where the new output dataset is to be created."
+    		},
+    		"output_dataset_name": {
+    		"display": "Output Dataset Name",
+    		"description": "The name of the output dataset."
     		}
 	    }
 	  }
