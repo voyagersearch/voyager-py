@@ -6,7 +6,7 @@
     {
       "type": "Geometry",
       "name": "clip_geometry",
-      "initWithItemExtent": true
+      "initWithResultsExtent": true
     },
     {
       "type": "VoyagerResults",

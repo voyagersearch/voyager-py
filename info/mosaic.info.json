@@ -12,7 +12,7 @@
       "type": "Geometry",
       "name": "processing_extent",
       "extentParam": true,
-      "initWithItemExtent": true
+      "initWithResultsExtent": true
     },
     {
       "type": "Projection",
@@ -45,7 +45,7 @@
         "LZ77",
         "JPEG",
         "JPEG2000",
-		"PackBits",
+		    "PackBits",
         "LZW",
         "RLE",
         "CCITT_G3",

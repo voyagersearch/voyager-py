@@ -20,7 +20,8 @@
     },
     {
       "type": "MapView",
-      "name": "map_view"
+      "name": "map_view",
+      "initWithResultsExtent": true
     },
     {
       "type": "String",
