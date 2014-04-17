@@ -1,5 +1,6 @@
 {
   "name": "mosaic_to_workspace",
+  "parent": "mosaic",
   "runner": "python",
   "categories": ["download"],
   "params": [
@@ -11,7 +12,7 @@
     {
       "type": "CatalogPath",
       "name": "target_workspace",
-	  "required": true
+	    "required": true
     },
     {
       "type": "Geometry",
@@ -50,7 +51,7 @@
         "LZ77",
         "JPEG",
         "JPEG2000",
-		"PackBits",
+		    "PackBits",
         "LZW",
         "RLE",
         "CCITT_G3",
@@ -80,30 +81,9 @@
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#mosaic",
   	  "params":
   	  {
-    		"processing_extent": {
-    			"display": "Clip Region",
-    			"description": "Select the clip region"
-    		},
     		"target_workspace": {
     		    "display": "Target Workspace",
     		    "description": "The existing geodatabase or folder where the new output dataset is to be created."
-    		},
-    		}
-    		"output_projection": {
-    			"display": "Projection",
-    			"description": "The projection factory code for setting the output coordinate system"
-    		},
-    		"raster_type": {
-    			"display": "Output Raster Type",
-    			"description": "The type of raster to create."
-    		},
-    		"compression_method": {
-    			"display": "Compression Method",
-    			"description": "choose compression method"
-    		},
-    		"compression_quality": {
-  		    "display": "Compression Quality",
-  		    "description": "compression quality (1 - 100). Default is 75."
     		}
 	    }
 	  }
