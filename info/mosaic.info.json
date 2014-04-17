@@ -12,7 +12,7 @@
       "type": "Geometry",
       "name": "processing_extent",
       "extentParam": true,
-      "initWithItemExtent": true
+      "initWithResultsExtent": true
     },
     {
       "type": "Projection",
