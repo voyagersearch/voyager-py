@@ -37,6 +37,11 @@ def execute(request):
     compression_quality = task_utils.get_parameter_value(parameters, 'compression_quality', 'value')
     arcpy.env.compression = '{0} {1}'.format(compression_method, compression_quality)
 
+    if output_raster_format in ('FileGDB', 'MosaicDataset'):
+        if not os.path.splitext(target_workspace)[1] in ('.gdb', '.mdb', '.sde'):
+            status_writer.send_state(status.STAT_FAILED, 'Target workspace must be a geodatabase for this raster format.')
+            sys.exit(1)
+
     task_folder = request['folder']
     if not os.path.exists(task_folder):
         os.makedirs(task_folder)
