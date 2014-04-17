@@ -45,7 +45,7 @@
         "LZ77",
         "JPEG",
         "JPEG2000",
-		"PackBits",
+		    "PackBits",
         "LZW",
         "RLE",
         "CCITT_G3",
