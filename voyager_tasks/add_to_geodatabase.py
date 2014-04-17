@@ -49,7 +49,7 @@ def execute(request):
             is_fds = True
         else:
             status_writer.send_state(status.STAT_FAILED, '{0} does not exist.'.format(out_gdb))
-            return
+            sys.exit(1)
 
     if out_gdb.endswith('.sde') or os.path.dirname(out_gdb).endswith('.sde'):
         status_writer.send_status('Connecting to {0}...'.format(out_gdb))
