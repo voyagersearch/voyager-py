@@ -1,0 +1,34 @@
+{
+  "name": "replace_workspace_path",
+  "runner": "python",
+  "categories": ["download"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "CatalogPath",
+      "name": "workspace_path",
+	  "required": true
+    }
+  ],
+  "display":
+  {
+    "en":
+    {
+      "display": "Replace Workspace Path",
+      "description": "Replace the workspace path for layer files and map document layers",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#zip_files",
+      "params":
+      {
+		"flatten_results":
+		{
+			"display": "Workspace Path",
+			"description": "The new workspace path."
+		}
+      }
+    }
+  }
+}
