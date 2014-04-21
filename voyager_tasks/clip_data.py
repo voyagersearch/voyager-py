@@ -195,6 +195,7 @@ def execute(request):
     """
     clipped = 0
     skipped = 0
+    errors = 0
     status_writer = status.Writer()
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
@@ -358,6 +359,7 @@ def execute(request):
             status_writer.send_percent(i/count, 'Skipped {0}: {1}'.format(os.path.basename(ds), repr(ex)), 'clip_data')
             i += 1.
             skipped += 1
+            errors += 1
             pass
 
     if arcpy.env.workspace.endswith('.gdb'):
@@ -378,12 +380,16 @@ def execute(request):
             status_writer.send_status('Created the output zip file.')
             shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
 
-    shutil.copy2(os.path.join(os.path.dirname(os.getcwd()), 'supportfiles', '_thumb.png'), request['folder'])
-    task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], clipped, skipped)
-
+    try:
+        shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
+    except IOError:
+        status_writer.send_status('Could not copy thumbnail.')
+        pass
     # Update state if necessary.
     if clipped == 0:
         status_writer.send_state(status.STAT_FAILED, 'All results failed to clip.')
+        task_utils.report(os.path.join(request['folder'], '_report.json'), clipped, skipped, errors)
         sys.exit(1)
     elif skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not be clipped.'.format(skipped))
+        task_utils.report(os.path.join(request['folder'], '_report.json'), clipped, skipped, errors)

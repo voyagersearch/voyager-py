@@ -41,6 +41,7 @@ def execute(request):
     i = 1.
     updated = 0
     skipped = 0
+    errors = 0
     item_count = len(input_items)
     status_writer = status.Writer()
 
@@ -138,15 +139,16 @@ def execute(request):
             pass
 
     try:
-        shutil.copy2(os.path.join(os.path.dirname(os.getcwd()), 'supportfiles', '_thumb.png'), request['folder'])
+        shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
         status_writer.send_status('Could not copy thumbnail.')
         pass
-    task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], updated, skipped)
 
     # Update state if necessary.
     if updated == 0:
         status_writer.send_state(status.STAT_FAILED, 'Could not write metadata for all results.')
+        task_utils.report(os.path.join(request['folder'], '_report.md'), updated, skipped, skipped)
         sys.exit(1)
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, 'Could not write metadata for {0} results.'.format(skipped))
+        task_utils.report(os.path.join(request['folder'], '_report.md'), updated, skipped, skipped)

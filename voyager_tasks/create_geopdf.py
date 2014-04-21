@@ -36,6 +36,7 @@ def execute(request):
     """
     added_to_map = 0
     skipped = 0
+    warnings = 0
     status_writer = status.Writer()
     parameters = request['params']
 
@@ -103,6 +104,7 @@ def execute(request):
         except Exception as ex:
             status_writer.send_status('Failed to add: {0}. {1}.'.format(os.path.basename(item), repr(ex)))
             skipped += 1
+            warnings += 1
             pass
 
     if map_view:
@@ -160,11 +162,16 @@ def execute(request):
         arcpy.mapping.ExportToPDF(mxd, os.path.join(request['folder'], 'output.pdf'), layers_attributes=attribute_setting)
     else:
         status_writer.send_state(status.STAT_FAILED, 'No results can be exported to PDF.')
+        task_utils.report(os.path.join(request['folder'], '_report.json'), added_to_map, skipped, skipped, 0)
         sys.exit(1)
 
-    shutil.copy2(os.path.join(os.path.dirname(os.getcwd()), '_thumb.png'), request['folder'])
-    task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], added_to_map, skipped)
+    try:
+        shutil.copy2(os.path.join(os.path.dirname(os.getcwd()), '_thumb.png'), request['folder'])
+    except IOError:
+        status_writer.send_status('Could not copy thumbnail.')
+        pass
 
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not be added to the PDF.'.format(skipped))
+        task_utils.report(os.path.join(request['folder'], '_report.json'), added_to_map, skipped, 0, skipped)

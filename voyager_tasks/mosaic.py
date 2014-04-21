@@ -54,6 +54,7 @@ def execute(request):
     raster_items = []
     bands = collections.defaultdict(int)
     skipped = 0
+    warnings = 0
     for item in input_items:
         # Number of bands for each item should be the same.
         dsc = arcpy.Describe(item)
@@ -65,6 +66,7 @@ def execute(request):
         else:
             status_writer.send_status('{0} is not a raster dataset and will not be processed.'.format(item))
             skipped += 1
+            warnings += 1
 
     if not raster_items:
         status_writer.send_state(status.STAT_FAILED, 'All results are invalid and cannot mosaic.')
@@ -118,7 +120,6 @@ def execute(request):
                                                    pixel_type, number_of_bands=bands.keys()[0])
         except arcpy.ExecuteError:
             status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
-            task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], 0, len(raster_items))
             sys.exit(1)
 
     if arcpy.env.workspace.endswith('.gdb'):
@@ -126,12 +127,12 @@ def execute(request):
     zip_file = task_utils.zip_data(out_workspace, 'output.zip')
     shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
     try:
-        shutil.copy2(os.path.join(os.path.dirname(os.getcwd()), 'supportfiles', '_thumb.png'), request['folder'])
+        shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
         status_writer.send_status('Could not copy thumbnail.')
         pass
-    task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], len(raster_items), skipped)
 
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not mosaic.'.format(skipped))
+        task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), skipped, 0, warnings)

@@ -38,6 +38,8 @@ def execute(request):
     i = 1.
     copied = 0
     skipped = 0
+    errors = 0
+    warnings = 0
     file_count = len(input_items)
     shp_files = ('shp', 'shx', 'sbn', 'dbf', 'prj', 'cpg', 'shp.xml', 'dbf.xml')
     sdc_files = ('sdc', 'sdi', 'sdc.xml', 'sdc.prj')
@@ -79,6 +81,7 @@ def execute(request):
                     'copy_files'
                 )
                 skipped += 1
+                warnings += 1
         except IOError as io_err:
             status_writer.send_percent(
                 i/file_count,
@@ -86,21 +89,20 @@ def execute(request):
                 'copy_files'
             )
             skipped += 1
+            errors += 1
             pass
 
     try:
-        shutil.copy2(os.path.join(os.path.dirname(os.getcwd()), 'supportfiles', '_thumb.png'), request['folder'])
+        shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
         status_writer.send_status('Could not copy thumbnail.')
         pass
-    try:
-        task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], copied, skipped)
-    except IOError:
-        status_writer.send_status('Could not create report file.')
-        pass
+
     # Update state if necessary.
     if copied == 0:
         status_writer.send_state(status.STAT_FAILED, 'All results failed to copy.')
+        task_utils.report(os.path.join(request['folder'], '_report.json'), copied, skipped, errors, 0)
         sys.exit(1)
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not be copied.'.format(skipped))
+        task_utils.report(os.path.join(request['folder'], '_report.json'), copied, skipped, errors, warnings)

@@ -13,6 +13,7 @@ def execute(request):
     """
     zipped = 0
     skipped = 0
+    warnings = 0
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
     try:
@@ -42,21 +43,20 @@ def execute(request):
             else:
                 status_writer.send_percent(i/file_count, '{0} is not a file or does not exist.'.format(in_file), 'zip_files')
                 skipped += 1
+                warnings += 1
             i += 1.0
 
     try:
-        shutil.copy2(os.path.join(os.path.dirname(os.getcwd()), 'supportfiles', '_thumb.png'), request['folder'])
+        shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
         status_writer.send_status('Could not copy thumbnail.')
         pass
-    try:
-        task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], zipped, skipped)
-    except IOError:
-        status_writer.send_status('Could not create report.')
-        pass
+
     # Update state if necessary.
     if zipped == 0:
         status_writer.send_state(status.STAT_FAILED, 'All results failed to zip.')
+        task_utils.report(os.path.join(request['folder'], '_report.md'), zipped, skipped, len(input_items), 0)
         sys.exit(1)
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not be zipped.'.format(skipped))
+        task_utils.report(os.path.join(request['folder'], '_report.md'), zipped, skipped, 0, warnings)

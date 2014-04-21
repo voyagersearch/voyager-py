@@ -13,6 +13,7 @@ def execute(request):
     """
     converted = 0
     skipped = 0
+    errors = 0
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
     count = len(input_items)
@@ -140,14 +141,16 @@ def execute(request):
         status_writer.send_status('Created zip file: {0}...'.format(os.path.join(out_workspace, 'output.zip')))
         shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
     try:
-        shutil.copy2(os.path.join(os.path.dirname(os.getcwd()), 'supportfiles', '_thumb.png'), request['folder'])
+        shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
         status_writer.send_status('Could not copy thumbnail.')
         pass
-    task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], converted, skipped)
+
     # Update state if necessary.
     if converted == 0:
         status_writer.send_state(status.STAT_FAILED, 'All results failed to convert.')
+        task_utils.report(os.path.join(request['folder'], '_report.json'), converted, skipped, errors)
         sys.exit(1)
     elif skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not be converted.'.format(skipped))
+        task_utils.report(os.path.join(request['folder'], '_report.json'), converted, skipped, errors)

@@ -215,20 +215,23 @@ def make_thumbnail(layer_or_mxd, output_folder):
         arcpy.mapping.ExportToPNG(mxd, os.path.join(output_folder, '_thumb.png'), data_frame, 150, 150)
 
 
-def report(report_file, task_name, num_processed, num_skipped):
+def report(report_file, num_processed, num_skipped, num_errors=0, num_warnings=0):
     """Create a markdown report of inputs processed or skipped.
 
     :param report_file: path of the .md file
-    :param task_name:  name of the task
     :param num_processed: number of items processed
     :param num_skipped: number of items skipped
+    :param num_errors:  number of errors
+    :param num_warnings: number of warnings
     """
-    with open(report_file, 'w') as r:
-        r.write('### {0}\n'.format(task_name))
-        r.write('| Action    | Count |\n')
-        r.write('| ------    | ----- |\n')
-        r.write('| Processed | {0} |\n'.format(num_processed))
-        r.write('| Skipped   | {0} |\n'.format(num_skipped))
+    report_md = ['| Action    | Count |',
+                 '| ------    | ----- |',
+                 '| Processed | {0} |'.format(num_processed),
+                 '| Skipped   | {0} |'.format(num_skipped)]
+
+    report_info = {"count": num_skipped, "warnings": num_warnings, "errors": num_errors, "text": '\n'.join(report_md)}
+    with open(report_file, 'w') as fp:
+        json.dump(report_info, fp, indent=2)
 
 
 def save_to_layer_file(data_location, include_mxd_layers=True):
