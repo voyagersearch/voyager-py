@@ -89,10 +89,7 @@ def execute(request):
             pass
 
     try:
-        shutil.copyfile(
-            os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'),
-            os.path.join(request['folder'], '_thumb.png')
-        )
+        shutil.copy2(os.path.join(os.path.dirname(os.getcwd()), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
         status_writer.send_status('Could not copy thumbnail.')
         pass
