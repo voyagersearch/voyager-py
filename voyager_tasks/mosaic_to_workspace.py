@@ -49,28 +49,10 @@ def execute(request):
     if not output_raster_format == 'MosaicDataset':
         # Get the clip region as an extent object.
         try:
-            clip_area = task_utils.get_parameter_value(parameters, 'processing_extent', 'wkt')
-            # WKT coordinates for each task are always WGS84.
-            gcs_sr = task_utils.get_spatial_reference(4326)
-            clip_area = task_utils.from_wkt(clip_area, gcs_sr)
-            if not clip_area.area > 0:
-                clip_area = task_utils.from_wkt('POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))', gcs_sr)
-            if out_coordinate_system:
-                out_sr = task_utils.get_spatial_reference(int(out_coordinate_system))
-                if not out_sr.name == gcs_sr.name:
-                    try:
-                        geo_transformation = arcpy.ListTransformations(gcs_sr, out_sr)[0]
-                        clip_area = clip_area.projectAs(out_sr, geo_transformation)
-                    except AttributeError:
-                        clip_area = clip_area.projectAs(out_sr)
-            clip_area = clip_area.extent
-            arcpy.env.outputCoordinateSystem = out_sr
+            clip_area_wkt = task_utils.get_parameter_value(parameters, 'processing_extent', 'wkt')
+            clip_area = task_utils.get_clip_region(clip_area_wkt, out_coordinate_system)
         except KeyError:
-            try:
-                clip_area = task_utils.get_parameter_value(parameters, 'processing_extent', 'feature')
-                clip_area = arcpy.Describe(clip_area).extent
-            except KeyError:
-                clip_area = None
+            clip_area = None
 
     #out_workspace = os.path.join(request['folder'], 'temp')
     if not os.path.exists(target_workspace):
@@ -123,7 +105,7 @@ def execute(request):
             if len(bands) > 1:
                 status_writer.send_state(status.STAT_FAILED, 'Input rasters must have the same number of bands.')
                 sys.exit(1)
-            if clip_area is not None:
+            if clip_area:
                 ext = '{0} {1} {2} {3}'.format(clip_area.XMin, clip_area.YMin, clip_area.XMax, clip_area.YMax)
                 status_writer.send_status('Running mosaic to new raster...')
                 tmp_mosaic = arcpy.MosaicToNewRaster_management(

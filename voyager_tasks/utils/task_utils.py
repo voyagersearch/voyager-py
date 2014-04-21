@@ -54,6 +54,31 @@ def clean_up(data_location):
             shutil.rmtree(os.path.join(root, name), True)
 
 
+def get_clip_region(clip_area_wkt, out_coordinate_system=None):
+    """Creates and returns an extent representing the clip region from WKT.
+    :param clip_area_wkt: Well-known text representing clip extent
+    :param out_coordinate_system: The coordinate system of the output extent
+    :rtype : arcpy.Extent
+    """
+    import arcpy
+    # WKT coordinates for each task are always WGS84.
+    gcs_sr = get_spatial_reference(4326)
+    clip_area = from_wkt(clip_area_wkt, gcs_sr)
+    if not clip_area.area > 0:
+        clip_area = from_wkt('POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))', gcs_sr)
+    if out_coordinate_system:
+        out_sr = get_spatial_reference(int(out_coordinate_system))
+        if not out_sr.name == gcs_sr.name:
+            try:
+                geo_transformation = arcpy.ListTransformations(gcs_sr, out_sr)[0]
+                clip_area = clip_area.projectAs(out_sr, geo_transformation)
+            except AttributeError:
+                clip_area = clip_area.projectAs(out_sr)
+    clip_area = clip_area.extent
+    arcpy.env.outputCoordinateSystem = out_sr
+    return clip_area
+
+
 def get_parameter_value(parameters, parameter_name, value_key='value'):
     """Returns the parameter value.
     :param parameters: parameter list
