@@ -137,10 +137,11 @@ def execute(request):
             skipped += 1
             pass
 
-    shutil.copyfile(
-        os.path.join(os.path.dirname(__file__), r'supportfiles\_thumb.png'),
-        os.path.join(request['folder'], '_thumb.png')
-    )
+    try:
+        shutil.copy2(os.path.join(os.path.dirname(os.getcwd()), 'supportfiles', '_thumb.png'), request['folder'])
+    except IOError:
+        status_writer.send_status('Could not copy thumbnail.')
+        pass
     task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], updated, skipped)
 
     # Update state if necessary.

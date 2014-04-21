@@ -132,7 +132,7 @@ def create_lpk(data_location, additional_files):
 def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
     """Creates a map document (.mxd) or map package (.mpk) for all the clipped datasets."""
     shutil.copyfile(
-        os.path.join(os.path.dirname(__file__), r'supportfiles\MapTemplate.mxd'),
+        os.path.join(os.path.dirname(__file__), 'supportfiles', 'MapTemplate.mxd'),
         os.path.join(data_location, 'output.mxd')
     )
     mxd = arcpy.mapping.MapDocument(os.path.join(data_location, 'output.mxd'))
@@ -378,10 +378,7 @@ def execute(request):
             status_writer.send_status('Created the output zip file.')
             shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
 
-    shutil.copyfile(
-        os.path.join(os.path.dirname(__file__), r'supportfiles\_thumb.png'),
-        os.path.join(request['folder'], '_thumb.png')
-    )
+    shutil.copy2(os.path.join(os.path.dirname(os.getcwd()), 'supportfiles', '_thumb.png'), request['folder'])
     task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], clipped, skipped)
 
     # Update state if necessary.
