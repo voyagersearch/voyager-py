@@ -44,12 +44,19 @@ def execute(request):
                 skipped += 1
             i += 1.0
 
-    shutil.copyfile(
-        os.path.join(os.path.dirname(__file__), r'supportfiles\_thumb.png'),
-        os.path.join(request['folder'], '_thumb.png')
-    )
-    task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], zipped, skipped)
-
+    try:
+        shutil.copyfile(
+            os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'),
+            os.path.join(request['folder'], '_thumb.png')
+        )
+    except IOError:
+        status_writer.send_status('Could not copy thumbnail.')
+        pass
+    try:
+        task_utils.report(os.path.join(request['folder'], '_report.md'), request['task'], zipped, skipped)
+    except IOError:
+        status_writer.send_status('Could not create report.')
+        pass
     # Update state if necessary.
     if zipped == 0:
         status_writer.send_state(status.STAT_FAILED, 'All results failed to zip.')
