@@ -105,12 +105,13 @@ def get_input_items(parameters):
         if item['name'] == 'input_items':
             docs = item['response']['docs']
             try:
-                try:
-                    for i in docs:
+                for i in docs:
+                    try:
                         results[get_data_path(i)] = i['name']
-                except KeyError:
-                    for i in docs:
+                    except KeyError:
                         results[get_data_path(i)] = ''
+                    except IOError:
+                        continue
             except IOError:
                 pass
             if not results:
@@ -143,6 +144,8 @@ def get_data_path(item):
                     return item['path']
                 else:
                     raise IOError
+            else:
+                raise IOError
         except (KeyError, IOError, ImportError):
             raise IOError
 
