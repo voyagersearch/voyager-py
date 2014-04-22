@@ -4,11 +4,6 @@
   "categories": ["download"],
   "params": [
     {
-      "type": "Geometry",
-      "name": "clip_geometry",
-      "initWithResultsExtent": true
-    },
-    {
       "type": "VoyagerResults",
       "name": "input_items",
       "required": true
@@ -27,6 +22,11 @@
         "MPK",
         "LPK"
       ]
+    },
+    {
+      "type": "Geometry",
+      "name": "clip_geometry",
+      "initWithResultsExtent": true
     }
   ],
   "display": {
