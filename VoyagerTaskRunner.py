@@ -28,7 +28,18 @@ if __name__ == '__main__':
                 task_info['tasks'].append({'name': task, 'available': True})
             except ImportError as ie:
                 task_info['tasks'].append({'name': task, 'available': False, 'warning': ie.message})
-        sys.stdout.write(json.dumps(task_info))
+        sys.stdout.write(json.dumps(task_info, indent=2))
+        sys.stdout.flush()
+    elif sys.argv[1] == '--license':
+        import arcpy
+        with open(os.path.join(os.path.dirname(__file__), 'voyager_tasks', 'supportfiles', 'licenses.json'), 'r') as fp:
+            licenses = json.load(fp)
+            for product in licenses['product']:
+                product['status'] = arcpy.CheckProduct(product['code'])
+            for extension in licenses['extension']:
+                extension['status'] = arcpy.CheckExtension(extension['code'])
+        [licenses['extension'].remove(e) for e in licenses['extension'] if e['status'].startswith('Unrecognized')]
+        sys.stdout.write(json.dumps(licenses, indent=2))
         sys.stdout.flush()
     else:
         run_task(sys.argv[1])

@@ -1,0 +1,201 @@
+{
+  "product": [
+    {
+      "name": "ArcView (ArcGIS for Desktop Basic)",
+      "status": "",
+      "code": "ArcView"
+    },
+    {
+      "name": "ArcEditor (ArcGIS for Desktop Standard)",
+      "status": "",
+      "code": "ArcEditor"
+    },
+    {
+      "name": "ArcInfo (ArcGIS for Desktop Advanced)",
+      "status": "",
+      "code": "ArcInfo"
+    },
+    {
+      "name": "Engine",
+      "status": "",
+      "code": "Engine"
+    },
+    {
+      "name": "EngineGeoDB",
+      "status": "",
+      "code": "EngineGeoDB"
+    },
+    {
+      "name": "ArcServer",
+      "status": "",
+      "code": "ArcServer"
+    }	
+  ],
+  "extension": [
+    {
+      "name": "ArcGIS 3D Analyst",
+      "status": "",
+      "code": "3D"
+    },
+	{
+	  "name": "ArcGIS Data Interoperability for Desktop",
+	  "status": "",
+	  "code": "DataInteroperability"
+	},
+	{
+	  "name": "ArcGIS 10.2 Data Reviewer for Desktop",
+	  "status": "",
+	  "code": "Datareviewer"
+	},	
+    {
+      "name": "ArcGIS for Aviation: Charting",
+      "status": "",
+      "code": "Aeronautical"
+    },	
+    {
+      "name": "ArcGIS for Aviation: Airports",
+      "status": "",
+      "code": "ArcScan"
+    },
+    {
+      "name": "ArcGIS for Maritime: Charting",
+      "status": "",
+      "code": "Nautical"
+    },	
+    {
+      "name": "ArcGIS for Maritime: Bathymetry",
+      "status": "",
+      "code": "Bathymetry"
+    },	
+    {
+      "name": "ArcScan",
+      "status": "esriLicenseNotLicensed",
+      "code": "ArcScan"
+    },
+    {
+      "name": "ArcGIS Geostatistical Analyst",
+      "status": "",
+      "code": "GeoStats"
+    },	
+    {
+      "name": "Business Analyst",
+      "status": "",
+      "code": "Business"
+    },
+    {
+      "name": "COGO",
+      "status": "",
+      "code": "COGO"
+    },
+    {
+      "name": "Esri Defense Mapping",
+      "status": "",
+      "code": "Defense"
+    },
+    {
+      "name": "Esri Production Mapping",
+      "status": "",
+      "code": "Foundation"
+    },	
+    {
+      "name": "Esri Roads and Highways",
+      "status": "",
+      "code": "Highways"
+    },	
+    {
+      "name": "ArcGIS Workflow Manager for Desktop",
+      "status": "",
+      "code": "JTX"
+    },	
+    {
+      "name": "Designer",
+      "status": "",
+      "code": "Designer"
+    },
+    {
+      "name": "ImageExt",
+      "status": "",
+      "code": "ImageExt"
+    },
+    {
+      "name": "IntelAgency",
+      "status": "",
+      "code": "IntelAgency"
+    },
+    {
+      "name": "MappingAgency",
+      "status": "",
+      "code": "MappingAgency"
+    },
+    {
+      "name": "Maplex",
+      "status": "",
+      "code": "Maplex"
+    },
+    {
+      "name": "MPSAtlas",
+      "status": "",
+      "code": "MPSAtlas"
+    },
+    {
+      "name": "MrSID",
+      "status": "",
+      "code": "MrSID"
+    },
+    {
+      "name": "ArcGIS Network Analyst",
+      "status": "",
+      "code": "Network"
+    },
+    {
+      "name": "Publisher",
+      "status": "",
+      "code": "Publisher"
+    },
+    {
+      "name": "ArcGIS Schematics",
+      "status": "",
+      "code": "Schematics"
+    },
+    {
+      "name": "ServerAdvancedEdition",
+      "status": "",
+      "code": "ServerAdvancedEdition"
+    },
+    {
+      "name": "ServerEnterprise",
+      "status": "",
+      "code": "ServerEnterprise"
+    },
+    {
+      "name": "ServerStandardEdition",
+      "status": "",
+      "code": "ServerStandardEdition"
+    },
+    {
+      "name": "ArcGIS Spatial Analyst",
+      "status": "",
+      "code": "Spatial"
+    },
+    {
+      "name": "StreetMap",
+      "status": "",
+      "code": "StreetMap"
+    },
+    {
+      "name": "TIFFLZW",
+      "status": "",
+      "code": "TIFFLZW"
+    },
+    {
+      "name": "ArcGIS Tracking Analyst",
+      "status": "",
+      "code": "Tracking"
+    },
+    {
+      "name": "Vector",
+      "status": "",
+      "code": "Vector"
+    }
+  ]
+}
