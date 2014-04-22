@@ -26,6 +26,16 @@
         "MPK",
         "LPK"
       ]
+    },
+    {
+      "type": "String",
+      "name": "summary",
+      "required": false
+    },
+    {
+      "type": "String",
+      "name": "tags",
+      "required": false
     }
   ],
   "display":
@@ -50,6 +60,16 @@
 		{
 			"display": "Output Format",
 			"description": "The output package format."
+		},
+		"summary":
+		{
+		    "display": "Summary",
+		    "description": "A short summary about the package and the contents."
+		},
+		"tags":
+		{
+		    "display": "Tags",
+		    "description": "Keywords that can be used to search for this package on ArcGIS Online."
 		}
       }
     }
