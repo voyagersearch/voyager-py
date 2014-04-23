@@ -189,7 +189,7 @@ def get_projection_file(factory_code):
     :rtype : str
     """
     import arcpy
-    lu_file = os.path.join(os.path.dirname(os.getcwd()), 'supportfiles/projection_files.json')
+    lu_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'projection_files.json')
     with open(lu_file) as fp:
         prj_lu = json.load(fp)
         arcgis_folder = arcpy.GetInstallInfo()['InstallDir']
@@ -209,7 +209,7 @@ def make_thumbnail(layer_or_mxd, output_folder):
         mxd = arcpy.mapping.MapDocument(layer_or_mxd)
         arcpy.mapping.ExportToPNG(mxd, os.path.join(output_folder, '_thumb.png'), '', 150, 150)
     else:
-        support_files_dir = os.path.abspath(os.path.join(os.getcwd(), 'voyager_tasks', 'supportfiles'))
+        support_files_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles')
         map_template = os.path.join(support_files_dir, 'MapTemplate.mxd')
         mxd = arcpy.mapping.MapDocument(map_template)
         data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
