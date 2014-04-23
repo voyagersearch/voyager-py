@@ -29,13 +29,11 @@
     },
     {
       "type": "String",
-      "name": "summary",
-      "required": false
+      "name": "summary"
     },
     {
       "type": "String",
-      "name": "tags",
-      "required": false
+      "name": "tags"
     }
   ],
   "display":
