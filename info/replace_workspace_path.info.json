@@ -9,6 +9,11 @@
       "required": true
     },
     {
+      "type": CheckBox",
+      "name": "create_backup",
+      "value": true,
+    },
+    {
       "type": "CatalogPath",
       "name": "workspace_path",
 	  "required": true
@@ -23,7 +28,12 @@
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#zip_files",
       "params":
       {
-		"flatten_results":
+        "create_backup":
+        {
+            "display": "Create backup (Recommended)",
+            "description": "Create backup copies of the map documents and layer files before replacing workspace paths. Backups are created in the source location with a .bak extension."
+        },
+		"workspace_path":
 		{
 			"display": "Workspace Path",
 			"description": "The new workspace path."
