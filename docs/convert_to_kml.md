@@ -16,9 +16,9 @@ Converts feature or raster data into Keyhole Markup Language (KML). The output K
 ###Requirements
     - ArcGIS 10.x
 
-### Learn more
-[Esri tools for conversion to KML]: http://resources.arcgis.com/en/help/main/10.2/#/An_overview_of_the_To_KML_toolset/00120000002n000000/ "Esri tools for conversion to KML"
-- Learn more about the [Esri tools for conversion to KML] used by this task
+### See Also
+[ArcGIS tools for conversion to KML]: http://resources.arcgis.com/en/help/main/10.2/#/An_overview_of_the_To_KML_toolset/00120000002n000000/ "Esri tools for conversion to KML"
+- Learn more about the [ArcGIS tools for conversion to KML] used by this task
 
 [Voyager Search]:http://voyagersearch.com/
 [@VoyagerGIS]:https://twitter.com/voyagergis
