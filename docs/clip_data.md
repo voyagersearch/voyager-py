@@ -16,7 +16,7 @@ Clips selected search results using the clip geometry.
   
 
 ###Screen Captures
-![Clip Data] (clip_data.png "Clip Data example")
+![Clip Data] (imgs/clip_data_0.png "Clip Data example")
 
 ###Requirements
     - ArcGIS 10.x
