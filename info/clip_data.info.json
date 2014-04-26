@@ -32,7 +32,7 @@
   "display": {
     "en": {
       "display": "Clip Data",
-      "description": "Clip data within the clip region; multiple output formats are supported",
+      "description": "Clips selected search results using the clip geometry",
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#clip_data",
       "params": {
         "clip_geometry": {

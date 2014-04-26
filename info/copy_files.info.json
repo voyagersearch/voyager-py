@@ -23,7 +23,7 @@
     "en":
     {
       "display": "Copy Files",
-      "description": "Copies files to an existing folder",
+      "description": "Copies files to a target folder",
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#copy_files",
 	  "params":
 	  {
