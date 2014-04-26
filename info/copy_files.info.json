@@ -9,12 +9,13 @@
       "required": true
     },
     {
-      "type": "CheckBox",
-      "name": "flatten_results"
+      "type": "FolderLocation",
+      "name": "target_folder",
+      "required": true
     },
     {
-      "type": "FolderLocation",
-      "name": "target_folder"
+      "type": "CheckBox",
+      "name": "flatten_results"
     }
   ],
   "display":
