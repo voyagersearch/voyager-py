@@ -77,7 +77,7 @@
   	  {
     		"processing_extent": {
     			"display": "Clip Region",
-    			"description": "The geographic extent of the rectangle or polygon used to clip the output mosaic dataset. This is not used when output format is a MosaicDataset"
+    			"description": "The geographic extent used to clip the output mosaic dataset. This is not used when output format is a MosaicDataset"
     		},
     		"output_projection": {
     			"display": "Projection",
