@@ -23,7 +23,7 @@
     "en":
 	{
       "display": "Add to Geodatabase",
-      "description": "Add input data to an existing geodatabase.",
+      "description": "Add input data to an existing geodatabase",
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#add_to_geodatabase",
 	  "params":
 	  {

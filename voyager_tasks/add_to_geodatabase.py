@@ -160,6 +160,13 @@ def execute(request):
                             out_gdb = os.path.dirname(out_gdb)
                         arcpy.management.CopyRaster(layer.dataSource,
                                                     task_utils.create_unique_name(layer.name, out_gdb))
+                table_views = arcpy.mapping.ListTableViews(mxd)
+                if is_fds:
+                    out_gdb = os.path.dirname(out_gdb)
+                for table_view in table_views:
+                    arcpy.management.CopyRows(table_view.dataSource,
+                                              task_utils.create_unique_name(table_view.name, out_gdb))
+                out_gdb = arcpy.env.workspace
 
             elif dsc.dataType.find('Table') > 0:
                 if is_fds:
