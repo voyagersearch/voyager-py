@@ -39,20 +39,20 @@ class TestMosaicToWorkspace(unittest.TestCase):
         dsc = arcpy.Describe(os.path.join(self.target_ws, 'Mosaic'))
         self.assertEquals([dsc.bandcount, dsc.pixeltype], [1, 'U8'])
 
-    def test_mosaic_to_workspace_MosaicDataset(self):
-        """Testing mosaic to workspace, creating a mosaic dataset"""
+    def test_mosaic_to_workspace_IMG(self):
+        """Testing mosaic to workspace, creating an IMG"""
         raster1 = os.path.join(os.getcwd(), 'test-data', 'raster', 'mosaic1')
         raster2 = os.path.join(os.getcwd(), 'test-data', 'raster', 'mosaic2')
         raster3 = os.path.join(os.getcwd(), 'test-data', 'raster', 'mosaic3')
         self.request['params'][1]['response']['docs'][0]['path'] = raster1
         self.request['params'][1]['response']['docs'][1]['path'] = raster2
         self.request['params'][1]['response']['docs'][2]['path'] = raster3
-        self.request['params'][2]['value'] = self.target_ws
-        self.request['params'][3]['value'] = 'MosaicDS'
-        self.request['params'][5]['value'] = 'MosaicDataset'
+        self.request['params'][2]['value'] = self.temp_folder
+        self.request['params'][3]['value'] = 'MosaicIMG'
+        self.request['params'][5]['value'] = 'IMG'
         getattr(sys.modules[self.request['task']], "execute")(self.request)
-        row_cnt = arcpy.GetCount_management(os.path.join(self.target_ws, 'MosaicDS')).getOutput(0)
-        self.assertEqual(int(row_cnt), 3)
+        dsc = arcpy.Describe(os.path.join(self.target_ws, 'Mosaic'))
+        self.assertEquals([dsc.bandcount, dsc.pixeltype], [1, 'U8'])
 
 if __name__ == '__main__':
     unittest.main()
