@@ -3,7 +3,6 @@ import os
 import sys
 import glob
 import json
-import shutil
 import urllib
 import zipfile
 import status
@@ -38,24 +37,9 @@ def create_unique_name(name, gdb):
     return unique_name
 
 
-def clean_up(data_location):
-    """Deletes intermediate data created during the task process.
-
-    :param data_location: folder path
-    """
-    for root, dirs, files in os.walk(data_location):
-        for name in files:
-            if not name.endswith('.zip'):
-                try:
-                    os.remove(os.path.join(root, name))
-                except WindowsError:
-                    pass
-        for name in dirs:
-            shutil.rmtree(os.path.join(root, name), True)
-
-
 def get_clip_region(clip_area_wkt, out_coordinate_system=None):
     """Creates and returns an extent representing the clip region from WKT.
+
     :param clip_area_wkt: Well-known text representing clip extent
     :param out_coordinate_system: The coordinate system of the output extent
     :rtype : arcpy.Extent
@@ -74,13 +58,12 @@ def get_clip_region(clip_area_wkt, out_coordinate_system=None):
                 clip_area = clip_area.projectAs(out_sr, geo_transformation)
             except AttributeError:
                 clip_area = clip_area.projectAs(out_sr)
-    clip_area = clip_area.extent
-    arcpy.env.outputCoordinateSystem = out_sr
-    return clip_area
+    return clip_area.extent
 
 
 def get_parameter_value(parameters, parameter_name, value_key='value'):
     """Returns the parameter value.
+
     :param parameters: parameter list
     :param parameter_name: parameter name
     :param value_key: parameter key containing the value
@@ -96,7 +79,8 @@ def get_parameter_value(parameters, parameter_name, value_key='value'):
 
 
 def get_input_items(parameters):
-    """Get the input search result items and output names if supplied.
+    """Get the input search result items and output names.
+
     :param: parameters: parameter list
     :rtype: dict
     """
@@ -124,6 +108,7 @@ def get_input_items(parameters):
 
 def get_data_path(item):
     """Return the layer file or dataset path.
+
     :param item: dataset path
     :rtype : str
     """
@@ -163,13 +148,13 @@ def from_wkt(wkt, sr):
     for p in coordinates:
         pt = p.strip().split(' ')
         array.add(arcpy.Point(float(pt[0]), float(pt[1])))
-
     poly = arcpy.Polygon(array, sr)
     return poly
 
 
 def get_spatial_reference(factory_code):
     """Returns spatial reference object.
+
     :param factory_code: The projection's factory code - i.e. 4326 for WGS84
     :rtype : arcpy.SpatialReference
     """
@@ -195,27 +180,6 @@ def get_projection_file(factory_code):
         arcgis_folder = arcpy.GetInstallInfo()['InstallDir']
         prj_file = os.path.join(arcgis_folder, prj_lu['{0}'.format(factory_code)])
     return prj_file
-
-
-def make_thumbnail(layer_or_mxd, output_folder):
-    """Creates a thumbnail PNG file for the layer file or map document.
-
-    :param layer_or_mxd: a layer file or document.
-    :param output_folder: the output folder where PNG files are saved
-    """
-    import arcpy
-    arcpy.env.overwriteOutput = True
-    if layer_or_mxd.endswith('.mxd'):
-        mxd = arcpy.mapping.MapDocument(layer_or_mxd)
-        arcpy.mapping.ExportToPNG(mxd, os.path.join(output_folder, '_thumb.png'), '', 150, 150)
-    else:
-        support_files_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles')
-        map_template = os.path.join(support_files_dir, 'MapTemplate.mxd')
-        mxd = arcpy.mapping.MapDocument(map_template)
-        data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
-        layer = arcpy.mapping.Layer(layer_or_mxd)
-        arcpy.mapping.AddLayer(data_frame, layer)
-        arcpy.mapping.ExportToPNG(mxd, os.path.join(output_folder, '_thumb.png'), data_frame, 150, 150)
 
 
 def report(report_file, num_processed, num_skipped, num_errors=0, num_warnings=0):
@@ -244,7 +208,6 @@ def save_to_layer_file(data_location, include_mxd_layers=True):
     :param include_mxd_layers: save layers in mxd's to layer files - default is True
     """
     import arcpy
-
     file_gdbs = glob.glob(os.path.join(data_location, '*.gdb'))
     for file_gdb in file_gdbs:
         arcpy.env.workspace = file_gdb
@@ -290,6 +253,7 @@ def zip_data(data_location, name):
                     zf = absf[len(data_location) + len(os.sep):]
                     try:
                         z.write(absf, zf)
-                    except Exception:
+                    except IOError:
+                        # Doing this because File GDB lock files throw an exception.
                         pass
     return zfile
