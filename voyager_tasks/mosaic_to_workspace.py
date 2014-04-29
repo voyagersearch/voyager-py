@@ -125,7 +125,9 @@ def execute(request):
                                                    target_workspace,
                                                    output_name,
                                                    out_coordinate_system,
-                                                   pixel_type, number_of_bands=bands.keys()[0])
+                                                   pixel_type,
+                                                   number_of_bands=bands.keys()[0],
+                                                   mosaic_method='BLEND')
         except arcpy.ExecuteError:
             status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
             sys.exit(1)
