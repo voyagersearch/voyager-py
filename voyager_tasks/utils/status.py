@@ -31,64 +31,58 @@ class Writer:
         """Initialize Writer call."""
         self._io = sys.stdout
 
-    def _w(self, msg):
+    def __w(self, msg):
         """Write to wrapped output thing. """
         self._io.write(msg)
 
-    def _fl(self):
+    def __fl(self):
         """Send newline and flush wrapped output thing."""
         self._io.write("\n")
         self._io.flush()
 
-    def _send(self, key, val):
+    def __send(self, key, val):
         """Write a key value pair to output thing. """
         if val:
-            self._w("{0}{1}={2}".format(S_SEP, key, val))
+            self.__w("{0}{1}={2}".format(S_SEP, key, val))
 
-    def format(func):
+    def format_output(func):
         """Decorator used to wrap the output with markers. """
         def inner(*args, **kwargs):
             inst = args[0]
-            inst._w(S_FLAG)
+            inst.__w(S_FLAG)
             func(*args, **kwargs)
-            inst._w(S_FLAG)
-            inst._fl()
+            inst.__w(S_FLAG)
+            inst.__fl()
         return inner
 
-
-
-    @format
+    @format_output
     def job_started(self, jobid, timeout, desc=None):
-        self._send(S_KEY_JOBID, jobid)
+        self.__send(S_KEY_JOBID, jobid)
         if desc:
-            self._send(S_KEY_MSG, desc)
-        self._send(S_KEY_TIMEOUT, timeout)
+            self.__send(S_KEY_MSG, desc)
+        self.__send(S_KEY_TIMEOUT, timeout)
 
-
-    @format
+    @format_output
     def send_status(self, msg):
-        self._send(S_KEY_MSG, msg)
+        self.__send(S_KEY_MSG, msg)
 
-
-    @format
+    @format_output
     def send_vpid(self, vpid):
-        self._send(S_KEY_VPID, vpid)
+        self.__send(S_KEY_VPID, vpid)
 
-
-    @format
+    @format_output
     def send_percent(self, pct, msg, name):
         if pct > 1:
             pct = 1.0
         elif pct < 0:
             pct = 0
 
-        self._send(S_KEY_MSG, msg)
-        self._send(S_KEY_PCT, "%4.3f" % pct)
-        self._send(S_KEY_NAME, name)
+        self.__send(S_KEY_MSG, msg)
+        self.__send(S_KEY_PCT, "%4.3f" % pct)
+        self.__send(S_KEY_NAME, name)
 
-
-    @format
+    @format_output
     def send_state(self, statev, msg=None):
-        self._send(S_KEY_STATE, statev)
+        self.__send(S_KEY_STATE, statev)
         if msg:
-            self._send(S_KEY_MSG, msg)
+            self.__send(S_KEY_MSG, msg)
