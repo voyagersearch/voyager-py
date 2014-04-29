@@ -41,7 +41,6 @@ def execute(request):
     i = 1.
     updated = 0
     skipped = 0
-    errors = 0
     item_count = len(input_items)
     status_writer = status.Writer()
 

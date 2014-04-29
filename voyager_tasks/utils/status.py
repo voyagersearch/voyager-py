@@ -1,9 +1,4 @@
-"""Module status
-Purpose is to emit log messages in a format that the Foreman can
-parse.
-
-Equivalent to the Java voyager.api.jobs.worker.WorkerStatusWriter.
-"""
+"""Report task status."""
 
 __author__ = 'VoyagerSearch'
 
@@ -32,34 +27,23 @@ STAT_WARNING = "WARNING"
 
 class Writer:
     """Write class"""
-    def __init__(self, wrappedio=None):
-        """Create a new one.
-
-        wrappedio - Something that behaves like sys.stdout, if not specified
-        we use stdout.
-        """
-        if wrappedio:
-            self._io = wrappedio
-        else:
-            self._io = sys.stdout
-
+    def __init__(self):
+        """Initialize Writer call."""
+        self._io = sys.stdout
 
     def _w(self, msg):
         """Write to wrapped output thing. """
         self._io.write(msg)
-
 
     def _fl(self):
         """Send newline and flush wrapped output thing."""
         self._io.write("\n")
         self._io.flush()
 
-
     def _send(self, key, val):
         """Write a key value pair to output thing. """
         if val:
-            self._w("%s%s=%s" % (S_SEP, key, val))
-
+            self._w("{0}{1}={2}".format(S_SEP, key, val))
 
     def format(func):
         """Decorator used to wrap the output with markers. """
