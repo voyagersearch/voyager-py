@@ -1,39 +1,23 @@
 import os
 import sys
-import glob
 import shutil
 from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
 
 
-def get_files(source_file, file_extensions):
-    """Returns a list of files for each file type.
-    :param source_file: source file path
-    :param file_extensions: list of file extensions - i.e. ['*.shp', '*.prj']
-    :rtype : list
-    """
-    folder_location = os.path.dirname(source_file)
-    file_name = os.path.basename(source_file)[:-4]
-    all_files = []
-    for ext in file_extensions:
-        all_files.extend(glob.glob(os.path.join(folder_location, '{0}.{1}'.format(file_name, ext))))
-    return all_files
-
-
 def execute(request):
-    """Copies files data to a target folder.
+    """Copies files to a target folder.
     :param request: json as a dict.
     """
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
     target_folder = task_utils.get_parameter_value(parameters, 'target_folder', 'value')
-    if not os.path.exists(request['folder']):
-        os.makedirs(request['folder'])
-    try:
-        flatten_results = task_utils.get_parameter_value(parameters, 'flatten_results', 'value')
-    except KeyError:
+    flatten_results = task_utils.get_parameter_value(parameters, 'flatten_results', 'value')
+    if not flatten_results:
         target_dirs = os.path.splitdrive(target_folder)[1]
         flatten_results = 'false'
+    if not os.path.exists(request['folder']):
+        os.makedirs(request['folder'])
 
     i = 1.
     copied = 0
@@ -63,9 +47,9 @@ def execute(request):
                         dst = target_folder
                 if os.path.isfile(src_file):
                     if src_file.endswith('.shp'):
-                        all_files = get_files(src_file, shp_files)
+                        all_files = task_utils.list_files(src_file, shp_files)
                     elif src_file.endswith('.sdc'):
-                        all_files = get_files(src_file, sdc_files)
+                        all_files = task_utils.list_files(src_file, sdc_files)
                     else:
                         all_files = [src_file]
                     for f in all_files:
@@ -99,10 +83,6 @@ def execute(request):
         pass
 
     # Update state if necessary.
-    if copied == 0:
-        status_writer.send_state(status.STAT_FAILED, 'All results failed to copy.')
-        task_utils.report(os.path.join(request['folder'], '_report.json'), copied, skipped, errors, 0)
-        sys.exit(1)
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not be copied.'.format(skipped))
         task_utils.report(os.path.join(request['folder'], '_report.json'), copied, skipped, errors, warnings)

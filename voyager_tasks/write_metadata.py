@@ -24,9 +24,10 @@ def execute(request):
     tags = task_utils.get_parameter_value(parameters, 'tags', 'value')
     # Handle commas, spaces, and/or new line separators.
     tags = [tag for tag in re.split(' |,|\n', tags) if not tag == '']
-    try:
-        overwrite = task_utils.get_parameter_value(parameters, 'overwrite', 'value')
-    except KeyError:
+    #try:
+    overwrite = task_utils.get_parameter_value(parameters, 'overwrite', 'value')
+    #except KeyError:
+    if not overwrite:
         overwrite = False
 
     if not os.path.exists(request['folder']):
@@ -36,7 +37,7 @@ def execute(request):
     xslt_file = os.path.join(arcpy.GetInstallInfo()['InstallDir'], 'Metadata/Stylesheets/gpTools/exact copy of.xslt')
 
     # Template metadata file.
-    template_xml = os.path.join(os.path.dirname(__file__), 'supportfiles/{0}'.format('metadata_template.xml'))
+    template_xml = os.path.join(os.path.dirname(__file__), 'supportfiles', 'metadata_template.xml')
 
     i = 1.
     updated = 0
@@ -126,7 +127,6 @@ def execute(request):
                 updated += 1
             else:
                 status_writer.send_percent(i/item_count, 'No Metadata changes for: {0}.'.format(item), 'write_metadata')
-                skipped += 1
 
         except Exception as ex:
             status_writer.send_percent(
@@ -144,10 +144,6 @@ def execute(request):
         pass
 
     # Update state if necessary.
-    if updated == 0:
-        status_writer.send_state(status.STAT_FAILED, 'Could not write metadata for all results.')
-        task_utils.report(os.path.join(request['folder'], '_report.md'), updated, skipped, skipped)
-        sys.exit(1)
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, 'Could not write metadata for {0} results.'.format(skipped))
         task_utils.report(os.path.join(request['folder'], '_report.md'), updated, skipped, skipped)

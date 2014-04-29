@@ -31,7 +31,7 @@ def execute(request):
         os.makedirs(out_workspace)
 
     skipped = 0
-    warnings = 0
+    errors = 0
     layers = []
     files = []
     for item in input_items:
@@ -77,7 +77,7 @@ def execute(request):
         except Exception as ex:
             status_writer.send_status('Cannot package {0}: {1}'.format(item, repr(ex)))
             skipped += 1
-            warnings += 1
+            errors += 1
             pass
 
     if skipped == len(input_items):
@@ -130,4 +130,4 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not be packaged.'.format(skipped))
-        task_utils.report(os.path.join(request['folder'], '_report.json'), len(layers), skipped, 0, warnings)
+        task_utils.report(os.path.join(request['folder'], '_report.json'), len(layers), skipped, errors)

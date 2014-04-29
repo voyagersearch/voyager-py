@@ -25,6 +25,7 @@ def execute(request):
     """
     added = 0
     skipped = 0
+    errors = 0
     status_writer = status.Writer()
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
@@ -192,6 +193,7 @@ def execute(request):
                                        'Failed to add: {0}. {1}.'.format(os.path.basename(ds), repr(ex)),
                                        'add_to_geodatabase')
             skipped += 1
+            errors += 1
             pass
 
     try:
@@ -199,11 +201,8 @@ def execute(request):
     except IOError:
         status_writer.send_status('Could not copy thumbnail.')
         pass
-    task_utils.report(os.path.join(task_folder, '_report.md'), request['task'], added, skipped)
 
     # Update state if necessary.
-    if added == 0:
-        status_writer.send_state(status.STAT_FAILED, 'All results failed to be added.')
-        sys.exit(1)
-    elif skipped > 0:
+    if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not be added.'.format(skipped))
+        task_utils.report(os.path.join(task_folder, '_report.md'), request['task'], added, skipped, errors)

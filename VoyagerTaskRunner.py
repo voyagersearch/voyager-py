@@ -1,9 +1,9 @@
 """Executes a Voyager processing task."""
 import os
-import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), 'voyager_tasks'))
 import collections
 import json
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), 'voyager_tasks'))
 import voyager_tasks
 
 

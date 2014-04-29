@@ -36,7 +36,6 @@ def execute(request):
     """
     added_to_map = 0
     skipped = 0
-    warnings = 0
     status_writer = status.Writer()
     parameters = request['params']
 
@@ -104,7 +103,6 @@ def execute(request):
         except Exception as ex:
             status_writer.send_status('Failed to add: {0}. {1}.'.format(os.path.basename(item), repr(ex)))
             skipped += 1
-            warnings += 1
             pass
 
     if map_view:
@@ -174,4 +172,4 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not be added to the PDF.'.format(skipped))
-        task_utils.report(os.path.join(request['folder'], '_report.json'), added_to_map, skipped, 0, skipped)
+        task_utils.report(os.path.join(request['folder'], '_report.json'), added_to_map, skipped, skipped)

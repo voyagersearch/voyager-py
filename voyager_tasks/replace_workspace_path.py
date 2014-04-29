@@ -84,10 +84,6 @@ def execute(request):
         pass
 
     # Update state if necessary.
-    if updated == 0:
-        status_writer.send_state(status.STAT_FAILED, 'Could not replace workspace for all results.')
-        task_utils.report(os.path.join(request['folder'], '_report.md'), updated, skipped, skipped)
-        sys.exit(1)
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, 'Could not replace workspace for {0} results.'.format(skipped))
-        task_utils.report(os.path.join(request['folder'], '_report.md'), updated, skipped, skipped)
+        task_utils.report(os.path.join(request['folder'], '_report.md'), updated, skipped, 0, skipped)

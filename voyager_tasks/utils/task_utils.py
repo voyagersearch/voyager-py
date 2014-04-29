@@ -61,6 +61,21 @@ def get_clip_region(clip_area_wkt, out_coordinate_system=None):
     return clip_area.extent
 
 
+def list_files(source_file, file_extensions):
+    """Returns a list of files for each file type.
+
+    :param source_file: source file path
+    :param file_extensions: list of file extensions - i.e. ['*.shp', '*.prj']
+    :rtype : list
+    """
+    folder_location = os.path.dirname(source_file)
+    file_name = os.path.splitext(os.path.basename(source_file))[0]
+    all_files = []
+    for ext in file_extensions:
+        all_files.extend(glob.glob(os.path.join(folder_location, '{0}.{1}'.format(file_name, ext))))
+    return all_files
+
+
 def get_parameter_value(parameters, parameter_name, value_key='value'):
     """Returns the parameter value.
 

@@ -130,9 +130,12 @@ def execute(request):
             i += 1.
             converted += 1
         except Exception as ex:
-            status_writer.send_percent(i/count, 'Skipped: {0}. {1}.'.format(dsc.name, repr(ex)), 'convert_to_kml')
+            status_writer.send_percent(i/count,
+                                       'Failed to convert: {0}. {1}.'.format(dsc.name, repr(ex)),
+                                       'convert_to_kml')
             i += 1
             skipped += 1
+            errors += 1
             pass
 
     # Zip up kmz files if more than one.
@@ -147,10 +150,6 @@ def execute(request):
         pass
 
     # Update state if necessary.
-    if converted == 0:
-        status_writer.send_state(status.STAT_FAILED, 'All results failed to convert.')
-        task_utils.report(os.path.join(request['folder'], '_report.json'), converted, skipped, errors)
-        sys.exit(1)
-    elif skipped > 0:
+    if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not be converted.'.format(skipped))
         task_utils.report(os.path.join(request['folder'], '_report.json'), converted, skipped, errors)

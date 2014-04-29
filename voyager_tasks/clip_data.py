@@ -53,14 +53,12 @@ def clip_layer_file(layer_file, aoi):
 
         if layer.description == '':
             layer.description == layer.name
-
         # Catch assertion error if a group layer.
         try:
             layer.save()
         except AssertionError:
             layers[0].save()
             pass
-# End clip_layer_file function
 
 
 def clip_mxd_layers(mxd_path, aoi):
@@ -102,7 +100,6 @@ def clip_mxd_layers(mxd_path, aoi):
         new_mxd = os.path.join(arcpy.env.workspace, os.path.basename(mxd.filePath))
     mxd.saveACopy(new_mxd)
     del mxd
-# End clip_mxd_layers function
 
 
 def create_lpk(data_location, additional_files):
@@ -126,7 +123,6 @@ def create_lpk(data_location, additional_files):
                                   'PRESERVE',
                                   version='10',
                                   additional_files=additional_files)
-# End create_layer_package function
 
 
 def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
@@ -186,7 +182,6 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
                                     version='10',
                                     additional_files=additional_files)
         del mxd
-# End create_map_package function
 
 
 def execute(request):
@@ -237,7 +232,6 @@ def execute(request):
     i = 1.
     count = len(input_items)
     files_to_package = list()
-    status_writer.send_status('Starting the clipping process...')
     for ds, out_name in input_items.iteritems():
         try:
             dsc = arcpy.Describe(ds)
@@ -356,7 +350,9 @@ def execute(request):
             clipped += 1
         # Continue. Process as many as possible.
         except Exception as ex:
-            status_writer.send_percent(i/count, 'Skipped {0}: {1}'.format(os.path.basename(ds), repr(ex)), 'clip_data')
+            status_writer.send_percent(i/count,
+                                       'Failed to clip {0}: {1}'.format(os.path.basename(ds), repr(ex)),
+                                       'clip_data')
             i += 1.
             skipped += 1
             errors += 1
@@ -385,11 +381,8 @@ def execute(request):
     except IOError:
         status_writer.send_status('Could not copy thumbnail.')
         pass
+
     # Update state if necessary.
-    if clipped == 0:
-        status_writer.send_state(status.STAT_FAILED, 'All results failed to clip.')
-        task_utils.report(os.path.join(request['folder'], '_report.json'), clipped, skipped, errors)
-        sys.exit(1)
-    elif skipped > 0:
+    if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not be clipped.'.format(skipped))
         task_utils.report(os.path.join(request['folder'], '_report.json'), clipped, skipped, errors)

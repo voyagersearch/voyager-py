@@ -64,7 +64,6 @@ def execute(request):
     raster_items = []
     bands = collections.defaultdict(int)
     skipped = 0
-    warnings = 0
     for item in input_items:
         # Number of bands for each item should be the same.
         dsc = arcpy.Describe(item)
@@ -141,4 +140,4 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not mosaic.'.format(skipped))
-        task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), skipped, 0, warnings)
+        task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), skipped, 0, skipped)

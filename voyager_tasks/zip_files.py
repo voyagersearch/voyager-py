@@ -1,5 +1,4 @@
 import os
-import glob
 import sys
 import shutil
 import zipfile
@@ -7,35 +6,18 @@ from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
 
 
-def get_files(source_file, file_extensions):
-    """Returns a list of files for each file type.
-    :param source_file: source file path
-    :param file_extensions: list of file extensions - i.e. ['*.shp', '*.prj']
-    :rtype : list
-    """
-    folder_location = os.path.dirname(source_file)
-    file_name = os.path.basename(source_file)[:-4]
-    all_files = []
-    for ext in file_extensions:
-        all_files.extend(glob.glob(os.path.join(folder_location, '{0}.{1}'.format(file_name, ext))))
-    return all_files
-
-
 def execute(request):
     """Zips all input files to output.zip.
-
     :param request: json as a dict.
     """
     zipped = 0
     skipped = 0
-    warnings = 0
     shp_files = ('shp', 'shx', 'sbn', 'dbf', 'prj', 'cpg', 'shp.xml', 'dbf.xml')
     sdc_files = ('sdc', 'sdi', 'sdc.xml', 'sdc.prj')
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
-    try:
-        flatten_results = task_utils.get_parameter_value(parameters, 'flatten_results', 'value')
-    except KeyError:
+    flatten_results = task_utils.get_parameter_value(parameters, 'flatten_results', 'value')
+    if not flatten_results:
         flatten_results = False
     zip_file_location = request['folder']
     if not os.path.exists(zip_file_location):
@@ -43,15 +25,14 @@ def execute(request):
     file_count = len(input_items)
     i = 1.
     status_writer = status.Writer()
-    status_writer.send_status('Starting to zip files...')
     zip_file = os.path.join(zip_file_location, 'output.zip')
     with task_utils.ZipFileManager(zip_file, 'w', zipfile.ZIP_DEFLATED) as zipper:
         for in_file in input_items:
             if os.path.isfile(in_file):
                 if in_file.endswith('.shp'):
-                    files = get_files(in_file, shp_files)
+                    files = task_utils.list_files(in_file, shp_files)
                 elif in_file.endswith('.sdc'):
-                    files = get_files(in_file, sdc_files)
+                    files = task_utils.list_files(in_file, sdc_files)
                 else:
                     files = [in_file]
                 if flatten_results:
@@ -73,14 +54,14 @@ def execute(request):
                                     zipper.write(absf, os.path.join(os.path.basename(in_file), zf))
                                 else:
                                     zipper.write(absf, os.path.join(in_file, zf))
-                            except Exception:
+                            except IOError:
+                                # For File GDB lock files.
                                 pass
             else:
                 status_writer.send_percent(i/file_count,
                                            '{0} is not a file or does not exist.'.format(in_file),
                                            'zip_files')
                 skipped += 1
-                warnings += 1
             i += 1.0
 
     try:
@@ -96,4 +77,4 @@ def execute(request):
         sys.exit(1)
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not be zipped.'.format(skipped))
-        task_utils.report(os.path.join(request['folder'], '_report.md'), zipped, skipped, 0, warnings)
+        task_utils.report(os.path.join(request['folder'], '_report.md'), zipped, skipped, 0, skipped)
