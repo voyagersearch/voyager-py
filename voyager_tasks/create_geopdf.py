@@ -1,4 +1,16 @@
-"""Creates a GeoPDF document containing the input items."""
+# (C) Copyright 2014 Voyager Search
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import os
 import sys
 import datetime
@@ -35,6 +47,7 @@ def execute(request):
     :param request: json as a dict.
     """
     added_to_map = 0
+    errors = 0
     skipped = 0
     status_writer = status.Writer()
     parameters = request['params']
@@ -55,7 +68,8 @@ def execute(request):
     if not os.path.exists(temp_folder):
         os.makedirs(temp_folder)
 
-    mxd = arcpy.mapping.MapDocument(os.path.join(os.path.dirname(__file__), 'supportfiles/frame/{0}'.format(map_template)))
+    mxd_path = os.path.join(os.path.dirname(__file__), 'supportfiles', 'frame', map_template)
+    mxd = arcpy.mapping.MapDocument(mxd_path)
     data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
     layer = None
     status_writer.send_status('Adding items to {0}...'.format(map_template))
@@ -78,7 +92,7 @@ def execute(request):
                 for fc in arcpy.ListFeatureClasses():
                     layer_file = arcpy.SaveToLayerFile_management(arcpy.MakeFeatureLayer_management(fc, fc),
                                                                   os.path.join(temp_folder, fc))
-                    layer = arcpy.mapping.Layer(data_frame, layer_file.getOutput(0))
+                    layer = arcpy.mapping.Layer(layer_file.getOutput(0))
 
             elif dsc.dataType == 'RasterDataset':
                 raster_layer = arcpy.MakeRasterLayer_management(item, os.path.basename(item))
@@ -102,7 +116,7 @@ def execute(request):
                 skipped += 1
         except Exception as ex:
             status_writer.send_status('Failed to add: {0}. {1}.'.format(os.path.basename(item), repr(ex)))
-            skipped += 1
+            errors += 1
             pass
 
     if map_view:
@@ -157,7 +171,9 @@ def execute(request):
 
     status_writer.send_status('Creating output GeoPDF...')
     if added_to_map > 0:
-        arcpy.mapping.ExportToPDF(mxd, os.path.join(request['folder'], 'output.pdf'), layers_attributes=attribute_setting)
+        arcpy.mapping.ExportToPDF(mxd,
+                                  os.path.join(request['folder'], 'output.pdf'),
+                                  layers_attributes=attribute_setting)
     else:
         status_writer.send_state(status.STAT_FAILED, 'No results can be exported to PDF.')
         task_utils.report(os.path.join(request['folder'], '_report.json'), added_to_map, skipped, skipped, 0)
@@ -170,6 +186,6 @@ def execute(request):
         pass
 
     # Update state if necessary.
-    if skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, '{0} results could not be added to the PDF.'.format(skipped))
-        task_utils.report(os.path.join(request['folder'], '_report.json'), added_to_map, skipped, skipped)
+    if skipped > 0 or errors > 0:
+        status_writer.send_state(status.STAT_WARNING, '{0} results could not be added to the PDF.'.format(skipped + errors))
+    task_utils.report(os.path.join(request['folder'], '_report.json'), added_to_map, skipped, errors)

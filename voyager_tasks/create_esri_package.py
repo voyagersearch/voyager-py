@@ -1,3 +1,16 @@
+# (C) Copyright 2014 Voyager Search
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import os
 import sys
 import shutil
@@ -30,8 +43,8 @@ def execute(request):
     if not os.path.exists(out_workspace):
         os.makedirs(out_workspace)
 
-    skipped = 0
     errors = 0
+    skipped = 0
     layers = []
     files = []
     for item in input_items:
@@ -74,13 +87,16 @@ def execute(request):
                     arcpy.env.workspace = out_workspace
                 elif dsc.dataType == 'File':
                     files.append(item)
+                else:
+                    status_writer.send_status('Invalid input type: {0}.'.format(item))
+                    skipped += 1
+                    continue
         except Exception as ex:
             status_writer.send_status('Cannot package {0}: {1}'.format(item, repr(ex)))
-            skipped += 1
             errors += 1
             pass
 
-    if skipped == len(input_items):
+    if errors == len(input_items):
         status_writer.send_state(status.STAT_FAILED, 'No results to package.')
         sys.exit(1)
 
@@ -128,6 +144,6 @@ def execute(request):
         status_writer.send_status('Could not copy thumbnail.')
         pass
     # Update state if necessary.
-    if skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, '{0} results could not be packaged.'.format(skipped))
-        task_utils.report(os.path.join(request['folder'], '_report.json'), len(layers), skipped, errors)
+    if errors > 0 or skipped:
+        status_writer.send_state(status.STAT_WARNING, '{0} results could not be packaged.'.format(errors + skipped))
+    task_utils.report(os.path.join(request['folder'], '_report.json'), len(layers), skipped, errors)

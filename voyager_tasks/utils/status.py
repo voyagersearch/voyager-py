@@ -1,7 +1,16 @@
-"""Report task status."""
-
-__author__ = 'VoyagerSearch'
-
+# (C) Copyright 2014 Voyager Search
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import sys
 
 
@@ -25,8 +34,8 @@ STAT_STOPPING = "STOPPING"
 STAT_WARNING = "WARNING"
 
 
-class Writer:
-    """Write class"""
+class Writer(object):
+    """Writer object with functions to report task status."""
     def __init__(self):
         """Initialize Writer call."""
         self._io = sys.stdout

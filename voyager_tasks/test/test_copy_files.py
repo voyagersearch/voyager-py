@@ -38,7 +38,7 @@ class TestCopyFilesTask(unittest.TestCase):
         self.request['params'][1]['value'] = self.temp_folder
         getattr(sys.modules[self.request['task']], "execute")(self.request)
         copied_files = glob.glob(os.path.join(self.temp_folder, '*.*'))
-        self.assertEqual(len(copied_files), 15)
+        self.assertEqual(len(copied_files), 16)
 
 
 if __name__ == '__main__':

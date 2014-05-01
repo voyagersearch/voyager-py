@@ -1,4 +1,16 @@
-"""Copies data to an existing geodatabase."""
+# (C) Copyright 2014 Voyager Search
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import os
 import sys
 import shutil
@@ -58,49 +70,48 @@ def execute(request):
 
     i = 1.
     count = len(input_items)
-    status_writer.send_status('Starting to add data to {0}...'.format(out_gdb))
     for ds, out_name in input_items.iteritems():
         try:
             dsc = arcpy.Describe(ds)
             if dsc.dataType == 'FeatureClass':
                 if out_name == '':
-                    arcpy.management.CopyFeatures(ds, task_utils.create_unique_name(dsc.name, out_gdb))
+                    arcpy.CopyFeatures_management(ds, task_utils.create_unique_name(dsc.name, out_gdb))
                 else:
-                    arcpy.management.CopyFeatures(ds, task_utils.create_unique_name(out_name, out_gdb))
+                    arcpy.CopyFeatures_management(ds, task_utils.create_unique_name(out_name, out_gdb))
 
             elif dsc.dataType == 'ShapeFile':
                 if out_name == '':
-                    arcpy.management.CopyFeatures(ds, task_utils.create_unique_name(dsc.name[:-4], out_gdb))
+                    arcpy.CopyFeatures_management(ds, task_utils.create_unique_name(dsc.name[:-4], out_gdb))
                 else:
-                    arcpy.management.CopyFeatures(ds, task_utils.create_unique_name(out_name, out_gdb))
+                    arcpy.CopyFeatures_management(ds, task_utils.create_unique_name(out_name, out_gdb))
 
             elif dsc.dataType == 'FeatureDataset':
                 if not is_fds:
                     fds_name = os.path.basename(task_utils.create_unique_name(dsc.name, out_gdb))
-                    fds = arcpy.management.CreateFeatureDataset(out_gdb, fds_name).getOutput(0)
+                    fds = arcpy.CreateFeatureDataset_management(out_gdb, fds_name).getOutput(0)
                 else:
                     fds = out_gdb
                 arcpy.env.workspace = dsc.catalogPath
                 for fc in arcpy.ListFeatureClasses():
                     name = os.path.basename(task_utils.create_unique_name(fc, out_gdb))
-                    arcpy.management.CopyFeatures(fc, os.path.join(fds, name))
+                    arcpy.CopyFeatures_management(fc, os.path.join(fds, name))
                 arcpy.env.workspace = out_gdb
 
             elif dsc.dataType == 'RasterDataset':
                 if is_fds:
                     out_gdb = os.path.dirname(out_gdb)
                 if out_name == '':
-                    arcpy.management.CopyRaster(ds, task_utils.create_unique_name(dsc.name, out_gdb))
+                    arcpy.CopyRaster_management(ds, task_utils.create_unique_name(dsc.name, out_gdb))
                 else:
-                    arcpy.management.CopyRaster(ds, task_utils.create_unique_name(out_name, out_gdb))
+                    arcpy.CopyRaster_management(ds, task_utils.create_unique_name(out_name, out_gdb))
 
             elif dsc.dataType == 'RasterCatalog':
                 if is_fds:
                     out_gdb = os.path.dirname(out_gdb)
                 if out_name == '':
-                    arcpy.management.CopyRasterCatalogItems(ds, task_utils.create_unique_name(dsc.name, out_gdb))
+                    arcpy.CopyRasterCatalogItems_management(ds, task_utils.create_unique_name(dsc.name, out_gdb))
                 else:
-                    arcpy.management.CopyRasterCatalogItems(ds, task_utils.create_unique_name(out_name, out_gdb))
+                    arcpy.CopyRasterCatalogItems_management(ds, task_utils.create_unique_name(out_name, out_gdb))
 
             elif dsc.dataType == 'Layer':
                 layer_from_file = arcpy.mapping.Layer(dsc.catalogPath)
@@ -111,17 +122,17 @@ def execute(request):
                     else:
                         name = task_utils.create_unique_name(out_name, out_gdb)
                     if layer.isFeatureLayer:
-                        arcpy.management.CopyFeatures(layer.dataSource, name)
+                        arcpy.CopyFeatures_management(layer.dataSource, name)
                     elif layer.isRasterLayer:
                         if is_fds:
                             name = os.path.dirname(name)
-                        arcpy.management.CopyRaster(layer.dataSource, name)
+                        arcpy.CopyRaster_management(layer.dataSource, name)
 
             elif dsc.dataType == 'CadDrawingDataset':
                 arcpy.env.workspace = dsc.catalogPath
                 cad_wks_name = os.path.splitext(dsc.name)[0]
                 for cad_fc in arcpy.ListFeatureClasses():
-                    arcpy.management.CopyFeatures(
+                    arcpy.CopyFeatures_management(
                         cad_fc,
                         task_utils.create_unique_name('{0}_{1}'.format(cad_wks_name, cad_fc), out_gdb)
                     )
@@ -131,20 +142,20 @@ def execute(request):
                 if dsc.catalogPath.endswith('.kml') or dsc.catalogPath.endswith('.kmz'):
                     name = os.path.splitext(dsc.name)[0]
                     temp_dir = tempfile.mkdtemp()
-                    kml_layer = arcpy.conversion.KMLToLayer(dsc.catalogPath, temp_dir, name)
+                    kml_layer = arcpy.KMLToLayer_conversion(dsc.catalogPath, temp_dir, name)
                     group_layer = arcpy.mapping.Layer(os.path.join(temp_dir, '{}.lyr'.format(name)))
                     for layer in arcpy.mapping.ListLayers(group_layer):
                         if layer.isFeatureLayer:
-                            arcpy.management.CopyFeatures(layer, task_utils.create_unique_name(layer, out_gdb))
+                            arcpy.CopyFeatures_management(layer, task_utils.create_unique_name(layer, out_gdb))
                         elif layer.isRasterLayer:
                             if is_fds:
                                 out_gdb = os.path.dirname(out_gdb)
-                            arcpy.management.CopyRaster(layer, task_utils.create_unique_name(layer, out_gdb))
+                            arcpy.CopyRaster_management(layer, task_utils.create_unique_name(layer, out_gdb))
                     # Clean up temp KML results.
-                    arcpy.management.Delete(os.path.join(temp_dir, '{}.lyr'.format(name)))
-                    arcpy.management.Delete(kml_layer)
+                    arcpy.Delete_management(os.path.join(temp_dir, '{}.lyr'.format(name)))
+                    arcpy.Delete_management(kml_layer)
                 else:
-                    status_writer.send_percent(i/count, 'Cannot add {0}.'.format(ds), 'add_to_geodatabase')
+                    status_writer.send_percent(i/count, 'Invalid input type: {0}.'.format(ds), 'add_to_geodatabase')
                     i += 1.
                     skipped += 1
                     continue
@@ -154,18 +165,18 @@ def execute(request):
                 layers = arcpy.mapping.ListLayers(mxd)
                 for layer in layers:
                     if layer.isFeatureLayer:
-                        arcpy.management.CopyFeatures(layer.dataSource,
+                        arcpy.CopyFeatures_management(layer.dataSource,
                                                       task_utils.create_unique_name(layer.name, out_gdb))
                     elif layer.isRasterLayer:
                         if is_fds:
                             out_gdb = os.path.dirname(out_gdb)
-                        arcpy.management.CopyRaster(layer.dataSource,
+                        arcpy.CopyRaster_management(layer.dataSource,
                                                     task_utils.create_unique_name(layer.name, out_gdb))
                 table_views = arcpy.mapping.ListTableViews(mxd)
                 if is_fds:
                     out_gdb = os.path.dirname(out_gdb)
                 for table_view in table_views:
-                    arcpy.management.CopyRows(table_view.dataSource,
+                    arcpy.CopyRows_management(table_view.dataSource,
                                               task_utils.create_unique_name(table_view.name, out_gdb))
                 out_gdb = arcpy.env.workspace
 
@@ -173,9 +184,9 @@ def execute(request):
                 if is_fds:
                     out_gdb = os.path.dirname(out_gdb)
                 if out_name == '':
-                    arcpy.management.CopyRows(ds, task_utils.create_unique_name(dsc.name, out_gdb))
+                    arcpy.CopyRows_management(ds, task_utils.create_unique_name(dsc.name, out_gdb))
                 else:
-                    arcpy.management.CopyRows(ds, task_utils.create_unique_name(out_name, out_gdb))
+                    arcpy.CopyRows_management(ds, task_utils.create_unique_name(out_name, out_gdb))
 
             else:
                 # Try to copy any other types such as topologies, network datasets, etc.
@@ -184,7 +195,7 @@ def execute(request):
                 arcpy.Copy_management(ds, task_utils.create_unique_name(dsc.name, out_gdb))
 
             out_gdb = arcpy.env.workspace
-            status_writer.send_percent(i/count, 'Added {0}.'.format(ds), 'add_to_geodatabase')
+            status_writer.send_percent(i/count, 'Added {0}.'.format(dsc.name), 'add_to_geodatabase')
             i += 1.
             added += 1
         # Continue if an error. Process as many as possible.
@@ -192,7 +203,6 @@ def execute(request):
             status_writer.send_percent(i/count,
                                        'Failed to add: {0}. {1}.'.format(os.path.basename(ds), repr(ex)),
                                        'add_to_geodatabase')
-            skipped += 1
             errors += 1
             pass
 
@@ -203,6 +213,6 @@ def execute(request):
         pass
 
     # Update state if necessary.
-    if skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, '{0} results could not be added.'.format(skipped))
-        task_utils.report(os.path.join(task_folder, '_report.md'), request['task'], added, skipped, errors)
+    if skipped > 0 or errors > 0:
+        status_writer.send_state(status.STAT_WARNING, '{0} results could not be added.'.format(skipped + errors))
+    task_utils.report(os.path.join(task_folder, '_report.json'), added, skipped, errors)

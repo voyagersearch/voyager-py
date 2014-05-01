@@ -1,6 +1,17 @@
-"""Converts data to kml (.kmz)."""
+# (C) Copyright 2014 Voyager Search
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import os
-import sys
 import shutil
 import arcpy
 from voyager_tasks.utils import status
@@ -41,34 +52,33 @@ def execute(request):
 
     i = 1.
     status_writer = status.Writer()
-    status_writer.send_status('Converting to kml...')
     for ds, out_name in input_items.iteritems():
         try:
             dsc = arcpy.Describe(ds)
 
             if dsc.dataType == 'FeatureClass':
-                arcpy.management.MakeFeatureLayer(ds, dsc.name)
+                arcpy.MakeFeatureLayer_management(ds, dsc.name)
                 if out_name == '':
                     out_name = dsc.name
-                arcpy.conversion.LayerToKML(dsc.name,
+                arcpy.LayerToKML_conversion(dsc.name,
                                             '{0}.kmz'.format(os.path.join(out_workspace, out_name)),
                                             1,
                                             boundary_box_extent=extent)
 
             elif dsc.dataType == 'ShapeFile':
-                arcpy.management.MakeFeatureLayer(ds, dsc.name[:-4])
+                arcpy.MakeFeatureLayer_management(ds, dsc.name[:-4])
                 if out_name == '':
                     out_name = dsc.name[:-4]
-                arcpy.conversion.LayerToKML(dsc.name[:-4],
+                arcpy.LayerToKML_conversion(dsc.name[:-4],
                                             '{0}.kmz'.format(os.path.join(out_workspace, out_name)),
                                             1,
                                             boundary_box_extent=extent)
 
             elif dsc.dataType == 'RasterDataset':
-                arcpy.management.MakeRasterLayer(ds, dsc.name)
+                arcpy.MakeRasterLayer_management(ds, dsc.name)
                 if out_name == '':
                     out_name = dsc.name
-                arcpy.conversion.LayerToKML(dsc.name,
+                arcpy.LayerToKML_conversion(dsc.name,
                                             '{0}.kmz'.format(os.path.join(out_workspace, out_name)),
                                             1,
                                             boundary_box_extent=extent)
@@ -79,7 +89,7 @@ def execute(request):
                         out_name = dsc.name[:-4]
                     else:
                         out_name = dsc.name
-                arcpy.conversion.LayerToKML(ds,
+                arcpy.LayerToKML_conversion(ds,
                                             '{0}.kmz'.format(os.path.join(out_workspace, out_name)),
                                             1,
                                             boundary_box_extent=extent)
@@ -87,8 +97,8 @@ def execute(request):
             elif dsc.dataType == 'FeatureDataset':
                 arcpy.env.workspace = ds
                 for fc in arcpy.ListFeatureClasses():
-                    arcpy.management.MakeFeatureLayer(fc, 'tmp_lyr')
-                    arcpy.conversion.LayerToKML('tmp_lyr',
+                    arcpy.MakeFeatureLayer_management(fc, 'tmp_lyr')
+                    arcpy.LayerToKML_conversion('tmp_lyr',
                                                 '{0}.kmz'.format(os.path.join(out_workspace, fc)),
                                                 1,
                                                 boundary_box_extent=extent)
@@ -97,20 +107,20 @@ def execute(request):
                 arcpy.env.workspace = dsc.catalogPath
                 for cad_fc in arcpy.ListFeatureClasses():
                     if cad_fc.lower() == 'annotation':
-                        cad_anno = arcpy.conversion.ImportCADAnnotation(
+                        cad_anno = arcpy.ImportCADAnnotation_conversion(
                             cad_fc,
                             arcpy.CreateUniqueName('cadanno', arcpy.env.scratchGDB)
                         )
-                        arcpy.management.MakeFeatureLayer(cad_anno, 'cad_lyr')
+                        arcpy.MakeFeatureLayer_management(cad_anno, 'cad_lyr')
                         name = '{0}_{1}'.format(dsc.name[:-4], cad_fc)
-                        arcpy.conversion.LayerToKML('cad_lyr',
+                        arcpy.LayerToKML_conversion('cad_lyr',
                                                     '{0}.kmz'.format(os.path.join(out_workspace, name)),
                                                     1,
                                                     boundary_box_extent=extent)
                     else:
-                        arcpy.management.MakeFeatureLayer(cad_fc, 'cad_lyr')
+                        arcpy.MakeFeatureLayer_management(cad_fc, 'cad_lyr')
                         name = '{0}_{1}'.format(dsc.name[:-4], cad_fc)
-                        arcpy.conversion.LayerToKML('cad_lyr',
+                        arcpy.LayerToKML_conversion('cad_lyr',
                                                     '{0}.kmz'.format(os.path.join(out_workspace, name)),
                                                     1,
                                                     boundary_box_extent=extent)
@@ -121,20 +131,24 @@ def execute(request):
                 data_frames = arcpy.mapping.ListDataFrames(mxd)
                 for df in data_frames:
                     name = '{0}_{1}'.format(dsc.name[:-4], df.name)
-                    arcpy.conversion.MapToKML(ds,
+                    arcpy.MapToKML_conversion(ds,
                                               df.name,
                                               '{0}.kmz'.format(os.path.join(out_workspace, name)),
                                               extent_to_export=extent)
+
+            else:
+                status_writer.send_percent(i/count, 'Invalid input type: {0}'.format(ds), 'convert_to_kml')
+                skipped += 1
+                continue
 
             status_writer.send_percent(i/count, 'Converted {0}.'.format(ds), 'convert_to_kml')
             i += 1.
             converted += 1
         except Exception as ex:
             status_writer.send_percent(i/count,
-                                       'Failed to convert: {0}. {1}.'.format(dsc.name, repr(ex)),
+                                       'Failed to convert: {0}. {1}.'.format(ds, repr(ex)),
                                        'convert_to_kml')
             i += 1
-            skipped += 1
             errors += 1
             pass
 
@@ -150,6 +164,6 @@ def execute(request):
         pass
 
     # Update state if necessary.
-    if skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, '{0} results could not be converted.'.format(skipped))
-        task_utils.report(os.path.join(request['folder'], '_report.json'), converted, skipped, errors)
+    if skipped > 0 or errors > 0:
+        status_writer.send_state(status.STAT_WARNING, '{0} results could not be converted.'.format(errors + skipped))
+    task_utils.report(os.path.join(request['folder'], '_report.json'), converted, skipped, errors)

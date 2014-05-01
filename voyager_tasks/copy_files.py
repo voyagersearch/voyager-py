@@ -1,5 +1,17 @@
+# (C) Copyright 2014 Voyager Search
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import os
-import sys
 import shutil
 from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
@@ -23,7 +35,6 @@ def execute(request):
     copied = 0
     skipped = 0
     errors = 0
-    warnings = 0
     file_count = len(input_items)
     shp_files = ('shp', 'shx', 'sbn', 'dbf', 'prj', 'cpg', 'shp.xml', 'dbf.xml')
     sdc_files = ('sdc', 'sdi', 'sdc.xml', 'sdc.prj')
@@ -65,14 +76,12 @@ def execute(request):
                     'copy_files'
                 )
                 skipped += 1
-                warnings += 1
         except IOError as io_err:
             status_writer.send_percent(
                 i/file_count,
                 'Failed to copy: {0}. {1}.'.format(src_file, repr(io_err)),
                 'copy_files'
             )
-            skipped += 1
             errors += 1
             pass
 
@@ -83,6 +92,6 @@ def execute(request):
         pass
 
     # Update state if necessary.
-    if skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, '{0} results could not be copied.'.format(skipped))
-        task_utils.report(os.path.join(request['folder'], '_report.json'), copied, skipped, errors, warnings)
+    if errors > 0 or skipped > 0:
+        status_writer.send_state(status.STAT_WARNING, '{0} results could not be copied.'.format(skipped + errors))
+    task_utils.report(os.path.join(request['folder'], '_report.json'), copied, skipped, errors)

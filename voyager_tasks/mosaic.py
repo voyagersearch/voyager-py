@@ -1,4 +1,16 @@
-"""Mosaic input rasters into a new raster dataset."""
+# (C) Copyright 2014 Voyager Search
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import os
 import sys
 import collections
@@ -47,7 +59,7 @@ def execute(request):
     if not os.path.exists(out_workspace):
         os.makedirs(out_workspace)
     if output_raster_format == 'FileGDB' or output_raster_format == 'MosaicDataset':
-        out_workspace = arcpy.management.CreateFileGDB(out_workspace, 'output.gdb').getOutput(0)
+        out_workspace = arcpy.CreateFileGDB_management(out_workspace, 'output.gdb').getOutput(0)
     arcpy.env.workspace = out_workspace
 
     pixels = []
@@ -63,7 +75,7 @@ def execute(request):
                 pixels.append(dsc.pixeltype)
             bands[dsc.bandcount] = 1
         else:
-            status_writer.send_status('{0} is not a raster dataset and will not be processed.'.format(item))
+            status_writer.send_status('{0} is not a raster dataset and will not mosaic.'.format(item))
             skipped += 1
 
     if not raster_items:
@@ -133,4 +145,4 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not mosaic.'.format(skipped))
-        task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), skipped, 0, skipped)
+    task_utils.report(os.path.join(request['folder'], '_report.json'), len(raster_items), skipped)

@@ -1,4 +1,16 @@
-"""Mosaic input rasters to a new dataset in an existing workspace."""
+# (C) Copyright 2014 Voyager Search
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import os
 import sys
 import collections
@@ -39,7 +51,8 @@ def execute(request):
 
     if output_raster_format in ('FileGDB', 'MosaicDataset'):
         if not os.path.splitext(target_workspace)[1] in ('.gdb', '.mdb', '.sde'):
-            status_writer.send_state(status.STAT_FAILED, 'Target workspace must be a geodatabase for this raster format.')
+            status_writer.send_state(status.STAT_FAILED,
+                                     'Target workspace must be a geodatabase for this raster format.')
             sys.exit(1)
 
     task_folder = request['folder']
@@ -137,9 +150,8 @@ def execute(request):
     except IOError:
         status_writer.send_status('Could not copy thumbnail.')
         pass
-    task_utils.report(os.path.join(task_folder, '_report.md'), request['task'], len(raster_items), skipped)
 
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, '{0} results could not mosaic.'.format(skipped))
-        task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), skipped, 0, skipped)
+    task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), skipped)

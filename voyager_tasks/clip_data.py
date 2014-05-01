@@ -1,8 +1,16 @@
-"""
-Clips each input feature class or layer against the
-clip area and creates a compressed zip file, map package, or layer package.
-"""
-import sys
+# (C) Copyright 2014 Voyager Search
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import os
 import glob
 import shutil
@@ -24,7 +32,7 @@ def clip_layer_file(layer_file, aoi):
     for layer in layers:
         if layer.isFeatureLayer:
             name = task_utils.create_unique_name(layer.name, arcpy.env.workspace)
-            arcpy.analysis.Clip(layer.dataSource, aoi, name)
+            arcpy.Clip_analysis(layer.dataSource, aoi, name)
             if arcpy.env.workspace.endswith('.gdb'):
                 layer.replaceDataSource(arcpy.env.workspace,
                                         'FILEGDB_WORKSPACE',
@@ -39,7 +47,7 @@ def clip_layer_file(layer_file, aoi):
                 extent = arcpy.Describe(aoi).extent
             ext = '{0} {1} {2} {3}'.format(extent.XMin, extent.YMin, extent.XMax, extent.YMax)
             name = task_utils.create_unique_name(layer.name, arcpy.env.workspace)
-            arcpy.management.Clip(layer.dataSource, ext, name)
+            arcpy.Clip_management(layer.dataSource, ext, name)
             if arcpy.env.workspace.endswith('.gdb'):
                 layer.replaceDataSource(arcpy.env.workspace,
                                         'FILEGDB_WORKSPACE',
@@ -69,7 +77,7 @@ def clip_mxd_layers(mxd_path, aoi):
     layers = arcpy.mapping.ListLayers(mxd)
     for layer in layers:
         if layer.isFeatureLayer:
-            arcpy.analysis.Clip(layer.dataSource, aoi, layer.name)
+            arcpy.Clip_analysis(layer.dataSource, aoi, layer.name)
             if arcpy.env.workspace.endswith('.gdb'):
                 layer.replaceDataSource(arcpy.env.workspace,
                                         'FILEGDB_WORKSPACE',
@@ -79,7 +87,7 @@ def clip_mxd_layers(mxd_path, aoi):
                 layer.replaceDataSource(arcpy.env.workspace, 'SHAPEFILE_WORKSPACE', layer.datasetName, False)
         elif layer.isRasterLayer:
             ext = '{0} {1} {2} {3}'.format(aoi.extent.XMin, aoi.extent.YMin, aoi.extent.XMax, aoi.extent.YMax)
-            arcpy.management.Clip(layer.dataSource, ext, layer.name)
+            arcpy.Clip_management(layer.dataSource, ext, layer.name)
             if arcpy.env.workspace.endswith('.gdb'):
                 layer.replaceDataSource(arcpy.env.workspace,
                                         'FILEGDB_WORKSPACE',
@@ -118,7 +126,7 @@ def create_lpk(data_location, additional_files):
 
     # Package all layer files.
     layer_files = glob.glob(os.path.join(data_location, '*.lyr'))
-    arcpy.management.PackageLayer(layer_files,
+    arcpy.PackageLayer_management(layer_files,
                                   os.path.join(os.path.dirname(data_location), 'output.lpk'),
                                   'PRESERVE',
                                   version='10',
@@ -143,7 +151,7 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
     for ds in all_data:
         if ds.endswith('.shp'):
             # Add all shapefiles to the mxd template.
-            layer = arcpy.management.MakeFeatureLayer(ds, '{0}_'.format(os.path.basename(ds)[:-3]))
+            layer = arcpy.MakeFeatureLayer_management(ds, '{0}_'.format(os.path.basename(ds)[:-3]))
             arcpy.mapping.AddLayer(df, layer.getOutput(0))
         elif ds.endswith('.gdb'):
             # Add all feature classes to the mxd template.
@@ -153,11 +161,11 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
                 for fds in feature_datasets:
                     arcpy.env.workspace = fds
                     for fc in arcpy.ListFeatureClasses():
-                        layer = arcpy.management.MakeFeatureLayer(fc, '{0}_'.format(fc))
+                        layer = arcpy.MakeFeatureLayer_management(fc, '{0}_'.format(fc))
                         arcpy.mapping.AddLayer(df, layer.getOutput(0))
                 arcpy.env.workspace = ds
             for fc in arcpy.ListFeatureClasses():
-                layer = arcpy.management.MakeFeatureLayer(fc, '{0}_'.format(fc))
+                layer = arcpy.MakeFeatureLayer_management(fc, '{0}_'.format(fc))
                 arcpy.mapping.AddLayer(df, layer.getOutput(0))
             for raster in arcpy.ListRasters():
                 layer = arcpy.MakeRasterLayer_management(raster, '{0}_'.format(raster))
@@ -176,7 +184,7 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
     mxd.save()
     if mpk:
         # Package the map template.
-        arcpy.management.PackageMap(mxd.filePath,
+        arcpy.PackageMap_management(mxd.filePath,
                                     mxd.filePath.replace('.mxd', '.mpk'),
                                     'PRESERVE',
                                     version='10',
@@ -185,12 +193,12 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
 
 
 def execute(request):
-    """Clips data to a new or existing geodatabase.
+    """Clips selected search results using the clip geometry.
     :param request: json as a dict.
     """
     clipped = 0
-    skipped = 0
     errors = 0
+    skipped = 0
     status_writer = status.Writer()
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
@@ -226,7 +234,7 @@ def execute(request):
         clip_poly = clip_area
 
     if not out_format == 'SHP':
-        out_workspace = arcpy.management.CreateFileGDB(out_workspace, 'output.gdb').getOutput(0)
+        out_workspace = arcpy.CreateFileGDB_management(out_workspace, 'output.gdb').getOutput(0)
     arcpy.env.workspace = out_workspace
 
     i = 1.
@@ -259,7 +267,7 @@ def execute(request):
                         extent = clip_poly.extent
                 else:
                     if not arcpy.Describe(clip_poly).spatialReference == out_sr:
-                        clip_poly = arcpy.management.Project(clip_poly, 'clip_features', out_sr)
+                        clip_poly = arcpy.Project_management(clip_poly, 'clip_features', out_sr)
                     extent = arcpy.Describe(clip_poly).extent
 
             # Feature class
@@ -268,16 +276,16 @@ def execute(request):
                     name = task_utils.create_unique_name(dsc.name, out_workspace)
                 else:
                     name = task_utils.create_unique_name(out_name, out_workspace)
-                arcpy.analysis.Clip(ds, clip_poly, name)
+                arcpy.Clip_analysis(ds, clip_poly, name)
 
             # Feature dataset
             elif dsc.dataType == 'FeatureDataset':
                 fds_name = os.path.basename(task_utils.create_unique_name(dsc.name, out_workspace))
-                fds = arcpy.management.CreateFeatureDataset(out_workspace, fds_name)
+                fds = arcpy.CreateFeatureDataset_management(out_workspace, fds_name)
                 arcpy.env.workspace = ds
                 for fc in arcpy.ListFeatureClasses():
                     try:
-                        arcpy.analysis.Clip(fc, clip_poly, task_utils.create_unique_name(fc, fds))
+                        arcpy.Clip_analysis(fc, clip_poly, task_utils.create_unique_name(fc, fds))
                     except arcpy.ExecuteError:
                         pass
                 arcpy.env.workspace = out_workspace
@@ -288,7 +296,7 @@ def execute(request):
                     name = task_utils.create_unique_name(dsc.name, out_workspace)
                 else:
                     name = task_utils.create_unique_name(out_name, out_workspace)
-                arcpy.analysis.Clip(ds, clip_poly, name)
+                arcpy.Clip_analysis(ds, clip_poly, name)
 
             # Raster dataset
             elif dsc.dataType == 'RasterDataset':
@@ -297,7 +305,7 @@ def execute(request):
                 else:
                     name = task_utils.create_unique_name(out_name, out_workspace)
                 ext = '{0} {1} {2} {3}'.format(extent.XMin, extent.YMin, extent.XMax, extent.YMax)
-                arcpy.management.Clip(ds, ext, name)
+                arcpy.Clip_management(ds, ext, name)
 
             # Layer file
             elif dsc.dataType == 'Layer':
@@ -309,31 +317,31 @@ def execute(request):
                 cad_wks_name = os.path.splitext(dsc.name)[0]
                 for cad_fc in arcpy.ListFeatureClasses():
                     name = task_utils.create_unique_name('{0}_{1}'.format(cad_wks_name, cad_fc), out_workspace)
-                    arcpy.analysis.Clip(cad_fc, clip_poly, name)
+                    arcpy.Clip_analysis(cad_fc, clip_poly, name)
                 arcpy.env.workspace = out_workspace
 
             # File
             elif dsc.dataType in ('File', 'TextFile'):
                 if dsc.catalogPath.endswith('.kml') or dsc.catalogPath.endswith('.kmz'):
                     name = os.path.splitext(dsc.name)[0]
-                    kml_layer = arcpy.conversion.KMLToLayer(dsc.catalogPath, arcpy.env.scratchFolder, name)
+                    kml_layer = arcpy.KMLToLayer_conversion(dsc.catalogPath, arcpy.env.scratchFolder, name)
                     group_layer = arcpy.mapping.Layer(os.path.join(arcpy.env.scratchFolder, '{0}.lyr'.format(name)))
                     for layer in arcpy.mapping.ListLayers(group_layer):
                         if layer.isFeatureLayer:
-                            arcpy.analysis.Clip(layer,
+                            arcpy.Clip_analysis(layer,
                                                 gcs_clip_poly,
                                                 task_utils.create_unique_name(layer, out_workspace))
                     # Clean up temp KML results.
-                    arcpy.management.Delete(os.path.join(arcpy.env.scratchFolder, '{0}.lyr'.format(name)))
-                    arcpy.management.Delete(kml_layer[1])
+                    arcpy.Delete_management(os.path.join(arcpy.env.scratchFolder, '{0}.lyr'.format(name)))
+                    arcpy.Delete_management(kml_layer[1])
                     del group_layer
                 else:
                     if out_name == '':
                         out_name = dsc.name
                     if out_workspace.endswith('.gdb'):
-                        f = arcpy.management.Copy(ds, os.path.join(os.path.dirname(out_workspace), out_name))
+                        f = arcpy.Copy_management(ds, os.path.join(os.path.dirname(out_workspace), out_name))
                     else:
-                        f = arcpy.management.Copy(ds, os.path.join(out_workspace, out_name))
+                        f = arcpy.Copy_management(ds, os.path.join(out_workspace, out_name))
                     status_writer.send_percent(i/count, 'copied file {0}'.format(dsc.name), 'clip_data')
                     clipped += 1
                     if out_format in ('LPK', 'MPK'):
@@ -345,6 +353,12 @@ def execute(request):
             elif dsc.dataType == 'MapDocument':
                 clip_mxd_layers(dsc.catalogPath, clip_poly)
 
+            else:
+                status_writer.send_percent(i/count, 'Invalid input type: {0}.'.format(ds), 'clip_data')
+                i += 1.
+                skipped += 1
+                continue
+
             status_writer.send_percent(i/count, 'clipped {0}'.format(dsc.name), 'clip_data')
             i += 1.
             clipped += 1
@@ -354,7 +368,6 @@ def execute(request):
                                        'Failed to clip {0}: {1}'.format(os.path.basename(ds), repr(ex)),
                                        'clip_data')
             i += 1.
-            skipped += 1
             errors += 1
             pass
 
@@ -383,6 +396,6 @@ def execute(request):
         pass
 
     # Update state if necessary.
-    if skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, '{0} results could not be clipped.'.format(skipped))
-        task_utils.report(os.path.join(request['folder'], '_report.json'), clipped, skipped, errors)
+    if errors > 0 or skipped > 0:
+        status_writer.send_state(status.STAT_WARNING, '{0} results could not be clipped.'.format(errors + skipped))
+    task_utils.report(os.path.join(request['folder'], '_report.json'), clipped, skipped, errors)
