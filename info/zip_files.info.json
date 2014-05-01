@@ -22,11 +22,11 @@
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#zip_files",
       "params":
       {
-		"flatten_results":
-		{
-			"display": "Flatten Results",
-			"description": "Flatten results; default is to maintain the file directory structure."
-		}
+    		"flatten_results":
+    		{
+    			"display": "Flatten Results",
+    			"description": "Place all items in the root folder"
+    		}
       }
     }
   }

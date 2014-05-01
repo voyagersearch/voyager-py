@@ -25,17 +25,17 @@
       "display": "Copy Files",
       "description": "Copies files to a target folder",
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#copy_files",
-	  "params":
-	  {
-	  "target_folder": {
-	      "display": "Target Folder",
-	      "description": "The folder where all files are copied. If it does not exist, it will be created."
-	    },
-	    "flatten_results": {
-	      "display": "Flatten Results",
-	      "description": "Flatten results; default is to maintain the file directory structure."
-	    }
- 	  }
+  	  "params":
+  	  {
+  	    "target_folder": {
+  	      "display": "Target Folder",
+  	      "description": "The folder where all files are copied. If it does not exist, it will be created."
+  	    },
+  	    "flatten_results": {
+  	      "display": "Flatten Results",
+          "description": "Place all items in the root folder"
+  	    }
+   	  }
     }
   }
 }
