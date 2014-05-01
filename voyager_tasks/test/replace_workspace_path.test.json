@@ -1,0 +1,40 @@
+{
+    "id": "REPLACE1F6CFA258AE08B5",
+    "type": "task",
+    "state": "RUNNING",
+    "task": "replace_workspace_path",
+    "folder": "",
+    "owner": {
+        "ip": "127.0.0.1"
+    },
+    "params": [
+        {
+            "name": "input_items",
+            "type": "VoyagerResults",
+            "required": true,
+            "ids": ["ids"],
+            "response": {
+                "numFound": 1,
+                "docs": [
+                    {
+                        "id": "d7528f25fe696069",
+                        "name": "Cities",
+                        "path": "",
+                        "[lyrFile]": "",
+                        "[lyrURL]": ""
+                    }
+                ]
+            }
+        },
+        {
+            "name": "create_backup",
+            "type": "CheckBox",
+            "value": true
+        },
+        {
+            "name": "workspace_path",
+            "type": "CatalogPath",
+            "value": ""
+        }
+    ]
+}
