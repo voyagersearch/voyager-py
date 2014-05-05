@@ -15,7 +15,12 @@
     },
     {
       "type": "CatalogPath",
-      "name": "workspace_path",
+      "name": "old_workspace_path",
+      "required": true
+    },
+    {
+      "type": "CatalogPath",
+      "name": "new_workspace_path",
       "required": true
     }
   ],
@@ -33,7 +38,12 @@
 			"display": "Create Backup (Recommended)",
 			"description": "Create backup copies of the map documents and layer files before replacing workspace paths. Backups are created in the source location with a .bak extension."
 		},
-		"workspace_path":
+		"old_workspace_path":
+		{
+		    "display": "Old Workspace Path",
+		    "description": "The workspace path to be replaced."
+		},
+		"new_workspace_path":
 		{
 		    "display": "New Workspace Path",
 		    "description": "The new workspace path."
