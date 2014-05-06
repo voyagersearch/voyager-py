@@ -32,7 +32,12 @@
             "value": true
         },
         {
-            "name": "workspace_path",
+            "name": "old_workspace_path",
+            "type": "CatalogPath",
+            "value": ""
+        },
+        {
+            "name": "new_workspace_path",
             "type": "CatalogPath",
             "value": ""
         }

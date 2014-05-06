@@ -28,8 +28,10 @@ class TestReplaceWorkspacePath(unittest.TestCase):
         lyr_file = os.path.join(self.temp_folder, 'Cities.lyr')
         self.request['params'][0]['response']['docs'][0]['[lyrFile]'] = lyr_file
         __import__(self.request['task'])
+        old_workspace = "C:\\GISData\\MDB\\USA.mdb"
         new_workspace = os.path.join(os.getcwd(), 'test-data', 'TestData_v10.gdb')
-        self.request['params'][2]['value'] = new_workspace
+        self.request['params'][2]['value'] = old_workspace
+        self.request['params'][3]['value'] = new_workspace
         getattr(sys.modules[self.request['task']], "execute")(self.request)
         dsc = arcpy.Describe(lyr_file)
         self.assertEquals(dsc.featureclass.catalogpath, os.path.join(new_workspace, 'cities'))
