@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # (C) Copyright 2014 Voyager Search
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#from __future__ import unicode_literals
 import os
 import shutil
 from voyager_tasks.utils import status
@@ -67,31 +69,27 @@ def execute(request):
                         shutil.copy2(f, dst)
                 else:
                     shutil.copytree(src_file, os.path.join(dst, os.path.basename(src_file)))
-                status_writer.send_percent(i/file_count, 'Copied {0}.'.format(src_file), 'copy_files')
+                status_writer.send_percent(i/file_count, _('SUCCESS'), 'copy_files')
                 copied += 1
             else:
                 status_writer.send_percent(
                     i/file_count,
-                    '{0} is not a file or does not exist.'.format(src_file),
+                    _('is_not_a_file_or_does_not_exist').format(src_file),
                     'copy_files'
                 )
                 skipped += 1
         except IOError as io_err:
             status_writer.send_percent(
-                i/file_count,
-                'Failed to copy: {0}. {1}.'.format(src_file, repr(io_err)),
-                'copy_files'
-            )
+                i/file_count, _('FAIL').format(repr(io_err)), 'copy_files')
             errors += 1
             pass
 
     try:
         shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
-        status_writer.send_status('Could not copy thumbnail.')
         pass
 
     # Update state if necessary.
     if errors > 0 or skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, '{0} results could not be copied.'.format(skipped + errors))
+        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(skipped + errors))
     task_utils.report(os.path.join(request['folder'], '_report.json'), copied, skipped, errors)

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # (C) Copyright 2014 Voyager Search
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,7 +58,6 @@ def execute(request):
     map_title = task_utils.get_parameter_value(parameters, 'map_title', 'value')
     attribute_setting = task_utils.get_parameter_value(parameters, 'attribute_settings', 'value')
     author = task_utils.get_parameter_value(parameters, 'map_author', 'value')
-
     try:
         map_view = task_utils.get_parameter_value(parameters, 'map_view', 'extent')
     except KeyError:
@@ -72,7 +72,6 @@ def execute(request):
     mxd = arcpy.mapping.MapDocument(mxd_path)
     data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
     layer = None
-    status_writer.send_status('Adding items to {0}...'.format(map_template))
     for item in input_items:
         try:
             dsc = arcpy.Describe(item)
@@ -112,10 +111,10 @@ def execute(request):
                 layer = None
                 added_to_map += 1
             else:
-                status_writer.send_status('{0} is not a supported dataset type.'.format(item))
+                status_writer.send_status(_('invalid_input_type').format(item))
                 skipped += 1
         except Exception as ex:
-            status_writer.send_status('Failed to add: {0}. {1}.'.format(os.path.basename(item), repr(ex)))
+            status_writer.send_status(_('FAIL').format(repr(ex)))
             errors += 1
             pass
 
@@ -169,23 +168,21 @@ def execute(request):
                 new_text = new_text.replace('s', str(dms[2]))
                 e.text = new_text
 
-    status_writer.send_status('Creating output GeoPDF...')
     if added_to_map > 0:
         arcpy.mapping.ExportToPDF(mxd,
                                   os.path.join(request['folder'], 'output.pdf'),
                                   layers_attributes=attribute_setting)
     else:
-        status_writer.send_state(status.STAT_FAILED, 'No results can be exported to PDF.')
+        status_writer.send_state(status.STAT_FAILED, _('no_results_to_export'))
         task_utils.report(os.path.join(request['folder'], '_report.json'), added_to_map, skipped, skipped, 0)
         sys.exit(1)
 
     try:
         shutil.copy2(os.path.join(os.path.dirname(os.getcwd()), '_thumb.png'), request['folder'])
     except IOError:
-        status_writer.send_status('Could not copy thumbnail.')
         pass
 
     # Update state if necessary.
     if skipped > 0 or errors > 0:
-        status_writer.send_state(status.STAT_WARNING, '{0} results could not be added to the PDF.'.format(skipped + errors))
+        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(skipped + errors))
     task_utils.report(os.path.join(request['folder'], '_report.json'), added_to_map, skipped, errors)

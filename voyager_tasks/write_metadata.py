@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # (C) Copyright 2014 Voyager Search
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -135,27 +136,22 @@ def execute(request):
                 tree.write(temp_xml)
                 # Import the XML file to the item; existing metadata is replaced.
                 arcpy.MetadataImporter_conversion(temp_xml, item)
-                status_writer.send_percent(i/item_count, 'Metadata changed for: {0}.'.format(item), 'write_metadata')
+                status_writer.send_percent(i/item_count, _('metadata_updated').format(item), 'write_metadata')
                 updated += 1
             else:
-                status_writer.send_percent(i/item_count, 'No Metadata changes for: {0}.'.format(item), 'write_metadata')
+                status_writer.send_percent(i/item_count, _('no_metadata_changes').format(item), 'write_metadata')
                 skipped += 1
         except Exception as ex:
-            status_writer.send_percent(
-                i/item_count,
-                'Failed to write metadata: {0}. {1}.'.format(item, repr(ex)),
-                'write_metadata'
-            )
+            status_writer.send_percent(i/item_count, _('FAIL').format(repr(ex)), 'write_metadata')
             errors += 1
             pass
 
     try:
         shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
-        status_writer.send_status('Could not copy thumbnail.')
         pass
 
     # Update state if necessary.
     if skipped > 0 or errors > 0:
-        status_writer.send_state(status.STAT_WARNING, 'Did not update metadata for {0} results.'.format(skipped + errors))
+        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(skipped + errors))
     task_utils.report(os.path.join(request['folder'], '_report.json'), updated, skipped, errors)

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # (C) Copyright 2014 Voyager Search
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -202,19 +203,17 @@ def execute(request):
     status_writer = status.Writer()
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
-
     # Retrieve clip geometry.
     try:
-        clip_area = task_utils.get_parameter_value(parameters, 'clip_geometry', 'wkt')
-    except KeyError:
         try:
-            clip_area = task_utils.get_parameter_value(parameters, 'clip_geometry', 'feature')
+            clip_area = task_utils.get_parameter_value(parameters, 'clip_geometry', 'wkt')
         except KeyError:
-            clip_area = 'POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))'
+            clip_area = task_utils.get_parameter_value(parameters, 'clip_geometry', 'feature')
+    except KeyError:
+        clip_area = 'POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))'
 
     # Retrieve the coordinate system code.
     out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
-
     # Retrieve the output format type.
     out_format = task_utils.get_parameter_value(parameters, 'output_format', 'value')
     out_workspace = os.path.join(request['folder'], 'temp')
@@ -243,7 +242,6 @@ def execute(request):
     for ds, out_name in input_items.iteritems():
         try:
             dsc = arcpy.Describe(ds)
-
             # If no output coord. system, get output spatial reference from input.
             if out_coordinate_system == '':
                 try:
@@ -342,7 +340,7 @@ def execute(request):
                         f = arcpy.Copy_management(ds, os.path.join(os.path.dirname(out_workspace), out_name))
                     else:
                         f = arcpy.Copy_management(ds, os.path.join(out_workspace, out_name))
-                    status_writer.send_percent(i/count, 'copied file {0}'.format(dsc.name), 'clip_data')
+                    status_writer.send_percent(i/count, _('copied_file').format(dsc.name), 'clip_data')
                     clipped += 1
                     if out_format in ('LPK', 'MPK'):
                         files_to_package.append(f.getOutput(0))
@@ -354,48 +352,40 @@ def execute(request):
                 clip_mxd_layers(dsc.catalogPath, clip_poly)
 
             else:
-                status_writer.send_percent(i/count, 'Invalid input type: {0}.'.format(ds), 'clip_data')
+                status_writer.send_percent(i/count, _('invalid_input_type').format(ds), 'clip_data')
                 i += 1.
                 skipped += 1
                 continue
 
-            status_writer.send_percent(i/count, 'clipped {0}'.format(dsc.name), 'clip_data')
+            status_writer.send_percent(i/count, _('SUCCESS'), 'clip_data')
             i += 1.
             clipped += 1
         # Continue. Process as many as possible.
         except Exception as ex:
-            status_writer.send_percent(i/count,
-                                       'Failed to clip {0}: {1}'.format(os.path.basename(ds), repr(ex)),
-                                       'clip_data')
+            status_writer.send_percent(i/count, _('FAIL').format(repr(ex)), 'clip_data')
             i += 1.
             errors += 1
             pass
 
     if arcpy.env.workspace.endswith('.gdb'):
         out_workspace = os.path.dirname(arcpy.env.workspace)
-
     if clipped > 0:
         if out_format == 'MPK':
             create_mxd_or_mpk(out_workspace, files_to_package, True)
-            status_writer.send_status('Created output map package.')
             shutil.move(os.path.join(out_workspace, 'output.mpk'),
                         os.path.join(os.path.dirname(out_workspace), 'output.mpk'))
         elif out_format == 'LPK':
             create_lpk(out_workspace, files_to_package)
-            status_writer.send_status('Created output layer package.')
         else:
             create_mxd_or_mpk(out_workspace)
             zip_file = task_utils.zip_data(out_workspace, 'output.zip')
-            status_writer.send_status('Created the output zip file.')
             shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
 
     try:
         shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
-        status_writer.send_status('Could not copy thumbnail.')
         pass
-
     # Update state if necessary.
     if errors > 0 or skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, '{0} results could not be clipped.'.format(errors + skipped))
+        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(errors + skipped))
     task_utils.report(os.path.join(request['folder'], '_report.json'), clipped, skipped, errors)

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # (C) Copyright 2014 Voyager Search
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,7 +55,7 @@ def execute(request):
                 else:
                     for f in files:
                         zipper.write(f, os.path.join(os.path.abspath(os.path.join(f, os.pardir)), os.path.basename(f)))
-                status_writer.send_percent(i/file_count, 'Zipped {0}.'.format(in_file), 'zip_files')
+                status_writer.send_percent(i/file_count, _('SUCCESS'), 'zip_files')
                 zipped += 1
             elif in_file.endswith('.gdb'):
                 for root, dirs, files in os.walk(in_file):
@@ -71,19 +72,20 @@ def execute(request):
                                 # For File GDB lock files.
                                 pass
             else:
-                status_writer.send_percent(i/file_count,
-                                           '{0} is not a file or does not exist.'.format(in_file),
-                                           'zip_files')
+                status_writer.send_percent(
+                    i/file_count,
+                    _('is_not_a_file_or_does_not_exist').format(in_file),
+                    'zip_files'
+                )
                 skipped += 1
             i += 1.0
 
     try:
         shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
-        status_writer.send_status('Could not copy thumbnail.')
         pass
 
     # Update state if necessary.
     if skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, '{0} results could not be zipped.'.format(skipped))
+        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(skipped))
     task_utils.report(os.path.join(request['folder'], '_report.json'), zipped, skipped)

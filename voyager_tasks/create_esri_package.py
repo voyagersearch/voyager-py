@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # (C) Copyright 2014 Voyager Search
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -88,16 +89,16 @@ def execute(request):
                 elif dsc.dataType == 'File':
                     files.append(item)
                 else:
-                    status_writer.send_status('Invalid input type: {0}.'.format(item))
+                    status_writer.send_status(_('invalid_input_type').format(item))
                     skipped += 1
                     continue
         except Exception as ex:
-            status_writer.send_status('Cannot package {0}: {1}'.format(item, repr(ex)))
+            status_writer.send_status(_('cannot_package').format(item))
             errors += 1
             pass
 
     if errors == len(input_items):
-        status_writer.send_state(status.STAT_FAILED, 'No results to package.')
+        status_writer.send_state(status.STAT_FAILED, _('no_results_to_package'))
         sys.exit(1)
 
     try:
@@ -111,7 +112,7 @@ def execute(request):
             for layer in layers:
                 arcpy.mapping.AddLayer(df, layer)
             mxd.save()
-            status_writer.send_status('Packaging results...')
+            status_writer.send_status(_('packaging_results'))
             arcpy.PackageMap_management(mxd.filePath,
                                         os.path.join(os.path.dirname(out_workspace), 'output.mpk'),
                                         'PRESERVE',
@@ -122,7 +123,7 @@ def execute(request):
                                         summary=summary,
                                         tags=tags)
         else:
-            status_writer.send_status('Packaging results...')
+            status_writer.send_status(_('packaging_results'))
             for layer in layers:
                 if layer.description == '':
                     layer.description = layer.name
@@ -141,9 +142,9 @@ def execute(request):
     try:
         shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
-        status_writer.send_status('Could not copy thumbnail.')
         pass
+
     # Update state if necessary.
     if errors > 0 or skipped:
-        status_writer.send_state(status.STAT_WARNING, '{0} results could not be packaged.'.format(errors + skipped))
+        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(errors + skipped))
     task_utils.report(os.path.join(request['folder'], '_report.json'), len(layers), skipped, errors)

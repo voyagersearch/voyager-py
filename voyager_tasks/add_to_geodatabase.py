@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # (C) Copyright 2014 Voyager Search
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,7 +33,7 @@ def is_feature_dataset(workspace):
 
 
 def execute(request):
-    """Copies data to a new or existing geodatabase.
+    """Copies data to an existing geodatabase or feature dataset.
     :param request: json as a dict.
     """
     added = 0
@@ -61,13 +62,10 @@ def execute(request):
         if is_feature_dataset(out_gdb):
             is_fds = True
         else:
-            status_writer.send_state(status.STAT_FAILED, '{0} does not exist.'.format(out_gdb))
+            status_writer.send_state(status.STAT_FAILED, _('does_not_exist').format(out_gdb))
             sys.exit(1)
 
-    if out_gdb.endswith('.sde') or os.path.dirname(out_gdb).endswith('.sde'):
-        status_writer.send_status('Connecting to {0}...'.format(out_gdb))
     arcpy.env.workspace = out_gdb
-
     i = 1.
     count = len(input_items)
     for ds, out_name in input_items.iteritems():
@@ -155,7 +153,7 @@ def execute(request):
                     arcpy.Delete_management(os.path.join(temp_dir, '{}.lyr'.format(name)))
                     arcpy.Delete_management(kml_layer)
                 else:
-                    status_writer.send_percent(i/count, 'Invalid input type: {0}.'.format(ds), 'add_to_geodatabase')
+                    status_writer.send_percent(i/count, _('invalid_input_type').format(dsc.name), 'add_to_geodatabase')
                     i += 1.
                     skipped += 1
                     continue
@@ -195,24 +193,21 @@ def execute(request):
                 arcpy.Copy_management(ds, task_utils.create_unique_name(dsc.name, out_gdb))
 
             out_gdb = arcpy.env.workspace
-            status_writer.send_percent(i/count, 'Added {0}.'.format(dsc.name), 'add_to_geodatabase')
+            status_writer.send_percent(i/count, _('SUCCESS'), 'add_to_geodatabase')
             i += 1.
             added += 1
         # Continue if an error. Process as many as possible.
         except Exception as ex:
-            status_writer.send_percent(i/count,
-                                       'Failed to add: {0}. {1}.'.format(os.path.basename(ds), repr(ex)),
-                                       'add_to_geodatabase')
+            status_writer.send_percent(i/count, _('FAIL').format(repr(ex)), 'add_to_geodatabase')
             errors += 1
             pass
 
     try:
         shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
-        status_writer.send_status('Could not copy thumbnail.')
         pass
 
     # Update state if necessary.
     if skipped > 0 or errors > 0:
-        status_writer.send_state(status.STAT_WARNING, '{0} results could not be added.'.format(skipped + errors))
+        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(skipped + errors))
     task_utils.report(os.path.join(task_folder, '_report.json'), added, skipped, errors)

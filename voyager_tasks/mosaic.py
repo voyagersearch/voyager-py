@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # (C) Copyright 2014 Voyager Search
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -75,11 +76,11 @@ def execute(request):
                 pixels.append(dsc.pixeltype)
             bands[dsc.bandcount] = 1
         else:
-            status_writer.send_status('{0} is not a raster dataset and will not mosaic.'.format(item))
+            status_writer.send_status(_('invalid_input_type').format(item))
             skipped += 1
 
     if not raster_items:
-        status_writer.send_state(status.STAT_FAILED, 'All results are invalid and cannot mosaic.')
+        status_writer.send_state(status.STAT_FAILED, _('invalid_input_types'))
         sys.exit(1)
 
     # Get most common pixel type.
@@ -105,11 +106,10 @@ def execute(request):
     else:
         try:
             if len(bands) > 1:
-                status_writer.send_state(status.STAT_FAILED, 'Input rasters must have the same number of bands.')
+                status_writer.send_state(status.STAT_FAILED, _('must_have_the_same_number_of_bands'))
                 sys.exit(1)
             if clip_area:
                 ext = '{0} {1} {2} {3}'.format(clip_area.XMin, clip_area.YMin, clip_area.XMax, clip_area.YMax)
-                status_writer.send_status('Running mosaic to new raster...')
                 tmp_mosaic = arcpy.MosaicToNewRaster_management(
                     raster_items,
                     out_workspace,
@@ -118,11 +118,10 @@ def execute(request):
                     pixel_type,
                     number_of_bands=bands.keys()[0]
                 )
-                status_writer.send_status('Clipping output mosaic...')
+                status_writer.send_status(_('clipping'))
                 arcpy.Clip_management(tmp_mosaic, ext, output_name)
                 arcpy.Delete_management(tmp_mosaic)
             else:
-                status_writer.send_status('Running mosaic to new raster...')
                 arcpy.MosaicToNewRaster_management(raster_items,
                                                    out_workspace,
                                                    output_name,
@@ -139,10 +138,9 @@ def execute(request):
     try:
         shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
-        status_writer.send_status('Could not copy thumbnail.')
         pass
 
     # Update state if necessary.
     if skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, '{0} results could not mosaic.'.format(skipped))
+        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(skipped))
     task_utils.report(os.path.join(request['folder'], '_report.json'), len(raster_items), skipped)

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # (C) Copyright 2014 Voyager Search
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,10 +13,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import locale
+import gettext
+import sys
+
 
 __all__ = []
-
 for module in os.listdir(os.path.dirname(__file__)):
     if module == '__init__.py' or module[-3:] != '.py':
         continue
     __all__.append(module[:-3])
+
+# Code for translating task messages.
+locale.setlocale(locale.LC_ALL, '')
+loc = locale.getlocale()[0].lower()[0:2]
+try:
+    try:
+        mo_filename = os.path.join(os.path.dirname(__file__), "locale", "LC_MESSAGES", "messages_%s.mo" % loc)
+        po_filename = os.path.join(os.path.dirname(__file__), "locale", "LC_MESSAGES", "messages_%s.po" % loc)
+        if not os.path.exists(mo_filename) and os.path.exists(po_filename):
+            sys.path.append(os.path.join(os.path.dirname(sys.executable), "tools", "i18n"))
+            import msgfmt
+            msgfmt.make(po_filename, mo_filename)
+        trans = gettext.GNUTranslations(open(mo_filename, "rb"))
+    except (IOError, ImportError):
+        filename = os.path.join(os.path.dirname(__file__), "locale", "LC_MESSAGES", "messages_en.mo")
+        trans = gettext.GNUTranslations(open(filename, "rb"))
+except IOError:
+    trans = gettext.NullTranslations()
+
+trans.install(unicode=True)
+_ = trans.ugettext

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # (C) Copyright 2014 Voyager Search
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,9 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#from __future__ import unicode_literals
 import os
 import shutil
 import arcpy
+#from voyager_tasks import _
 from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
 
@@ -38,17 +41,17 @@ def execute(request):
     # Get the boundary box extent for input to KML tools.
     extent = ''
     try:
-        ext = task_utils.get_parameter_value(parameters, 'processing_extent', 'wkt')
-        if ext:
-            sr = task_utils.get_spatial_reference("4326")
-            extent = task_utils.from_wkt(ext, sr)
-    except KeyError:
         try:
+            ext = task_utils.get_parameter_value(parameters, 'processing_extent', 'wkt')
+            if ext:
+                sr = task_utils.get_spatial_reference("4326")
+                extent = task_utils.from_wkt(ext, sr)
+        except KeyError:
             ext = task_utils.get_parameter_value(parameters, 'processing_extent', 'feature')
             if ext:
                 extent = arcpy.Describe(ext).extent
-        except KeyError:
-            pass
+    except KeyError:
+        pass
 
     i = 1.
     status_writer = status.Writer()
@@ -137,17 +140,15 @@ def execute(request):
                                               extent_to_export=extent)
 
             else:
-                status_writer.send_percent(i/count, 'Invalid input type: {0}'.format(ds), 'convert_to_kml')
+                status_writer.send_percent(i/count, _('invalid_input_type').format(dsc.name), 'convert_to_kml')
                 skipped += 1
                 continue
 
-            status_writer.send_percent(i/count, 'Converted {0}.'.format(ds), 'convert_to_kml')
+            status_writer.send_percent(i/count, _('SUCCESS'), 'convert_to_kml')
             i += 1.
             converted += 1
         except Exception as ex:
-            status_writer.send_percent(i/count,
-                                       'Failed to convert: {0}. {1}.'.format(ds, repr(ex)),
-                                       'convert_to_kml')
+            status_writer.send_percent(i/count, _('FAIL').format(repr(ex)), 'convert_to_kml')
             i += 1
             errors += 1
             pass
@@ -155,15 +156,13 @@ def execute(request):
     # Zip up kmz files if more than one.
     if count > 1:
         zip_file = task_utils.zip_data(out_workspace, 'output.zip')
-        status_writer.send_status('Created zip file: {0}...'.format(os.path.join(out_workspace, 'output.zip')))
         shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
     try:
         shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
-        status_writer.send_status('Could not copy thumbnail.')
         pass
 
     # Update state if necessary.
     if skipped > 0 or errors > 0:
-        status_writer.send_state(status.STAT_WARNING, '{0} results could not be converted.'.format(errors + skipped))
+        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(errors + skipped))
     task_utils.report(os.path.join(request['folder'], '_report.json'), converted, skipped, errors)
