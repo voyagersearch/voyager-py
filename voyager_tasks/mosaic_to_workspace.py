@@ -84,6 +84,8 @@ def execute(request):
             raster_items.append(item)
             if hasattr(dsc, 'pixeltype'):
                 pixels.append(dsc.pixeltype)
+            elif dsc.bandcount > 1:
+                pixels.append(arcpy.Describe(os.path.join(dsc.catalogPath, 'Band_1')).pixeltype)
             bands[dsc.bandcount] = 1
         else:
             status_writer.send_status(_('invalid_input_type').format(item))
