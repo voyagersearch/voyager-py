@@ -111,10 +111,10 @@ def execute(request):
                 layer = None
                 added_to_map += 1
             else:
-                status_writer.send_status(_('invalid_input_type').format(item))
+                status_writer.send_status(_('Invalid input type: {0}').format(item))
                 skipped += 1
         except Exception as ex:
-            status_writer.send_status(_('FAIL').format(repr(ex)))
+            status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
             errors += 1
             pass
 
@@ -173,7 +173,7 @@ def execute(request):
                                   os.path.join(request['folder'], 'output.pdf'),
                                   layers_attributes=attribute_setting)
     else:
-        status_writer.send_state(status.STAT_FAILED, _('no_results_to_export'))
+        status_writer.send_state(status.STAT_FAILED, _('No results can be exported to PDF'))
         task_utils.report(os.path.join(request['folder'], '_report.json'), added_to_map, skipped, skipped, 0)
         sys.exit(1)
 
@@ -184,5 +184,5 @@ def execute(request):
 
     # Update state if necessary.
     if skipped > 0 or errors > 0:
-        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(skipped + errors))
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
     task_utils.report(os.path.join(request['folder'], '_report.json'), added_to_map, skipped, errors)

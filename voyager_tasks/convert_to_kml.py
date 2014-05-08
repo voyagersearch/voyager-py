@@ -140,7 +140,7 @@ def execute(request):
                                               extent_to_export=extent)
 
             else:
-                status_writer.send_percent(i/count, _('invalid_input_type').format(dsc.name), 'convert_to_kml')
+                status_writer.send_percent(i/count, _('Invalid input type: {0}').format(dsc.name), 'convert_to_kml')
                 skipped += 1
                 continue
 
@@ -148,7 +148,7 @@ def execute(request):
             i += 1.
             converted += 1
         except Exception as ex:
-            status_writer.send_percent(i/count, _('FAIL').format(repr(ex)), 'convert_to_kml')
+            status_writer.send_percent(i/count, _('FAIL: {0}').format(repr(ex)), 'convert_to_kml')
             i += 1
             errors += 1
             pass
@@ -164,5 +164,5 @@ def execute(request):
 
     # Update state if necessary.
     if skipped > 0 or errors > 0:
-        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(errors + skipped))
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(errors + skipped))
     task_utils.report(os.path.join(request['folder'], '_report.json'), converted, skipped, errors)

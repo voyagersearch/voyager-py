@@ -46,7 +46,7 @@ def execute(request):
                 try:
                     shutil.copyfile(item, '{0}.bak'.format(item))
                 except IOError as ex:
-                    status_writer.send_status(_('cannot_backup').format(item))
+                    status_writer.send_status(_('Cannot make a backup of: {0}').format(item))
                     skipped += 1
                     continue
             if item.endswith('.lyr'):
@@ -57,7 +57,7 @@ def execute(request):
                 layers = arcpy.mapping.ListLayers(mxd)
                 table_views = arcpy.mapping.ListTableViews(mxd)
         else:
-            status_writer.send_status(_('not_a_layer_file_or_map_document').format(item))
+            status_writer.send_status(_('{0} is not a layer file or map document').format(item))
             skipped += 1
             continue
 
@@ -78,7 +78,7 @@ def execute(request):
                     if item.endswith('.lyr'):
                         layer.save()
                 except ValueError:
-                    status_writer.send_status(_('invalid_workspace'))
+                    status_writer.send_status(_('Invalid workspace'))
                     skipped += 1
                     pass
 
@@ -89,7 +89,7 @@ def execute(request):
                         new_source = table_view.workspacePath.lower().replace(old_workspace, new_workspace)
                         table_view.replaceDataSource(new_source, workspace_type, validate=False)
                 except ValueError:
-                    status_writer.send_status(_('invalid_workspace'))
+                    status_writer.send_status(_('Invalid workspace'))
                     skipped += 1
                     pass
         if mxd:
@@ -104,5 +104,5 @@ def execute(request):
 
     # Update state if necessary.
     if skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(skipped))
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
     task_utils.report(os.path.join(request['folder'], '_report.json'), updated, skipped)

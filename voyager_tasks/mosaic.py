@@ -78,11 +78,11 @@ def execute(request):
                 pixels.append(arcpy.Describe(os.path.join(dsc.catalogPath, 'Band_1')).pixeltype)
             bands[dsc.bandcount] = 1
         else:
-            status_writer.send_status(_('invalid_input_type').format(item))
+            status_writer.send_status(_('Invalid input type: {0}').format(item))
             skipped += 1
 
     if not raster_items:
-        status_writer.send_state(status.STAT_FAILED, _('invalid_input_types'))
+        status_writer.send_state(status.STAT_FAILED, _('Invalid input types'))
         sys.exit(1)
 
     # Get most common pixel type.
@@ -108,7 +108,7 @@ def execute(request):
     else:
         try:
             if len(bands) > 1:
-                status_writer.send_state(status.STAT_FAILED, _('must_have_the_same_number_of_bands'))
+                status_writer.send_state(status.STAT_FAILED, _('Input rasters must have the same number of bands'))
                 sys.exit(1)
             if clip_area:
                 ext = '{0} {1} {2} {3}'.format(clip_area.XMin, clip_area.YMin, clip_area.XMax, clip_area.YMax)
@@ -120,7 +120,7 @@ def execute(request):
                     pixel_type,
                     number_of_bands=bands.keys()[0]
                 )
-                status_writer.send_status(_('clipping'))
+                status_writer.send_status(_('Clipping...'))
                 arcpy.Clip_management(tmp_mosaic, ext, output_name)
                 arcpy.Delete_management(tmp_mosaic)
             else:
@@ -144,5 +144,5 @@ def execute(request):
 
     # Update state if necessary.
     if skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(skipped))
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
     task_utils.report(os.path.join(request['folder'], '_report.json'), len(raster_items), skipped)

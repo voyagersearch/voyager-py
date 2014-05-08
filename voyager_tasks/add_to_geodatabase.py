@@ -62,7 +62,7 @@ def execute(request):
         if is_feature_dataset(out_gdb):
             is_fds = True
         else:
-            status_writer.send_state(status.STAT_FAILED, _('does_not_exist').format(out_gdb))
+            status_writer.send_state(status.STAT_FAILED, _('{0} does not exist').format(out_gdb))
             sys.exit(1)
 
     arcpy.env.workspace = out_gdb
@@ -153,7 +153,7 @@ def execute(request):
                     arcpy.Delete_management(os.path.join(temp_dir, '{}.lyr'.format(name)))
                     arcpy.Delete_management(kml_layer)
                 else:
-                    status_writer.send_percent(i/count, _('invalid_input_type').format(dsc.name), 'add_to_geodatabase')
+                    status_writer.send_percent(i/count, _('Invalid input type: {0}').format(dsc.name), 'add_to_geodatabase')
                     i += 1.
                     skipped += 1
                     continue
@@ -198,7 +198,7 @@ def execute(request):
             added += 1
         # Continue if an error. Process as many as possible.
         except Exception as ex:
-            status_writer.send_percent(i/count, _('FAIL').format(repr(ex)), 'add_to_geodatabase')
+            status_writer.send_percent(i/count, _('FAIL: {0}').format(repr(ex)), 'add_to_geodatabase')
             errors += 1
             pass
 
@@ -209,5 +209,5 @@ def execute(request):
 
     # Update state if necessary.
     if skipped > 0 or errors > 0:
-        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(skipped + errors))
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
     task_utils.report(os.path.join(task_folder, '_report.json'), added, skipped, errors)

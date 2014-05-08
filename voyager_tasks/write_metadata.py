@@ -136,13 +136,13 @@ def execute(request):
                 tree.write(temp_xml)
                 # Import the XML file to the item; existing metadata is replaced.
                 arcpy.MetadataImporter_conversion(temp_xml, item)
-                status_writer.send_percent(i/item_count, _('metadata_updated').format(item), 'write_metadata')
+                status_writer.send_percent(i/item_count, _('Metadata updated for: {0}').format(item), 'write_metadata')
                 updated += 1
             else:
-                status_writer.send_percent(i/item_count, _('no_metadata_changes').format(item), 'write_metadata')
+                status_writer.send_percent(i/item_count, _('No metadata changes for: {0}').format(item), 'write_metadata')
                 skipped += 1
         except Exception as ex:
-            status_writer.send_percent(i/item_count, _('FAIL').format(repr(ex)), 'write_metadata')
+            status_writer.send_percent(i/item_count, _('FAIL: {0}').format(repr(ex)), 'write_metadata')
             errors += 1
             pass
 
@@ -153,5 +153,5 @@ def execute(request):
 
     # Update state if necessary.
     if skipped > 0 or errors > 0:
-        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(skipped + errors))
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
     task_utils.report(os.path.join(request['folder'], '_report.json'), updated, skipped, errors)

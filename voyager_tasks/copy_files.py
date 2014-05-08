@@ -74,13 +74,13 @@ def execute(request):
             else:
                 status_writer.send_percent(
                     i/file_count,
-                    _('is_not_a_file_or_does_not_exist').format(src_file),
+                    _('{0} is not a file or does no exist').format(src_file),
                     'copy_files'
                 )
                 skipped += 1
         except IOError as io_err:
             status_writer.send_percent(
-                i/file_count, _('FAIL').format(repr(io_err)), 'copy_files')
+                i/file_count, _('FAIL: {0}').format(repr(io_err)), 'copy_files')
             errors += 1
             pass
 
@@ -91,5 +91,5 @@ def execute(request):
 
     # Update state if necessary.
     if errors > 0 or skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(skipped + errors))
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
     task_utils.report(os.path.join(request['folder'], '_report.json'), copied, skipped, errors)

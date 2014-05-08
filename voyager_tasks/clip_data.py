@@ -340,7 +340,7 @@ def execute(request):
                         f = arcpy.Copy_management(ds, os.path.join(os.path.dirname(out_workspace), out_name))
                     else:
                         f = arcpy.Copy_management(ds, os.path.join(out_workspace, out_name))
-                    status_writer.send_percent(i/count, _('copied_file').format(dsc.name), 'clip_data')
+                    status_writer.send_percent(i/count, _('Copied file: {0}').format(dsc.name), 'clip_data')
                     clipped += 1
                     if out_format in ('LPK', 'MPK'):
                         files_to_package.append(f.getOutput(0))
@@ -352,7 +352,7 @@ def execute(request):
                 clip_mxd_layers(dsc.catalogPath, clip_poly)
 
             else:
-                status_writer.send_percent(i/count, _('invalid_input_type').format(ds), 'clip_data')
+                status_writer.send_percent(i/count, _('Invalid input type: {0}').format(ds), 'clip_data')
                 i += 1.
                 skipped += 1
                 continue
@@ -362,7 +362,7 @@ def execute(request):
             clipped += 1
         # Continue. Process as many as possible.
         except Exception as ex:
-            status_writer.send_percent(i/count, _('FAIL').format(repr(ex)), 'clip_data')
+            status_writer.send_percent(i/count, _('FAIL: {0}').format(repr(ex)), 'clip_data')
             i += 1.
             errors += 1
             pass
@@ -387,5 +387,5 @@ def execute(request):
         pass
     # Update state if necessary.
     if errors > 0 or skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(errors + skipped))
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(errors + skipped))
     task_utils.report(os.path.join(request['folder'], '_report.json'), clipped, skipped, errors)

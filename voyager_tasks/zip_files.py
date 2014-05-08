@@ -74,7 +74,7 @@ def execute(request):
             else:
                 status_writer.send_percent(
                     i/file_count,
-                    _('is_not_a_file_or_does_not_exist').format(in_file),
+                    _('{0} is not a file or does not exist').format(in_file),
                     'zip_files'
                 )
                 skipped += 1
@@ -87,5 +87,5 @@ def execute(request):
 
     # Update state if necessary.
     if skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, _('results_could_not_be_processed').format(skipped))
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
     task_utils.report(os.path.join(request['folder'], '_report.json'), zipped, skipped)

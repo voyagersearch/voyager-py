@@ -30,16 +30,11 @@ loc = locale.getlocale()[0].lower()[0:2]
 try:
     sys.path.append(os.path.join(os.path.dirname(sys.executable), "tools", "i18n"))
     import msgfmt
-    try:
-        mo_filename = os.path.join(os.path.dirname(__file__), "locale", "LC_MESSAGES", "messages_%s.mo" % loc)
-        po_filename = os.path.join(os.path.dirname(__file__), "locale", "LC_MESSAGES", "messages_%s.po" % loc)
-        if not os.path.exists(mo_filename) and os.path.exists(po_filename):
-            msgfmt.make(po_filename, mo_filename)
-        trans = gettext.GNUTranslations(open(mo_filename, "rb"))
-    except IOError:
-        mo_filename = os.path.join(os.path.dirname(__file__), "locale", "LC_MESSAGES", "messages_en.mo")
-        msgfmt.make(os.path.join(os.path.dirname(__file__), "locale", "LC_MESSAGES", "messages_en.po"), mo_filename)
-        trans = gettext.GNUTranslations(open(mo_filename, "rb"))
+    mo_filename = os.path.join(os.path.dirname(__file__), "locale", "LC_MESSAGES", "messages_%s.mo" % loc)
+    po_filename = os.path.join(os.path.dirname(__file__), "locale", "LC_MESSAGES", "messages_%s.po" % loc)
+    if not os.path.exists(mo_filename) and os.path.exists(po_filename):
+        msgfmt.make(po_filename, mo_filename)
+    trans = gettext.GNUTranslations(open(mo_filename, "rb"))
 except (IOError, ImportError):
     trans = gettext.NullTranslations()
 
