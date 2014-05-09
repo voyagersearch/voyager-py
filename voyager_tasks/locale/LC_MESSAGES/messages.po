@@ -5,14 +5,17 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 1.9.3\n"
 "POT-Creation-Date: 2014-05-06 09:23+Pacific Daylight Time\n"
-"PO-Revision-Date: 2014-05-08 \n"
+"PO-Revision-Date: 2014-05-08 17:23-0800\n"
 "Last-Translator: Voyager Search <info@voyagersearch.com>\n"
 "Language-Team: LANGUAGE <EMAIL>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: ENCODING\n"
+"Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
-
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language: en_US\n"
+"X-Generator: Poedit 1.6.5\n"
+"X-Poedit-SourceCharset: UTF-8\n"
 
 #: Used in all tasks:
 #, python-format
@@ -34,7 +37,9 @@ msgstr ""
 msgid "{0} does not exist"
 msgstr ""
 
-#: add_to_geodatabase.py:156 clip_data.py:355 convert_to_kml.py:143 create_esri_package.py:92 create_geopdf.py:114 mosaic.py: 81,85 mosaic_to_workspace.py:91,95
+#: add_to_geodatabase.py:156 clip_data.py:355 convert_to_kml.py:143
+#: create_esri_package.py:92 create_geopdf.py:114 mosaic.py: 81,85
+#: mosaic_to_workspace.py:91,95
 #, python-format
 msgid "Invalid input type: {0}"
 msgstr ""
@@ -42,7 +47,7 @@ msgstr ""
 #: clip_data.py:343
 #, python-format
 msgid "Copied file: {0}"
-msgstr "Copied file: {0}"
+msgstr ""
 
 #: create_geopdf.py:176
 #, python-format
