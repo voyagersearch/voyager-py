@@ -102,6 +102,9 @@ def execute(request):
                                                              max(bands),
                                                              pixel_type)
             arcpy.AddRastersToMosaicDataset_management(mosaic_ds, 'Raster Dataset', raster_items)
+            arcpy.MakeMosaicLayer_management(mosaic_ds, 'mosaic_layer')
+            layer_object = arcpy.mapping.Layer('mosaic_layer')
+            task_utils.make_thumbnail(layer_object, os.path.join(request['folder'], '_thumb.png'))
         except arcpy.ExecuteError:
             status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
             sys.exit(1)
@@ -121,14 +124,17 @@ def execute(request):
                     number_of_bands=bands.keys()[0]
                 )
                 status_writer.send_status(_('Clipping...'))
-                arcpy.Clip_management(tmp_mosaic, ext, output_name)
+                out_mosaic = arcpy.Clip_management(tmp_mosaic, ext, output_name)
                 arcpy.Delete_management(tmp_mosaic)
             else:
-                arcpy.MosaicToNewRaster_management(raster_items,
-                                                   out_workspace,
-                                                   output_name,
-                                                   out_coordinate_system,
-                                                   pixel_type, number_of_bands=bands.keys()[0])
+                out_mosaic = arcpy.MosaicToNewRaster_management(raster_items,
+                                                                out_workspace,
+                                                                output_name,
+                                                                out_coordinate_system,
+                                                                pixel_type, number_of_bands=bands.keys()[0])
+            arcpy.MakeRasterLayer_management(out_mosaic, 'mosaic_layer')
+            layer_object = arcpy.mapping.Layer('mosaic_layer')
+            task_utils.make_thumbnail(layer_object, os.path.join(request['folder'], '_thumb.png'))
         except arcpy.ExecuteError:
             status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
             sys.exit(1)
@@ -137,10 +143,6 @@ def execute(request):
         out_workspace = os.path.dirname(arcpy.env.workspace)
     zip_file = task_utils.zip_data(out_workspace, 'output.zip')
     shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
-    except IOError:
-        pass
 
     # Update state if necessary.
     if skipped > 0:

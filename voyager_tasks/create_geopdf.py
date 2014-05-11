@@ -172,15 +172,12 @@ def execute(request):
         arcpy.mapping.ExportToPDF(mxd,
                                   os.path.join(request['folder'], 'output.pdf'),
                                   layers_attributes=attribute_setting)
+        # Create a thumbnail size PNG of the mxd.
+        task_utils.make_thumbnail(mxd, os.path.join(request['folder'], '_thumb.png'), False)
     else:
         status_writer.send_state(status.STAT_FAILED, _('No results can be exported to PDF'))
         task_utils.report(os.path.join(request['folder'], '_report.json'), added_to_map, skipped, skipped, 0)
         sys.exit(1)
-
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(os.getcwd()), '_thumb.png'), request['folder'])
-    except IOError:
-        pass
 
     # Update state if necessary.
     if skipped > 0 or errors > 0:

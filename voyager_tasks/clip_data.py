@@ -132,6 +132,7 @@ def create_lpk(data_location, additional_files):
                                   'PRESERVE',
                                   version='10',
                                   additional_files=additional_files)
+    task_utils.make_thumbnail(layer_files[0], os.path.join(os.path.dirname(data_location), '_thumb.png'))
 
 
 def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
@@ -190,6 +191,7 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
                                     'PRESERVE',
                                     version='10',
                                     additional_files=additional_files)
+        task_utils.make_thumbnail(mxd.filePath, os.path.join(os.path.dirname(data_location), '_thumb.png'))
         del mxd
 
 
@@ -380,11 +382,8 @@ def execute(request):
             create_mxd_or_mpk(out_workspace)
             zip_file = task_utils.zip_data(out_workspace, 'output.zip')
             shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
+            shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
 
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
-    except IOError:
-        pass
     # Update state if necessary.
     if errors > 0 or skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(errors + skipped))

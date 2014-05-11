@@ -122,6 +122,8 @@ def execute(request):
                                         additional_files=files,
                                         summary=summary,
                                         tags=tags)
+            #  Create a thumbnail size PNG of the mxd.
+            task_utils.make_thumbnail(mxd, os.path.join(request['folder'], '_thumb.png'))
         else:
             status_writer.send_status(_('Packaging results...'))
             for layer in layers:
@@ -135,14 +137,16 @@ def execute(request):
                                           additional_files=files,
                                           summary=summary,
                                           tags=tags)
+            #  Create a thumbnail size PNG of the mxd.
+            task_utils.make_thumbnail(layers[0], os.path.join(request['folder'], '_thumb.png'))
     except (RuntimeError, ValueError, arcpy.ExecuteError) as ex:
         status_writer.send_state(status.STAT_FAILED, repr(ex))
         sys.exit(1)
 
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
-    except IOError:
-        pass
+    #try:
+    #    shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
+    #except IOError:
+    #    pass
 
     # Update state if necessary.
     if errors > 0 or skipped:

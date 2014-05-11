@@ -209,6 +209,43 @@ def get_projection_file(factory_code):
     return prj_file
 
 
+def make_thumbnail(layer_or_mxd, output_png_file, use_data_frame=True):
+    """Creates a thumbnail PNG file for the layer or map document.
+
+    :param layer_or_mxd: a (layer object or file) or (map document object or file)
+    :param output_png_file: the path for the output PNG
+    :param use_data_frame: Use the data frame of the map
+    :rtype : str
+    """
+    import arcpy
+    if hasattr(layer_or_mxd, 'filePath'):
+        mxd = layer_or_mxd
+        data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
+    elif hasattr(layer_or_mxd, 'name'):
+        layer = layer_or_mxd
+        mxd = arcpy.mapping.MapDocument(
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'MapTemplate.mxd')
+        )
+        data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
+        arcpy.mapping.AddLayer(data_frame, layer)
+    elif layer_or_mxd.endswith('.mxd'):
+        mxd = arcpy.mapping.MapDocument(layer_or_mxd)
+        data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
+    elif layer_or_mxd.endswith('.lyr'):
+        mxd = arcpy.mapping.MapDocument(
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'MapTemplate.mxd')
+        )
+        data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
+        layer = arcpy.mapping.Layer(layer_or_mxd)
+        arcpy.mapping.AddLayer(data_frame, layer)
+    else:
+        return
+    if use_data_frame:
+        arcpy.mapping.ExportToPNG(mxd, output_png_file, data_frame, 150, 150, 10)
+    else:
+        arcpy.mapping.ExportToPNG(mxd, output_png_file, '', 150, 150, 10)
+
+
 def report(report_file, num_processed, num_skipped, num_errors=0, num_warnings=0):
     """Create a markdown report of inputs processed or skipped.
 

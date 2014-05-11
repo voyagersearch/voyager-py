@@ -112,6 +112,9 @@ def execute(request):
                                                              max(bands),
                                                              pixel_type)
             arcpy.AddRastersToMosaicDataset_management(mosaic_ds, 'Raster Dataset', raster_items)
+            arcpy.MakeMosaicLayer_management(mosaic_ds, 'mosaic_layer')
+            layer_object = arcpy.mapping.Layer('mosaic_layer')
+            task_utils.make_thumbnail(layer_object, os.path.join(request['folder'], '_thumb.png'))
         except arcpy.ExecuteError:
             status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
             sys.exit(1)
@@ -125,30 +128,28 @@ def execute(request):
                 tmp_mosaic = arcpy.MosaicToNewRaster_management(
                     raster_items,
                     target_workspace,
-                    'tmpMosaic',
+                    'tempMosaic',
                     out_coordinate_system,
                     pixel_type,
                     number_of_bands=bands.keys()[0]
                 )
                 status_writer.send_status(_('Clipping...'))
-                arcpy.Clip_management(tmp_mosaic, ext, output_name)
+                out_mosaic = arcpy.Clip_management(tmp_mosaic, ext, output_name)
                 arcpy.Delete_management(tmp_mosaic)
             else:
-                arcpy.MosaicToNewRaster_management(raster_items,
-                                                   target_workspace,
-                                                   output_name,
-                                                   out_coordinate_system,
-                                                   pixel_type,
-                                                   number_of_bands=bands.keys()[0],
-                                                   mosaic_method='BLEND')
+                out_mosaic = arcpy.MosaicToNewRaster_management(raster_items,
+                                                                target_workspace,
+                                                                output_name,
+                                                                out_coordinate_system,
+                                                                pixel_type,
+                                                                number_of_bands=bands.keys()[0],
+                                                                mosaic_method='BLEND')
+            arcpy.MakeRasterLayer_management(out_mosaic, 'mosaic_layer')
+            layer_object = arcpy.mapping.Layer('mosaic_layer')
+            task_utils.make_thumbnail(layer_object, os.path.join(request['folder'], '_thumb.png'))
         except arcpy.ExecuteError:
             status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
             sys.exit(1)
-
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
-    except IOError:
-        pass
 
     # Update state if necessary.
     if skipped > 0:
