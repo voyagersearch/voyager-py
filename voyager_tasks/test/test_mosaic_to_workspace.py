@@ -19,10 +19,12 @@ class TestMosaicToWorkspace(unittest.TestCase):
         self.request['folder'] = self.temp_folder
         __import__(self.request['task'])
         self.target_ws = arcpy.management.CreateFileGDB(self.temp_folder, 'test.gdb').getOutput(0)
+        self.dsc = None
 
     @classmethod
     def tearDownClass(self):
-        shutil.rmtree(self.temp_folder, False)
+        del self.dsc
+        shutil.rmtree(self.temp_folder, True)
 
     def test_mosaic_to_workspace_FGDB(self):
         """Testing mosaic to workspace, creating a raster in a file geodatabase"""
@@ -51,8 +53,8 @@ class TestMosaicToWorkspace(unittest.TestCase):
         self.request['params'][3]['value'] = 'MosaicIMG'
         self.request['params'][5]['value'] = 'IMG'
         getattr(sys.modules[self.request['task']], "execute")(self.request)
-        dsc = arcpy.Describe(os.path.join(self.target_ws, 'Mosaic'))
-        self.assertEquals([dsc.bandcount, dsc.pixeltype], [1, 'U8'])
+        self.dsc = arcpy.Describe(os.path.join(self.target_ws, 'Mosaic'))
+        self.assertEquals([self.dsc.bandcount, self.dsc.pixeltype], [1, 'U8'])
 
 if __name__ == '__main__':
     unittest.main()
