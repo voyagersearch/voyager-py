@@ -14,9 +14,9 @@
 # limitations under the License.
 #from __future__ import unicode_literals
 import os
+import glob
 import shutil
 import arcpy
-#from voyager_tasks import _
 from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
 
@@ -157,10 +157,11 @@ def execute(request):
     if count > 1:
         zip_file = task_utils.zip_data(out_workspace, 'output.zip')
         shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
-    try:
         shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
-    except IOError:
-        pass
+    else:
+        kml_file = glob.glob(os.path.join(out_workspace, '*.kmz'))[0]
+        tmp_lyr = arcpy.KMLToLayer_conversion(kml_file, out_workspace, 'kml_layer')
+        task_utils.make_thumbnail(tmp_lyr.getOutput(0), os.path.join(request['folder'], '_thumb.png'))
 
     # Update state if necessary.
     if skipped > 0 or errors > 0:
