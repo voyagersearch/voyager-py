@@ -1,6 +1,4 @@
 import os
-import sys
-import json
 import arcpy
 import job
 
@@ -82,7 +80,6 @@ class EsriJob(job.Job):
 
     def search_fields(self, dataset):
         """Returns a valid list of existing fields for the search cursor."""
-        #all_fields = set([f.name for f in arcpy.ListFields(dataset)])
         fields = []
         if not self.fields_to_keep == '*':
             for fld in self.fields_to_keep:
@@ -95,6 +92,8 @@ class EsriJob(job.Job):
             return [f.name for f in arcpy.ListFields(dataset)]
 
     def assign_job(self):
+        """Determines the data type and each dataset is sent to the worker to be processed."""
+        self.connect_to_zmq()
         dsc = arcpy.Describe(self.path)
         if dsc.dataType in ('DbaseTable', 'FeatureClass', 'Shapefile', 'Table'):
             self.worker(self.path)

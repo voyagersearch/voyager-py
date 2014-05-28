@@ -19,13 +19,14 @@ from voyager_worker import odbc_worker
 
 if __name__ == '__main__':
     jb = job.Job(sys.argv[1])
-    #jb = job.Job(r"C:\Voyager\templatedata_job.json")
+    #jb = job.Job(r"C:\Voyager\sql_server_job.json")
     if jb.path:
         from voyager_worker import esri_worker
         esri_job = esri_worker.EsriJob(jb.job_file)
         esri_job.assign_job()
-    elif jb.sql_info:
-        odbc_worker.assign_job(jb)
+    elif jb.sql_connection_info:
+        odbc_job = odbc_worker.ODBCJob(jb.job_file)
+        odbc_job.assign_job()
     else:
         sys.stdout.write("No job information.")
         sys.exit(1)
