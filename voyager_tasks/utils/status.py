@@ -45,6 +45,7 @@ class Writer(object):
     def __w(self, msg):
         """Write to wrapped output thing. """
         self._io.write(msg)
+        self._io.flush()
 
     def __fl(self):
         """Send newline and flush wrapped output thing."""
