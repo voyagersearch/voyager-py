@@ -29,7 +29,27 @@ msgstr ""
 
 #: Used in all tasks:
 #, python-format
+msgid "Starting to process..."
+msgstr ""
+
+#: Used in all tasks:
+#, python-format
 msgid "{0} results could not be processed"
+msgstr ""
+
+#: Used in multiple tasks:
+#, python-format
+msgid "Setting output workspace..."
+msgstr ""
+
+#: add_to_geodatabase.py:197
+#, python-format
+msgid "Added: {0}"
+msgstr ""
+
+#: add_to_geodatabase.py:202 clip_data.py:367
+#, python-format
+msgid "Skipped: {0}"
 msgstr ""
 
 #: add_to_geodatabase.py:65
@@ -44,6 +64,11 @@ msgstr ""
 msgid "Invalid input type: {0}"
 msgstr ""
 
+#: clip_data.py:
+#, python-format
+msgid "Clipped: {0}"
+msgstr ""
+
 #: clip_data.py:343
 #, python-format
 msgid "Copied file: {0}"
@@ -54,9 +79,19 @@ msgstr ""
 msgid "No results can be exported to PDF"
 msgstr ""
 
+#: copy_files.py:73
+#, python-format
+msgid "Copied: {0}"
+msgstr ""
+
 #: copy_files.py:77 zip_files:77
 #, python-format
 msgid "{0} is not a file or does not exist"
+msgstr ""
+
+#: convert_to_kml.py:147
+#, python-format
+msgid "Converted: {0}"
 msgstr ""
 
 #: create_esri_package.py:115,126
@@ -72,6 +107,11 @@ msgstr ""
 #: create_esri_package.py:101
 #, python-format
 msgid "No results to package"
+msgstr ""
+
+#: replace_workspace_path.py:100
+#, python-format
+msgid "Updated: {0}"
 msgstr ""
 
 #: replace_workspace_path.py:49
@@ -122,4 +162,9 @@ msgstr ""
 #: write_metadata.py:142
 #, python-format
 msgid "No metadata changes for: {0}"
+msgstr ""
+
+#: zip_files.py:58
+#, python-format
+msgid "Zipped: {0}"
 msgstr ""

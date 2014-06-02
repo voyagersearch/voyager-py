@@ -65,9 +65,11 @@ def execute(request):
             status_writer.send_state(status.STAT_FAILED, _('{0} does not exist').format(out_gdb))
             sys.exit(1)
 
+    status_writer.send_status(_('Setting the output workspace...'))
     arcpy.env.workspace = out_gdb
     i = 1.
     count = len(input_items)
+    status_writer.send_percent(0.0, _('Starting to process...'), 'add_to_geodatabase')
     for ds, out_name in input_items.iteritems():
         try:
             dsc = arcpy.Describe(ds)
@@ -193,12 +195,13 @@ def execute(request):
                 arcpy.Copy_management(ds, task_utils.create_unique_name(dsc.name, out_gdb))
 
             out_gdb = arcpy.env.workspace
-            status_writer.send_percent(i/count, _('SUCCESS'), 'add_to_geodatabase')
+            status_writer.send_percent(i/count, _('Added: {0}').format(ds), 'add_to_geodatabase')
             i += 1.
             added += 1
         # Continue if an error. Process as many as possible.
         except Exception as ex:
-            status_writer.send_percent(i/count, _('FAIL: {0}').format(repr(ex)), 'add_to_geodatabase')
+            status_writer.send_percent(i/count, _('Skipped: {0}').format(ds), 'add_to_geodatabase')
+            status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
             errors += 1
             pass
 

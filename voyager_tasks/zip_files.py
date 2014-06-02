@@ -55,7 +55,7 @@ def execute(request):
                 else:
                     for f in files:
                         zipper.write(f, os.path.join(os.path.abspath(os.path.join(f, os.pardir)), os.path.basename(f)))
-                status_writer.send_percent(i/file_count, _('SUCCESS'), 'zip_files')
+                status_writer.send_percent(i/file_count, _('Zipped: {0}').format(in_file), 'zip_files')
                 zipped += 1
             elif in_file.endswith('.gdb'):
                 for root, dirs, files in os.walk(in_file):

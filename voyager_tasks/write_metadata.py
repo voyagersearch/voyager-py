@@ -57,7 +57,7 @@ def execute(request):
     skipped = 0
     item_count = len(input_items)
     status_writer = status.Writer()
-
+    status_writer.send_percent(0.0, _('Starting to process...'), 'write_metadata')
     for item in input_items:
         try:
             # Temporary XML file
@@ -141,8 +141,10 @@ def execute(request):
             else:
                 status_writer.send_percent(i/item_count, _('No metadata changes for: {0}').format(item), 'write_metadata')
                 skipped += 1
+            i += 1
         except Exception as ex:
-            status_writer.send_percent(i/item_count, _('FAIL: {0}').format(repr(ex)), 'write_metadata')
+            status_writer.send_percent(i/item_count, _('Skipped: {0}').format(item), 'write_metadata')
+            status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
             errors += 1
             pass
 

@@ -37,6 +37,9 @@ def execute(request):
 
     workspace_types = {'.mdb': 'ACCESS_WORKSPACE', '.gdb': 'FILEGDB_WORKSPACE', '.sde': 'SDE_WORKSPACE', '': 'NONE'}
     workspace_type = workspace_types[os.path.splitext(new_workspace)[1]]
+    i = 1.
+    count = len(input_items)
+    status_writer.send_percent(0.0, _('Starting to process...'), 'replace_workspace_path')
     for item in input_items:
         layers = None
         table_views = None
@@ -94,7 +97,8 @@ def execute(request):
                     pass
         if mxd:
             mxd.save()
-
+        status_writer.send_percent(i/count, _('Updated: {0}').format(item), 'replace_workspace_path')
+        i += 1.
         updated += 1
 
     try:

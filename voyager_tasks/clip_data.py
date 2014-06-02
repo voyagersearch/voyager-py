@@ -234,6 +234,7 @@ def execute(request):
     else:
         clip_poly = clip_area
 
+    status_writer.send_status(_('Setting the output workspace...'))
     if not out_format == 'SHP':
         out_workspace = arcpy.CreateFileGDB_management(out_workspace, 'output.gdb').getOutput(0)
     arcpy.env.workspace = out_workspace
@@ -241,6 +242,7 @@ def execute(request):
     i = 1.
     count = len(input_items)
     files_to_package = list()
+    status_writer.send_percent(0.0, _('Starting to process...'), 'clip_data')
     for ds, out_name in input_items.iteritems():
         try:
             dsc = arcpy.Describe(ds)
@@ -359,12 +361,13 @@ def execute(request):
                 skipped += 1
                 continue
 
-            status_writer.send_percent(i/count, _('SUCCESS'), 'clip_data')
+            status_writer.send_percent(i/count, _('Clipped: {0}').format(dsc.name), 'clip_data')
             i += 1.
             clipped += 1
         # Continue. Process as many as possible.
         except Exception as ex:
-            status_writer.send_percent(i/count, _('FAIL: {0}').format(repr(ex)), 'clip_data')
+            status_writer.send_percent(i/count, _('Skipped: {0}').format(dsc.name), 'clip_data')
+            status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
             i += 1.
             errors += 1
             pass

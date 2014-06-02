@@ -54,6 +54,7 @@ def execute(request):
 
     i = 1.
     status_writer = status.Writer()
+    status_writer.send_percent(0.0, _('Starting to process...'), 'convert_to_kml')
     for ds, out_name in input_items.iteritems():
         try:
             dsc = arcpy.Describe(ds)
@@ -143,11 +144,12 @@ def execute(request):
                 skipped += 1
                 continue
 
-            status_writer.send_percent(i/count, _('SUCCESS'), 'convert_to_kml')
+            status_writer.send_percent(i/count, _('Converted: {0}').format(ds), 'convert_to_kml')
             i += 1.
             converted += 1
         except Exception as ex:
-            status_writer.send_percent(i/count, _('FAIL: {0}').format(repr(ex)), 'convert_to_kml')
+            status_writer.send_percent(i/count, _('Skipped: {0}').format(ds), 'convert_to_kml')
+            status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
             i += 1
             errors += 1
             pass

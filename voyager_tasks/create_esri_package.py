@@ -143,11 +143,6 @@ def execute(request):
         status_writer.send_state(status.STAT_FAILED, repr(ex))
         sys.exit(1)
 
-    #try:
-    #    shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
-    #except IOError:
-    #    pass
-
     # Update state if necessary.
     if errors > 0 or skipped:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(errors + skipped))

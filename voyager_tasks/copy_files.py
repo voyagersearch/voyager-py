@@ -42,6 +42,7 @@ def execute(request):
     sdc_files = ('sdc', 'sdi', 'sdc.xml', 'sdc.prj')
     status_writer = status.Writer()
 
+    status_writer.send_percent(0.0, _('Starting to process...'), 'copy_files')
     for src_file in input_items:
         try:
             if os.path.isfile(src_file) or src_file.endswith('.gdb'):
@@ -69,7 +70,7 @@ def execute(request):
                         shutil.copy2(f, dst)
                 else:
                     shutil.copytree(src_file, os.path.join(dst, os.path.basename(src_file)))
-                status_writer.send_percent(i/file_count, _('SUCCESS'), 'copy_files')
+                status_writer.send_percent(i/file_count, _('Copied: {0}').format(src_file), 'copy_files')
                 copied += 1
             else:
                 status_writer.send_percent(
@@ -80,7 +81,8 @@ def execute(request):
                 skipped += 1
         except IOError as io_err:
             status_writer.send_percent(
-                i/file_count, _('FAIL: {0}').format(repr(io_err)), 'copy_files')
+                i/file_count, _('Skipped: {0}').format(src_file), 'copy_files')
+            status_writer.send_status(_('FAIL: {0}').format(repr(io_err)))
             errors += 1
             pass
 
