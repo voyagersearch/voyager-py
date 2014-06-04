@@ -38,5 +38,10 @@ try:
 except (IOError, ImportError):
     trans = gettext.NullTranslations()
 
-trans.install(unicode=True)
-_ = trans.ugettext
+# This has changed in Python 3.x
+if sys.version_info[0] < 3:
+    trans.install(unicode=True)
+    _ = trans.ugettext
+else:
+    trans.install()
+    _ = trans.gettext
