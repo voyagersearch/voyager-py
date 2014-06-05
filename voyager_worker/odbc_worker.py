@@ -1,6 +1,20 @@
+# (C) Copyright 2014 Voyager Search
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import decimal
 import json
 import job
+
 
 class ComplexEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -17,7 +31,7 @@ class ODBCJob(job.Job):
     def worker(self):
         """Worker function to index each row in each table in the database."""
         self.db_cursor.execute("select name from sysobjects where type='U'")
-        if not self.tables_to_keep == '*':
+        if not self.tables_to_keep == ['*']:
             tables = [t[0] for t in self.db_cursor.fetchall() if t[0] in self.tables_to_keep]
         else:
             tables = [t[0] for t in self.db_cursor.fetchall()]
@@ -38,7 +52,10 @@ class ODBCJob(job.Job):
                     qry = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
                     [columns.remove(c[0]) for c in self.execute_query(qry).fetchall()]
 
-            mapped_cols = self.map_fields(columns)
+            if self.field_mapping:
+                mapped_cols = self.map_fields(tbl, columns)
+            else:
+                mapped_cols = columns
             for c in self.db_cursor.columns(table=tbl).fetchall():
                 if c.type_name == 'geometry':
                     has_shape = True
@@ -87,6 +104,7 @@ class ODBCJob(job.Job):
                 self.send_entry(entry)
 
     def assign_job(self):
+        """Connects to ZMQ, connects to the database, and assigns the job."""
         self.connect_to_zmq()
         self.connect_to_database()
         self.worker()
