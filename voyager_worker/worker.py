@@ -7,14 +7,8 @@ import arcpy
 import base_job
 
 
-def global_job(args):
-    """Create a global job object for multiprocessing."""
-    global job
-    job = args
-
-
 def worker(data_path):
-    """The worker function to index feature data and tabular data."""
+    #job = base_job.Job(job_file)
     job.connect_to_zmq()
     geo = {}
     entry = {}
@@ -24,14 +18,17 @@ def worker(data_path):
         fields = job.search_fields(data_path)
         with arcpy.da.SearchCursor(data_path, fields) as rows:
             for i, row in enumerate(rows, 1):
+                gfid_index = rows.fields.index('GFID')
                 mapped_fields = job.map_fields(dsc.name, fields)
                 mapped_fields = dict(zip(mapped_fields, row))
-                oid_field = filter(lambda x: x in ('FID', 'OID', 'OBJECTID'), rows.fields)
-                if oid_field:
-                   fld_index = rows.fields.index(oid_field[0])
-                else:
-                    fld_index = i
-                entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), row[fld_index])
+                #oid_field = filter(lambda x: x in ('FID', 'OID', 'OBJECTID'), rows.fields)
+                #if oid_field:
+                #   fld_index = rows.fields.index(oid_field[0])
+                #else:
+                #    fld_index = i
+                #entry['id'] = '{0}_{1}_{2}'.format(location_id, os.path.basename(data_path), row[fld_index])
+                # FOR KYLE...
+                entry['id'] = row[gfid_index]
                 entry['location'] = job.location_id
                 entry['action'] = job.action_type
                 entry['entry'] = {'fields': mapped_fields}
@@ -48,9 +45,12 @@ def worker(data_path):
                 for i, row in enumerate(rows):
                     geo['lon'] = row[0][0]
                     geo['lat'] = row[0][1]
+                    gfid_index = rows.fields.index('OBJECTID')
                     mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]))
                     mapped_fields = dict(zip(mapped_fields, row[1:]))
-                    entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
+                    #entry['id'] = '{0}_{1}_{2}'.format(location_id, os.path.basename(data_path), i)
+                    # FOR KYLE...
+                    entry['id'] = row[gfid_index]
                     entry['location'] = job.location_id
                     entry['action'] = job.action_type
                     entry['entry'] = {'geo': geo, 'fields': mapped_fields}
@@ -62,9 +62,12 @@ def worker(data_path):
                     geo['xmax'] = row[0].extent.XMax
                     geo['ymin'] = row[0].extent.YMin
                     geo['ymax'] = row[0].extent.YMax
+                    gfid_index = rows.fields.index('OBJECTID')
                     mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]))
                     mapped_fields = dict(zip(mapped_fields, row[1:]))
-                    entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
+                    #entry['id'] = '{0}_{1}_{2}'.format(location_id, os.path.basename(data_path), i)
+                    # FOR KYLE...
+                    entry['id'] = row[gfid_index]
                     entry['location'] = job.location_id
                     entry['action'] = job.action_type
                     entry['entry'] = {'geo': geo, 'fields': mapped_fields}
@@ -73,64 +76,58 @@ def worker(data_path):
 
 def assign_work(job_info):
     """Determines the data type and each dataset is sent to the worker to be processed."""
+    #job_file = job.job_file
     job = base_job.Job(job_info)
     dsc = arcpy.Describe(job.path)
-
-    # A single feature class or table.
     if dsc.dataType in ('DbaseTable', 'FeatureClass', 'Shapefile', 'Table'):
-        global_job(job)
         worker(job.path)
-        return
-
-    # A geodatabase (.mdb, .gdb, or .sde).
     elif dsc.dataType == 'Workspace':
         arcpy.env.workspace = job.path
         feature_datasets = arcpy.ListDatasets('*', 'Feature')
-        tables = []
+        all_tables = []
         if job.tables_to_keep:
             for t in job.tables_to_keep:
-                [tables.append(os.path.join(job.path, tbl)) for tbl in arcpy.ListTables(t)]
-                [tables.append(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(t)]
+                [all_tables.append(os.path.join(job.path, tbl)) for tbl in arcpy.ListTables(t)]
+                [all_tables.append(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(t)]
                 for fds in feature_datasets:
-                    [tables.append(os.path.join(job.path, fds, fc)) for fc in arcpy.ListFeatureClasses(wild_card=t, feature_dataset=fds)]
+                    [all_tables.append(os.path.join(job.path, fds, fc)) for fc in arcpy.ListFeatureClasses(wild_card=t, feature_dataset=fds)]
         else:
-            [tables.append(os.path.join(job.path, tbl)) for tbl in arcpy.ListTables()]
-            [tables.append(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses()]
+            [all_tables.append(os.path.join(job.path, tbl)) for tbl in arcpy.ListTables()]
+            [all_tables.append(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses()]
             for fds in feature_datasets:
-                [tables.append(os.path.join(job.path, fds, fc)) for fc in arcpy.ListFeatureClasses(feature_dataset=fds)]
+                [all_tables.append(os.path.join(job.path, fds, fc)) for fc in arcpy.ListFeatureClasses(feature_dataset=fds)]
 
         if job.tables_to_skip:
             for t in job.tables_to_keep:
-                [tables.remove(os.path.join(job.path, tbl)) for tbl in arcpy.ListTables(t)]
-                [tables.remove(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(t)]
+                [all_tables.remove(os.path.join(job.path, tbl)) for tbl in arcpy.ListTables(t)]
+                [all_tables.remove(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(t)]
                 for fds in feature_datasets:
-                    [tables.remove(os.path.join(job.path, fds, fc)) for fc in arcpy.ListFeatureClasses(wild_card=t, feature_dataset=fds)]
+                    [all_tables.remove(os.path.join(job.path, fds, fc)) for fc in arcpy.ListFeatureClasses(wild_card=t, feature_dataset=fds)]
 
-    # A geodatabase feature dataset, SDC data, or CAD dataset.
+        multiprocessing.log_to_stderr()
+        logger = multiprocessing.get_logger()
+        logger.setLevel(logging.INFO)
+        pool = multiprocessing.Pool(initializer=global_job, initargs = (job, ))
+        for i, _ in enumerate(pool.imap_unordered(worker, all_tables, 1)):
+            sys.stderr.write('\rdone {0:%}'.format(i/len(all_tables)))
+        # Synchronize the main process with the job processes to ensure proper cleanup.
+        pool.close()
+        pool.join()
+
     elif dsc.dataType == 'FeatureDataset' or dsc.dataType == 'CadDrawingDataset':
         arcpy.env.workspace = job.path
         if job.tables_to_keep:
-            tables = []
+            feature_classes = []
             for tbl in job.tables_to_keep:
-                [tables.append(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(tbl)]
+                [feature_classes.append(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(tbl)]
         else:
-            tables = [os.path.join(job.path, fc) for fc in arcpy.ListFeatureClasses()]
+            feature_classes = [os.path.join(job.path, fc) for fc in arcpy.ListFeatureClasses()]
         if job.tables_to_skip:
             for tbl in job.tables_to_skip:
-                [tables.remove(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(tbl)]
+                [feature_classes.remove(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(tbl)]
+        for fc in feature_classes:
+            worker(os.path.join(job.path, fc))
 
-    # Not a recognized data type.
-    else:
-        sys.exit(1)
-
-    # Multiprocess larger databases and feature datasets.
-    multiprocessing.log_to_stderr()
-    logger = multiprocessing.get_logger()
-    logger.setLevel(logging.INFO)
-    pool = multiprocessing.Pool(initializer=global_job, initargs=(job, ))
-    for i, _ in enumerate(pool.imap_unordered(worker, tables, 1)):
-        sys.stderr.write('\rdone {0:%}'.format(i/len(tables)))
-    # Synchronize the main process with the job processes to ensure proper cleanup.
-    pool.close()
-    pool.join()
-    return
+def global_job(args):
+    global job
+    job = args

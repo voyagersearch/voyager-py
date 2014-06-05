@@ -13,7 +13,7 @@
 # limitations under the License.
 import decimal
 import json
-import job
+import base_job
 
 
 class ComplexEncoder(json.JSONEncoder):
@@ -24,7 +24,7 @@ class ComplexEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-class ODBCJob(job.Job):
+class ODBCJob(base_job.Job):
     def __repr__(self):
         return "ODBCJob{0}".format(str(self))
 

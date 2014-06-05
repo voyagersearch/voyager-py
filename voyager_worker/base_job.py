@@ -14,6 +14,7 @@
 import os
 import sys
 import json
+import datetime
 import copy
 import pyodbc
 try:
@@ -26,6 +27,14 @@ except ImportError as ie:
     sys.stdout.write(repr(ie))
     sys.exit(1)
 
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime.datetime):
+            encoded_object = list(obj.timetuple())[0:6]
+        else:
+            encoded_object = json.JSONEncoder.default(self, obj)
+        return encoded_object
 
 class Job(object):
     def __init__(self, job_file):
@@ -142,40 +151,27 @@ class Job(object):
         mapped_field_names = copy.copy(field_names)
         default_map = self.default_mapping
 
-        for mapping in self.field_mapping:
-            if mapping['table'] == '*':
-                fmap = mapping['map']
-            elif mapping['table'].lower() == table_name.lower():
-                mapped_field_names = copy.copy(field_names)
-                fmap = mapping['map']
-            else:
-                return mapped_field_names
+        if self.field_mapping:
+            for mapping in self.field_mapping:
+                if mapping['table'] == '*':
+                    fmap = mapping['map']
+                elif mapping['table'].lower() == table_name.lower():
+                    mapped_field_names = copy.copy(field_names)
+                    fmap = mapping['map']
+                else:
+                    return mapped_field_names
+                for i, field in enumerate(mapped_field_names):
+                    try:
+                        mapped_field_names[i] = fmap[field]
+                    except KeyError:
+                        if default_map:
+                            mapped_field_names[i] = '{0}{1}'.format(default_map, field)
+        elif self.default_mapping:
             for i, field in enumerate(mapped_field_names):
-                try:
-                    mapped_field_names[i] = fmap[field]
-                except KeyError:
-                    if default_map:
-                        mapped_field_names[i] = '{0}{1}'.format(default_map, field)
-        #
-        # if self.field_mapping.has_key(table_name):
-        #     field_maps = self.field_mapping[table_name]
-        #     for i, field in enumerate(mapped_field_names):
-        #         try:
-        #             mapped_field_names[i] = field_maps[field]
-        #         except KeyError:
-        #             if default_map:
-        #                 mapped_field_names[i] = '{0}{1}'.format(default_map, field)
-        # else:
-        #     if default_map:
-        #         for i, field in enumerate(mapped_field_names):
-        #             mapped_field_names[i] = '{0}{1}'.format(default_map, field)
+                mapped_field_names[i] = '{0}{1}'.format(default_map, field)
+        else:
+            return mapped_field_names
 
-        # for i, field in enumerate(mapped_field_names):
-        #     try:
-        #         mapped_field_names[i] = self.field_mapping[field]
-        #     except KeyError:
-        #         if default_map:
-        #             mapped_field_names[i] = '{0}{1}'.format(default_map, field)
         return mapped_field_names
 
     def connect_to_database(self):
@@ -203,4 +199,18 @@ class Job(object):
 
     def send_entry(self, entry):
         """Sends an entry to be indexed using pyzmq."""
-        self.zmq_socket.send_json(entry)
+        self.zmq_socket.send_json(entry, cls=DateTimeEncoder)
+
+    def search_fields(self, dataset):
+        """Returns a valid list of existing fields for the search cursor."""
+        import arcpy
+        fields = []
+        if not self.fields_to_keep == ['*']:
+            for fld in self.fields_to_keep:
+                [fields.append(f.name) for f in arcpy.ListFields(dataset, fld)]
+        if self.fields_to_skip:
+            for fld in self.fields_to_skip:
+                [fields.remove(f.name) for f in arcpy.ListFields(dataset, fld)]
+            return fields
+        else:
+            return [f.name for f in arcpy.ListFields(dataset)]
