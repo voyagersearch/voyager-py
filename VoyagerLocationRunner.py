@@ -14,19 +14,18 @@
 """Submits a indexing job for a data location."""
 import sys
 from voyager_worker import base_job
-from voyager_worker import odbc_worker
+from voyager_worker import sql_worker
 
 
 if __name__ == '__main__':
     job = base_job.Job(sys.argv[1])
-    #job = base_job.Job(r"C:\Voyager\states.json")
+    #job = base_job.Job(r"C:\Voyager\sql_server_field_mapping.json")
     #job = base_job.Job(r"C:\Temp\GIFD_DATA_TEST.json")
     if job.path:
         from voyager_worker import esri_worker
         esri_worker.assign_work(job.job_file)
     elif job.sql_connection_info:
-        odbc_job = odbc_worker.ODBCJob(job.job_file)
-        odbc_job.assign_job()
+        sql_worker.assign_job(job.job_file)
     else:
         sys.stdout.write("No job information.")
         sys.exit(1)
