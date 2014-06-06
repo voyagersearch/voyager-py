@@ -37,10 +37,14 @@ if __name__ == '__main__':
         task_info = collections.defaultdict(list)
         for task in voyager_tasks.__all__:
             try:
+                # Metadata GP tools do not work in Python with ArcGIS 10.0
                 __import__(task)
                 task_info['tasks'].append({'name': task, 'available': True})
             except ImportError as ie:
-                task_info['tasks'].append({'name': task, 'available': False, 'warning': repr(ie)})
+                if 'arcpy' in ie:
+                     task_info['tasks'].append({'name': task, 'available': False, 'warning': '{0}. Requires ArcGIS'.format(str(ie))})
+                else:
+                    task_info['tasks'].append({'name': task, 'available': False, 'warning': str(ie)})
         sys.stdout.write(json.dumps(task_info, indent=2))
         sys.stdout.flush()
     elif sys.argv[1] == '--license':

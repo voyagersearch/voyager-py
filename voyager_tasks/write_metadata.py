@@ -21,6 +21,8 @@ import arcpy
 from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
 
+if arcpy.GetInstallInfo()['Version'] == '10.0':
+    raise ImportError('write_metadata not available with ArcGIS 10.0.')
 
 def execute(request):
     """Writes existing metadata for summary, description and tags.
