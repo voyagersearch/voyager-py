@@ -78,7 +78,7 @@ def execute(request):
     for item in input_items:
         # Number of bands for each item should be the same.
         dsc = arcpy.Describe(item)
-        if dsc.datasettype == 'RasterDataset':
+        if dsc.dataType == 'RasterDataset':
             raster_items.append(item)
             if hasattr(dsc, 'pixeltype'):
                 pixels.append(dsc.pixeltype)
