@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import sys
 import shutil
 import tempfile
 import arcpy
@@ -63,7 +62,7 @@ def execute(request):
             is_fds = True
         else:
             status_writer.send_state(status.STAT_FAILED, _('{0} does not exist').format(out_gdb))
-            sys.exit(1)
+            return
 
     status_writer.send_status(_('Setting the output workspace...'))
     arcpy.env.workspace = out_gdb

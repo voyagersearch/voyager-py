@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import sys
 import collections
 import shutil
 import arcpy
@@ -83,7 +82,7 @@ def execute(request):
 
     if not raster_items:
         status_writer.send_state(status.STAT_FAILED, _('Invalid input types'))
-        sys.exit(1)
+        return
 
     # Get most common pixel type.
     pixel_type = pixel_types[max(set(pixels), key=pixels.count)]
@@ -107,12 +106,12 @@ def execute(request):
             task_utils.make_thumbnail(layer_object, os.path.join(request['folder'], '_thumb.png'))
         except arcpy.ExecuteError:
             status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
-            sys.exit(1)
+            return
     else:
         try:
             if len(bands) > 1:
                 status_writer.send_state(status.STAT_FAILED, _('Input rasters must have the same number of bands'))
-                sys.exit(1)
+                return
             if clip_area:
                 ext = '{0} {1} {2} {3}'.format(clip_area.XMin, clip_area.YMin, clip_area.XMax, clip_area.YMax)
                 tmp_mosaic = arcpy.MosaicToNewRaster_management(
@@ -137,7 +136,7 @@ def execute(request):
             task_utils.make_thumbnail(layer_object, os.path.join(request['folder'], '_thumb.png'))
         except arcpy.ExecuteError:
             status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
-            sys.exit(1)
+            return
 
     if arcpy.env.workspace.endswith('.gdb'):
         out_workspace = os.path.dirname(arcpy.env.workspace)

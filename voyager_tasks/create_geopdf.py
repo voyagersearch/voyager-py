@@ -16,7 +16,6 @@ import os
 import sys
 import datetime
 import locale
-import shutil
 import arcpy
 from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
@@ -177,7 +176,7 @@ def execute(request):
     else:
         status_writer.send_state(status.STAT_FAILED, _('No results can be exported to PDF'))
         task_utils.report(os.path.join(request['folder'], '_report.json'), added_to_map, skipped, skipped, 0)
-        sys.exit(1)
+        return
 
     # Update state if necessary.
     if skipped > 0 or errors > 0:

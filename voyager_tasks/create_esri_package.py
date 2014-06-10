@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import sys
 import shutil
 import arcpy
 from voyager_tasks.utils import status
@@ -99,7 +98,7 @@ def execute(request):
 
     if errors == len(input_items):
         status_writer.send_state(status.STAT_FAILED, _('No results to package'))
-        sys.exit(1)
+        return
 
     try:
         if out_format == 'MPK':
@@ -141,7 +140,7 @@ def execute(request):
             task_utils.make_thumbnail(layers[0], os.path.join(request['folder'], '_thumb.png'))
     except (RuntimeError, ValueError, arcpy.ExecuteError) as ex:
         status_writer.send_state(status.STAT_FAILED, repr(ex))
-        sys.exit(1)
+        return
 
     # Update state if necessary.
     if errors > 0 or skipped:
