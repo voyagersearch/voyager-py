@@ -21,7 +21,6 @@ def global_job(args):
     global job
     job = args
 
-
 def worker():
     """Worker function to index each geometry in each feature in the datasource."""
     job.connect_to_zmq()
@@ -39,7 +38,6 @@ def worker():
         cont = '*' in job.tables_to_keep or ln in job.tables_to_keep
         
         if cont:
-            
             for i in range(ldef.GetFieldCount()):
                 fn = ldef.GetFieldDefn(i).GetName()
                 if '*' in job.fields_to_keep or fn in job.fields_to_keep:
@@ -62,16 +60,15 @@ def worker():
                     geo['ymin'] = e[2]
                     geo['ymax'] = e[3]
                 
-                fields = []
+                fvalues = []
                 for i in fnames:
-                    fields.append(f.GetField(i))
+                    fvalues.append(f.GetField(i))
     
                 entry = {}
                 entry['id'] = '{0}_{1}_{2}'.format(job.location_id, l.GetName(), f.GetFID())
                 entry['location'] = job.location_id
                 entry['action'] = job.action_type
-                entry['entry'] = {'geo': geo, 'fields': dict(zip(fnames, fields))}
-
+                entry['entry'] = {'geo': geo, 'fields': dict(zip(job.map_fields(ln, fnames), fvalues))}
                 job.send_entry(entry)
      
             
