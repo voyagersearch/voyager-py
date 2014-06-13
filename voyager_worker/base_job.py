@@ -119,6 +119,14 @@ class Job(object):
             return ''
 
     @property
+    def url(self):
+        """URL for GDAL/OGR dataset."""
+        try:
+            return self.job['location']['config']['url']
+        except KeyError:
+            return ''
+
+    @property
     def sql_driver(self):
         try:
             return self.job['location']['config']['sql']['connection']['driver']

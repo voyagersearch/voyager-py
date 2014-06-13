@@ -15,7 +15,7 @@
 import sys
 from voyager_worker import base_job
 from voyager_worker import sql_worker
-
+from voyager_worker import gdal_worker
 
 if __name__ == '__main__':
     job = base_job.Job(sys.argv[1])
@@ -26,6 +26,8 @@ if __name__ == '__main__':
         esri_worker.assign_work(job.job_file)
     elif job.sql_connection_info:
         sql_worker.assign_job(job.job_file)
+    elif job.url:
+        gdal_worker.assign_job(job.job_file)
     else:
         sys.stdout.write("No job information.")
         sys.exit(1)
