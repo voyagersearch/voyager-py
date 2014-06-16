@@ -13,10 +13,12 @@
 # limitations under the License.
 import decimal
 import json
+import multiprocessing
 import base_job
 
 
 class ComplexEncoder(json.JSONEncoder):
+    """To handle decimal types for json encoding."""
     def default(self, obj):
         if isinstance(obj, decimal.Decimal):
             return float(obj)
@@ -34,15 +36,31 @@ def worker():
     """Worker function to index each row in each table in the database."""
     job.connect_to_zmq()
     job.connect_to_database()
-    job.db_cursor.execute("select name from sysobjects where type='U'")
+    #job.db_cursor.execute("select name from sysobjects where type='U'")
+    tables = []
     if not job.tables_to_keep == ['*']:
-        tables = [t[0] for t in job.db_cursor.fetchall() if t[0] in job.tables_to_keep]
+        for tk in job.tables_to_keep:
+            #tcur = job.db_cursor.execute("select * from sys.objects where name like '{0}'".format(tk))
+            [tables.append(t[0]) for t in job.db_cursor.execute("select * from sys.objects where name like '{0}'".format(tk)).fetchall()]
+        #tables = [t[0] for t in job.db_cursor.fetchall() if t[0] in job.tables_to_keep]
     else:
-        tables = [t[0] for t in job.db_cursor.fetchall()]
+        [tables.append(t[0]) for t in job.db_cursor.execute("select name from sysobjects where type='U'").fetchall()]
+        #tables = [t[0] for t in job.db_cursor.fetchall()]
 
-    for tbl in tables:
+    for tbl in set(tables):
         geo = {}
         has_shape = False
+
+        query = job.get_table_query(tbl)
+        constraint = job.get_table_constraint(tbl)
+        if query and constraint:
+            expression = """{0} AND {1}""".format(query, constraint)
+        else:
+            if query:
+                expression = query
+            else:
+                expression = constraint
+
         if not job.fields_to_keep == '*':
             columns = []
             for col in job.fields_to_keep:
@@ -78,7 +96,10 @@ def worker():
                     columns.insert(0, "{0}.STEnvelope().STPointN((1)).STX".format(c.column_name))
                 break
 
-        job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl))
+        if not expression:
+            job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl))
+        else:
+            job.db_cursor.execute("select {0} from {1} where {2}".format(','.join(columns), tbl, expression))
         for i, row in enumerate(job.db_cursor.fetchall()):
             entry = {}
             if has_shape:

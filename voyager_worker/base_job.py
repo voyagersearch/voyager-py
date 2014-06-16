@@ -36,10 +36,20 @@ class DateTimeEncoder(json.JSONEncoder):
             encoded_object = json.JSONEncoder.default(self, obj)
         return encoded_object
 
+
 class Job(object):
     def __init__(self, job_file):
         self.job_file = job_file
         self.job = json.load(open(job_file, 'r'))
+
+        self.__tables_to_keep = []
+        self.__tables_to_skip = []
+        self.__field_mapping = []
+        self.__table_constraints = []
+        self.__table_queries = []
+        self.__get_table_config()
+
+        self._sql_queries = []
         self.db_connection = None
         self.db_cursor = None
         self.db_query = None
@@ -70,11 +80,7 @@ class Job(object):
 
     @property
     def field_mapping(self):
-        """Field mapping as key, value pairs."""
-        try:
-            return self.job['location']['config']['fields']['mapping']
-        except KeyError:
-            return None
+        return self.__field_mapping
 
     @property
     def default_mapping(self):
@@ -87,23 +93,30 @@ class Job(object):
     @property
     def tables_to_keep(self):
         """List of tables to keep (may include wild card)."""
-        try:
-            return self.job['location']['config']['tables']['include']
-        except KeyError:
-            return ['*']
+        return self.__tables_to_keep
 
     @property
     def tables_to_skip(self):
         """List of tables to skip (may include a wild card)."""
-        try:
-            return self.job['location']['config']['tables']['exclude']
-        except KeyError:
-            return None
+        return self.__tables_to_skip
+
+    @property
+    def table_constraints(self):
+        return self.__table_constraints
+
+    @property
+    def table_queries(self):
+        return self.__table_queries
 
     @property
     def action_type(self):
-        """The action type."""
+        """Returns the action type."""
         return 'ADD'
+
+    @property
+    def discovery_id(self):
+        """Returns the discovery id."""
+        return self.job['id']
 
     @property
     def location_id(self):
@@ -142,10 +155,10 @@ class Job(object):
             return None
 
     @property
-    def sql_query(self):
+    def sql_queries(self):
         """A SQL query"""
         try:
-            return self.job['location']['config']['sql']['query']
+            return self.job['location']['config']['queries']
         except KeyError:
             return None
 
@@ -154,16 +167,32 @@ class Job(object):
         """Returns the database schema."""
         return self.job['location']['config']['sql']['connection']['schema']
 
+    #
+    # Public methods
+    #
+    def connect_to_database(self):
+        """Makes an ODBC database connection."""
+
+        #TODO: test this for oracle -- connString  = "Driver={Microsoft ODBC for Oracle};Server=" + dbInst + ';Uid=' + schema + ';Pwd=' + passwd + ";"
+
+        drvr = self.sql_connection_info['connection']['driver']
+        srvr = self.sql_connection_info['connection']['server']
+        db = self.sql_connection_info['connection']['database']
+        un = self.sql_connection_info['connection']['uid']
+        pw = self.sql_connection_info['connection']['pwd']
+        self.db_connection = pyodbc.connect("DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(drvr, srvr, db, un, pw))
+        self.db_cursor = self.db_connection.cursor()
+
     def map_fields(self, table_name, field_names):
         """Returns mapped field names. Order matters."""
         mapped_field_names = copy.copy(field_names)
         default_map = self.default_mapping
-
-        if self.field_mapping:
+        #TODO: revisit this logic...
+        if self.__field_mapping:
             for mapping in self.field_mapping:
-                if mapping['table'] == '*':
+                if mapping['name'] == '*':
                     fmap = mapping['map']
-                elif mapping['table'].lower() == table_name.lower():
+                elif mapping['name'].lower() == table_name.lower():
                     mapped_field_names = copy.copy(field_names)
                     fmap = mapping['map']
                 else:
@@ -182,15 +211,29 @@ class Job(object):
 
         return mapped_field_names
 
-    def connect_to_database(self):
-        """Makes an ODBC database connection."""
-        drvr = self.sql_connection_info['connection']['driver']
-        srvr = self.sql_connection_info['connection']['server']
-        db = self.sql_connection_info['connection']['database']
-        un = self.sql_connection_info['connection']['uid']
-        pw = self.sql_connection_info['connection']['pwd']
-        self.db_connection = pyodbc.connect("DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(drvr, srvr, db, un, pw))
-        self.db_cursor = self.db_connection.cursor()
+    def get_table_constraint(self, table_name):
+        """Get and return the constraint for a table."""
+        constraint = ''
+        if self.table_constraints:
+            for tc in self.table_constraints:
+                if tc['name'] == '*':
+                    constraint = tc['constraint']
+                elif tc['name'].lower() == table_name.lower():
+                    constraint = tc['constraint']
+                    break
+        return constraint
+
+    def get_table_query(self, table_name):
+        """Get and return the query for a table."""
+        query = ''
+        if self.table_queries:
+            for q in self.table_queries:
+                if q['name'] == '*':
+                    query = q['query']
+                elif q['name'].lower() == table_name.lower():
+                    query = q['query']
+                    break
+        return query
 
     def execute_query(self, query):
         """Execute the SQL query and return a new cursor object."""
@@ -222,3 +265,49 @@ class Job(object):
             return fields
         else:
             return [f.name for f in arcpy.ListFields(dataset)]
+
+    #
+    # Private functions.
+    #
+
+    def __get_table_config(self):
+        """List of tables to keep (may include wild card)."""
+        try:
+            tables = self.job['location']['config']['tables']
+            for table in tables:
+                try:
+                    if table['action'] == 'INCLUDE':
+                        self.__tables_to_keep.append(table['name'])
+                        self.__get_info(table)
+                    elif table['action'] == 'EXCLUDE':
+                        self.__tables_to_skip.append(table['name'])
+                except KeyError:
+                    self.__get_info(table)
+                    continue
+        except KeyError:
+            self.__tables_to_keep = ['*']
+
+    def __get_info(self, table):
+        """Gets info such as field mapping, queries, and constraints."""
+        try:
+            try:
+                if table['query'] and table['constraint']:
+                    sys.stderr.write('Config Error: A table cannot have a query and a constraint.')
+                    sys.stderr.flush()
+                    sys.exit(1)
+            except KeyError:
+                pass
+            try:
+                self.__table_queries.append({'name': table['name'], 'query': table['query']})
+            except KeyError:
+                pass
+            try:
+                self.__table_constraints.append({'name': table['name'], 'constraint': table['constraint']})
+            except KeyError:
+                pass
+            try:
+                self.__field_mapping.append({'name': table['name'], 'map': table['map']})
+            except KeyError:
+                pass
+        except KeyError:
+            pass

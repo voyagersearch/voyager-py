@@ -1,3 +1,16 @@
+# (C) Copyright 2014 Voyager Search
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from __future__ import division
 import os
 import sys
@@ -22,10 +35,20 @@ def worker(data_path):
 
     if dsc.dataType == 'Table':
         fields = job.search_fields(data_path)
-        with arcpy.da.SearchCursor(data_path, fields) as rows:
+        query = job.get_table_query(dsc.name)
+        constraint = job.get_table_constraint(dsc.name)
+        if query and constraint:
+            expression = """{0} AND {1}""".format(query, constraint)
+        else:
+            if query:
+                expression = query
+            else:
+                expression = constraint
+        with arcpy.da.SearchCursor(data_path, fields, expression) as rows:
             for i, row in enumerate(rows, 1):
                 mapped_fields = job.map_fields(dsc.name, fields)
                 mapped_fields = dict(zip(mapped_fields, row))
+                mapped_fields['_discoveryID'] = job.discovery_id
                 oid_field = filter(lambda x: x in ('FID', 'OID', 'OBJECTID'), rows.fields)
                 if oid_field:
                    fld_index = rows.fields.index(oid_field[0])
@@ -41,22 +64,32 @@ def worker(data_path):
         geo['spatialReference'] = dsc.spatialReference.name
         geo['code'] = dsc.spatialReference.factoryCode
         fields = job.search_fields(dsc.catalogPath)
+        query = job.get_table_query(dsc.name)
+        constraint = job.get_table_constraint(dsc.name)
+        if query and constraint:
+            expression = """{0} AND {1}""".format(query, constraint)
+        else:
+            if query:
+                expression = query
+            else:
+                expression = constraint
         if dsc.shapeFieldName in fields:
             fields.remove(dsc.shapeFieldName)
         if dsc.shapeType == 'Point':
-            with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@XY'] + fields, '', sr) as rows:
+            with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@XY'] + fields, expression, sr) as rows:
                 for i, row in enumerate(rows):
                     geo['lon'] = row[0][0]
                     geo['lat'] = row[0][1]
                     mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]))
                     mapped_fields = dict(zip(mapped_fields, row[1:]))
+                    mapped_fields['_discoveryID'] = job.discovery_id
                     entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                     entry['location'] = job.location_id
                     entry['action'] = job.action_type
                     entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                     job.send_entry(entry)
         else:
-            with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, '', sr) as rows:
+            with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, expression, sr) as rows:
                 for i, row in enumerate(rows):
                     geo['xmin'] = row[0].extent.XMin
                     geo['xmax'] = row[0].extent.XMax
@@ -64,6 +97,7 @@ def worker(data_path):
                     geo['ymax'] = row[0].extent.YMax
                     mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]))
                     mapped_fields = dict(zip(mapped_fields, row[1:]))
+                    mapped_fields['_discoveryID'] = job.discovery_id
                     entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                     entry['location'] = job.location_id
                     entry['action'] = job.action_type
@@ -71,9 +105,9 @@ def worker(data_path):
                     job.send_entry(entry)
 
 
-def assign_work(job_info):
+def assign_work(esri_job):
     """Determines the data type and each dataset is sent to the worker to be processed."""
-    job = base_job.Job(job_info)
+    job = esri_job
     dsc = arcpy.Describe(job.path)
 
     # A single feature class or table.
@@ -117,7 +151,7 @@ def assign_work(job_info):
             tables = [os.path.join(job.path, fc) for fc in arcpy.ListFeatureClasses()]
         if job.tables_to_skip:
             for tbl in job.tables_to_skip:
-                [tables.remove(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(tbl)]
+                [tables.remove(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(tbl) if fc in tables]
 
     # Not a recognized data type.
     else:
@@ -128,7 +162,7 @@ def assign_work(job_info):
     logger = multiprocessing.get_logger()
     logger.setLevel(logging.INFO)
     pool = multiprocessing.Pool(initializer=global_job, initargs=(job, ))
-    for i, _ in enumerate(pool.imap_unordered(worker, tables, 1)):
+    for i, _ in enumerate(pool.imap_unordered(worker, tables), 1):
         sys.stderr.write('\rdone {0:%}'.format(i/len(tables)))
     # Synchronize the main process with the job processes to ensure proper cleanup.
     pool.close()

@@ -19,11 +19,11 @@ from voyager_worker import gdal_worker
 
 if __name__ == '__main__':
     job = base_job.Job(sys.argv[1])
-    #job = base_job.Job(r"C:\Voyager\sql_server_field_mapping.json")
-    #job = base_job.Job(r"C:\Temp\GIFD_DATA_TEST.json")
+    #job = base_job.Job(r"C:\Voyager\sql_server_job.json")
+    #job = base_job.Job(r"C:\Temp\gifd_data_info.json")
     if job.path:
         from voyager_worker import esri_worker
-        esri_worker.assign_work(job.job_file)
+        esri_worker.assign_work(job)
     elif job.sql_connection_info:
         sql_worker.assign_job(job.job_file)
     elif job.url:
