@@ -29,7 +29,7 @@
   {
     "en":
     {
-      "display": "Write metadata",
+      "display": "Write Metadata",
       "description": "Create or update existing metadata",
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#zip_files",
       "params":
