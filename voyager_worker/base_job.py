@@ -11,21 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-import sys
 import json
 import datetime
 import copy
+import sys
+
 import pyodbc
-try:
-    try:
-        import zmq
-    except ImportError:
-        sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'arch', 'win32_x86', 'py', 'pyzmq-14.3.0-py2.7-win32.egg')))
-        import zmq
-except ImportError as ie:
-    sys.stdout.write(repr(ie))
-    sys.exit(1)
+import zmq
 
 
 class DateTimeEncoder(json.JSONEncoder):

@@ -17,7 +17,6 @@ import sys
 import logging
 import multiprocessing
 import arcpy
-import base_job
 
 
 def global_job(args):

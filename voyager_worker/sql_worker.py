@@ -13,7 +13,6 @@
 # limitations under the License.
 import decimal
 import json
-import multiprocessing
 import base_job
 
 

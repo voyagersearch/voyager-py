@@ -8,26 +8,27 @@
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# WITHOUT WARRANTIES  CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Submits a indexing job for a data location."""
 import sys
+import voyager_worker
 from voyager_worker import base_job
-from voyager_worker import sql_worker
-from voyager_worker import gdal_worker
 
 if __name__ == '__main__':
     job = base_job.Job(sys.argv[1])
     #job = base_job.Job(r"C:\Voyager\sql_server_job.json")
-    #job = base_job.Job(r"C:\Temp\gifd_data_info.json")
+    #job = base_job.Job(r"C:\Voyager\TestJSONFiles\esri_sample.json")
     if job.path:
         from voyager_worker import esri_worker
         esri_worker.assign_work(job)
-    elif job.sql_connection_info:
-        sql_worker.assign_job(job.job_file)
     elif job.url:
+        from voyager_worker import gdal_worker
         gdal_worker.assign_job(job.job_file)
+    elif job.sql_connection_info:
+        from voyager_worker import sql_worker
+        sql_worker.assign_job(job.job_file)
     else:
         sys.stdout.write("No job information.")
         sys.exit(1)
