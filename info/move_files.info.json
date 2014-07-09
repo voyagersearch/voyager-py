@@ -1,0 +1,43 @@
+{
+  "name": "move_files",
+  "runner": "python",
+  "categories": ["download"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "FolderLocation",
+      "name": "target_folder",
+      "required": false
+    },
+    {
+      "type": "CheckBox",
+      "name": "flatten_results",
+      "required": false,
+      "value": true
+    }
+  ],
+  "display":
+  {
+    "en":
+    {
+      "display": "Move Files",
+      "description": "Moves files to a target folder",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#move_files",
+  	  "params":
+  	  {
+  	    "archive_location": {
+  	      "display": "Target Folder",
+  	      "description": "The target folder location"
+  	    },
+  	    "flatten_results": {
+  	      "display": "Flatten Results",
+          "description": "Place all items in the root folder"
+  	    }
+   	  }
+    }
+  }
+}
