@@ -23,6 +23,7 @@ def execute(request):
     """Package inputs to an Esri map or layer package.
     :param request: json as a dict.
     """
+    app_folder = os.path.dirname(os.path.abspath(__file__))
     status_writer = status.Writer()
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
@@ -102,7 +103,7 @@ def execute(request):
 
     try:
         if out_format == 'MPK':
-            shutil.copyfile(os.path.join(os.path.dirname(__file__), 'supportfiles', 'MapTemplate.mxd'),
+            shutil.copyfile(os.path.join(app_folder, 'supportfiles', 'MapTemplate.mxd'),
                             os.path.join(out_workspace, 'output.mxd'))
             mxd = arcpy.mapping.MapDocument(os.path.join(out_workspace, 'output.mxd'))
             if mxd.description == '':
@@ -112,15 +113,21 @@ def execute(request):
                 arcpy.mapping.AddLayer(df, layer)
             mxd.save()
             status_writer.send_status(_('Packaging results...'))
-            arcpy.PackageMap_management(mxd.filePath,
-                                        os.path.join(os.path.dirname(out_workspace), 'output.mpk'),
-                                        'PRESERVE',
-                                        extent=clip_area,
-                                        arcgisruntime='RUNTIME',
-                                        version='10',
-                                        additional_files=files,
-                                        summary=summary,
-                                        tags=tags)
+            if arcpy.GetInstallInfo()['Version'] == '10.0':
+                arcpy.PackageMap_management(mxd.filePath,
+                                            os.path.join(os.path.dirname(out_workspace), 'output.mpk'),
+                                            'PRESERVE',
+                                            extent=clip_area)
+            else:
+                arcpy.PackageMap_management(mxd.filePath,
+                                            os.path.join(os.path.dirname(out_workspace), 'output.mpk'),
+                                            'PRESERVE',
+                                            extent=clip_area,
+                                            arcgisruntime='RUNTIME',
+                                            version='10',
+                                            additional_files=files,
+                                            summary=summary,
+                                            tags=tags)
             #  Create a thumbnail size PNG of the mxd.
             task_utils.make_thumbnail(mxd, os.path.join(request['folder'], '_thumb.png'))
         else:
@@ -128,14 +135,21 @@ def execute(request):
             for layer in layers:
                 if layer.description == '':
                     layer.description = layer.name
-            arcpy.PackageLayer_management(layers,
-                                          os.path.join(os.path.dirname(out_workspace), 'output.lpk'),
-                                          'PRESERVE',
-                                          extent=clip_area,
-                                          version='10',
-                                          additional_files=files,
-                                          summary=summary,
-                                          tags=tags)
+            if arcpy.GetInstallInfo()['Version'] == '10.0':
+                arcpy.PackageLayer_management(layers,
+                                              os.path.join(os.path.dirname(out_workspace), 'output.lpk'),
+                                              'PRESERVE',
+                                              extent=clip_area,
+                                              version='10')
+            else:
+                arcpy.PackageLayer_management(layers,
+                                              os.path.join(os.path.dirname(out_workspace), 'output.lpk'),
+                                              'PRESERVE',
+                                              extent=clip_area,
+                                              version='10',
+                                              additional_files=files,
+                                              summary=summary,
+                                              tags=tags)
             #  Create a thumbnail size PNG of the mxd.
             task_utils.make_thumbnail(layers[0], os.path.join(request['folder'], '_thumb.png'))
     except (RuntimeError, ValueError, arcpy.ExecuteError) as ex:
