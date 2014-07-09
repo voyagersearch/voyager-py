@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#from __future__ import unicode_literals
 import os
 import shutil
 from voyager_tasks.utils import status
@@ -38,7 +37,7 @@ def execute(request):
     skipped = 0
     errors = 0
     file_count = len(input_items)
-    shp_files = ('shp', 'shx', 'sbn', 'dbf', 'prj', 'cpg', 'shp.xml', 'dbf.xml')
+    shp_files = ('shp', 'shx', 'sbn', 'sbx', 'dbf', 'prj', 'cpg', 'shp.xml', 'dbf.xml')
     sdc_files = ('sdc', 'sdi', 'sdc.xml', 'sdc.prj')
     status_writer = status.Writer()
 
@@ -85,6 +84,7 @@ def execute(request):
             status_writer.send_status(_('FAIL: {0}').format(repr(io_err)))
             errors += 1
             pass
+        i += 1
 
     try:
         shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
