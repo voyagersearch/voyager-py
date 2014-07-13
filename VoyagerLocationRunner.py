@@ -18,7 +18,7 @@ from voyager_worker import base_job
 
 if __name__ == '__main__':
     job = base_job.Job(sys.argv[1])
-    #job = base_job.Job(r"C:\Voyager\sql_server_job.json")
+    #job = base_job.Job(r"C:\Voyager\oracle_job.json")
     #job = base_job.Job(r"C:\Voyager\TestJSONFiles\esri_sample.json")
     if job.path:
         from voyager_worker import esri_worker
@@ -27,8 +27,12 @@ if __name__ == '__main__':
         from voyager_worker import gdal_worker
         gdal_worker.assign_job(job.job_file)
     elif job.sql_connection_info:
-        from voyager_worker import sql_worker
-        sql_worker.assign_job(job.job_file)
+        if job.sql_driver == 'SQL Server':
+            from voyager_worker import sql_worker
+            sql_worker.assign_job(job.job_file)
+        elif job.sql_driver == 'Oracle':
+            from voyager_worker import oracle_worker
+            oracle_worker.assign_job(job.job_file)
     else:
         sys.stdout.write("No job information.")
         sys.exit(1)

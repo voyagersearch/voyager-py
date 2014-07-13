@@ -16,6 +16,7 @@ import datetime
 import copy
 import sys
 
+import cx_Oracle
 import pyodbc
 import zmq
 
@@ -162,17 +163,22 @@ class Job(object):
     #
     # Public methods
     #
-    def connect_to_database(self):
+    def connect_to_database(self, database_type=''):
         """Makes an ODBC database connection."""
-
         #TODO: test this for oracle -- connString  = "Driver={Microsoft ODBC for Oracle};Server=" + dbInst + ';Uid=' + schema + ';Pwd=' + passwd + ";"
-
+        # if database_type == 'Oracle':
+        #     self.db_connection = cx_Oracle.connect("sde/sde@voyagerdemo.com/voyager")
+        #     self.db_cursor = self.db_connection.cursor()
+        # else:
         drvr = self.sql_connection_info['connection']['driver']
         srvr = self.sql_connection_info['connection']['server']
         db = self.sql_connection_info['connection']['database']
         un = self.sql_connection_info['connection']['uid']
         pw = self.sql_connection_info['connection']['pwd']
-        self.db_connection = pyodbc.connect("DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(drvr, srvr, db, un, pw))
+        if drvr == 'Oracle':
+            self.db_connection = cx_Oracle.connect("{0}/{1}@{2}/{3}".format(un, pw, srvr, db))
+        else:
+            self.db_connection = pyodbc.connect("DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(drvr, srvr, db, un, pw))
         self.db_cursor = self.db_connection.cursor()
 
     def map_fields(self, table_name, field_names):
