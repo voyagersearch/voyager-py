@@ -67,18 +67,7 @@ def execute(request):
         if layers:
             for layer in layers:
                 try:
-                    #if layer.isFeatureLayer or layer.isRasterLayer:
-                        #if layer.workspacePath.lower().find(old_workspace) > -1:
-                        #    new_source = layer.workspacePath.lower().replace(old_workspace, new_workspace)
-                        #    layer.replaceDataSource(new_source, workspace_type, validate=True)
                     layer.findAndReplaceWorkspacePath(old_workspace, new_workspace, validate=True)
-                    #elif layer.isRasterLayer:
-                    #    if layer.workspacePath.lower().find(old_workspace) > -1:
-                    #        new_source = layer.workspacePath.lower().replace(old_workspace, new_workspace)
-                    #        if not workspace_type == 'NONE':
-                    #            layer.replaceDataSource(new_source, workspace_type, validate=True)
-                    #        else:
-                    #            layer.replaceDataSource(new_source, 'RASTER_WORKSPACE', validate=True)
                     if item.endswith('.lyr'):
                         layer.save()
                 except ValueError:
@@ -89,9 +78,6 @@ def execute(request):
         if table_views:
             for table_view in table_views:
                 try:
-                    #if table_view.workspacePath.lower().find(old_workspace) > -1:
-                    #    new_source = table_view.workspacePath.lower().replace(old_workspace, new_workspace)
-                    #    table_view.replaceDataSource(new_source, workspace_type, validate=False)
                     table_view.findAndReplaceWorkspacePath(old_workspace, new_workspace, validate=True)
                 except ValueError:
                     status_writer.send_status(_('Invalid workspace'))
