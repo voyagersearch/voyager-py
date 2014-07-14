@@ -1,0 +1,54 @@
+{
+  "name": "replace_data_source",
+  "runner": "python",
+  "categories": ["download"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "CheckBox",
+      "name": "create_backup",
+      "value": true
+    },
+    {
+      "type": "CatalogPath",
+      "name": "old_data_source",
+      "required": true
+    },
+    {
+      "type": "CatalogPath",
+      "name": "new_data_source",
+      "required": true
+    }
+  ],
+  "display":
+  {
+    "en":
+    {
+      "display": "Replace Data Source",
+      "description": "Replaces a layer's data source",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#replace_data_source",
+      "params":
+      {
+		"create_backup":
+		{
+			"display": "Create Backup (Recommended)",
+			"description": "Create backup copies of the map documents and layer files before replacing workspace paths. Backups are created in the source location with a .bak extension."
+		},
+		"old_data_source":
+		{
+		    "display": "Old Data Source",
+		    "description": "The old data source path to be replaced."
+		},
+		"new_data_source":
+		{
+		    "display": "New Data Source",
+		    "description": "The replacement data source path."
+		}
+      }
+    }
+  }
+}
