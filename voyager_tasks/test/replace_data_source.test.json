@@ -2,7 +2,7 @@
     "id": "REPLACE1F6CFA258AE08B5",
     "type": "task",
     "state": "RUNNING",
-    "task": "replace_workspace_path",
+    "task": "replace_data_source",
     "folder": "",
     "owner": {
         "ip": "127.0.0.1"
@@ -32,12 +32,12 @@
             "value": true
         },
         {
-            "name": "old_workspace_path",
+            "name": "old_data_source",
             "type": "CatalogPath",
             "value": ""
         },
         {
-            "name": "new_workspace_path",
+            "name": "new_data_source",
             "type": "CatalogPath",
             "value": ""
         }
