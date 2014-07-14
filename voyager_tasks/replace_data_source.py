@@ -19,6 +19,19 @@ from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
 
 
+def get_workspace_type(workspace_path):
+    """Return workspace type."""
+    if workspace_path.endswith('.gdb'):
+        workspace_type = 'FILEGDB_WORKSPACE'
+    elif workspace_path.endswith('.mdb'):
+        workspace_type = 'ACCESS_WORKSPACE'
+    elif workspace_path.endswith('.sde'):
+        workspace_type = 'SDE_WORKSPACE'
+    else:
+        workspace_type = 'NONE'
+    return workspace_type
+
+
 def execute(request):
     """Replace the workspace path for layer files and map document layers.
     :param request: json as a dict.
@@ -39,17 +52,23 @@ def execute(request):
     dsc = arcpy.Describe(os.path.dirname(new_data_source))
     if dsc.dataType == 'FeatureDataset':
         new_workspace = dsc.path
+        workspace_type = get_workspace_type(new_workspace)
+    elif dsc.dataType == 'Workspace':
+        new_workspace = os.path.dirname(new_data_source)
+        workspace_type = get_workspace_type(new_workspace)
+    elif dsc.dataType == 'Folder':
+        new_workspace = dsc.catalogPath
+        if new_dataset.endswith('.shp'):
+            workspace_type = 'SHAPEFILE_WORKSPACE'
+            new_dataset = new_dataset.rsplit('.shp')[0]
+        else:
+            if arcpy.Describe(new_data_source).dataType == 'RasterDataset':
+                workspace_type = 'RASTER_WORKSPACE'
+    elif dsc.dataType == 'CadDrawingDataset':
+        new_workspace = dsc.path
+        workspace_type = 'CAD_WORKSPACE'
     else:
         new_workspace = os.path.dirname(new_data_source)
-
-    dsc = arcpy.Describe(new_workspace)
-    if dsc.workspaceFactoryProgID == 'esriDataSourcesGDB.AccessWorkspaceFactory.1':
-        workspace_type = 'ACCESS_WORKSPACE'
-    elif dsc.workspaceFactoryProgID == 'esriDataSourcesGDB.FileGDBWorkspaceFactory.1':
-        workspace_type = 'FILEGDB_WORKSPACE'
-    elif dsc.workspaceFactoryPropID == 'esriDataSourcesGDB.SdeWorkspaceFactory.1':
-        workspace_type = 'SDE_WORKSPACE'
-    else:
         workspace_type = 'NONE'
 
     i = 1.
@@ -91,9 +110,9 @@ def execute(request):
                     elif layer.isRasterLayer:
                         if layer.dataSource.lower() == old_data_source.lower():
                             if layer.datasetName.lower() == new_dataset.lower():
-                                layer.replaceDataSource(new_workspace, 'RASTER_WORKSPACE', validate=False)
+                                layer.replaceDataSource(new_workspace, workspace_type, validate=False)
                             else:
-                                layer.replaceDataSource(new_workspace, 'RASTER_WORKSPACE', new_dataset, False)
+                                layer.replaceDataSource(new_workspace, workspace_type, new_dataset, False)
                     if item.endswith('.lyr'):
                         layer.save()
                 except ValueError:
