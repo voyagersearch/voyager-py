@@ -42,6 +42,16 @@ def execute(request):
     else:
         new_workspace = os.path.dirname(new_data_source)
 
+    dsc = arcpy.Describe(new_workspace)
+    if dsc.workspaceFactoryProgID == 'esriDataSourcesGDB.AccessWorkspaceFactory.1':
+        workspace_type = 'ACCESS_WORKSPACE'
+    elif dsc.workspaceFactoryProgID == 'esriDataSourcesGDB.FileGDBWorkspaceFactory.1':
+        workspace_type = 'FILEGDB_WORKSPACE'
+    elif dsc.workspaceFactoryPropID == 'esriDataSourcesGDB.SdeWorkspaceFactory.1':
+        workspace_type = 'SDE_WORKSPACE'
+    else:
+        workspace_type = 'NONE'
+
     i = 1.
     count = len(input_items)
     status_writer.send_percent(0.0, _('Starting to process...'), 'replace_data_source')
@@ -75,9 +85,9 @@ def execute(request):
                     if layer.isFeatureLayer or layer.isRasterLayer:
                         if layer.dataSource.lower() == old_data_source.lower():
                             if layer.datasetName.lower() == new_dataset.lower():
-                                layer.replaceDataSource(new_workspace, 'NONE', validate=False)
+                                layer.replaceDataSource(new_workspace, workspace_type, validate=False)
                             else:
-                                layer.replaceDataSource(new_workspace, 'NONE', new_dataset, False)
+                                layer.replaceDataSource(new_workspace, workspace_type, new_dataset, False)
                     elif layer.isRasterLayer:
                         if layer.dataSource.lower() == old_data_source.lower():
                             if layer.datasetName.lower() == new_dataset.lower():
@@ -96,9 +106,9 @@ def execute(request):
                 try:
                     if table_view.dataSource.lower() == old_data_source.lower():
                         if layer.datasetName.lower() == new_dataset.lower():
-                            table_view.replaceDataSource(new_workspace, 'NONE', validate=False)
+                            table_view.replaceDataSource(new_workspace, workspace_type, validate=False)
                         else:
-                            table_view.replaceDataSource(new_workspace, 'NONE', new_dataset, False)
+                            table_view.replaceDataSource(new_workspace, workspace_type, new_dataset, False)
                 except ValueError:
                     status_writer.send_status(_('Invalid workspace'))
                     skipped += 1
