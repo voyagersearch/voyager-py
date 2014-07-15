@@ -35,8 +35,6 @@ def execute(request):
     if not os.path.exists(request['folder']):
         os.makedirs(request['folder'])
 
-    workspace_types = {'.mdb': 'ACCESS_WORKSPACE', '.gdb': 'FILEGDB_WORKSPACE', '.sde': 'SDE_WORKSPACE', '': 'NONE'}
-    workspace_type = workspace_types[os.path.splitext(new_workspace)[1]]
     i = 1.
     count = len(input_items)
     status_writer.send_percent(0.0, _('Starting to process...'), 'replace_workspace_path')
@@ -48,7 +46,7 @@ def execute(request):
             if backup:
                 try:
                     shutil.copyfile(item, '{0}.bak'.format(item))
-                except IOError as ex:
+                except IOError:
                     status_writer.send_status(_('Cannot make a backup of: {0}').format(item))
                     skipped += 1
                     continue
@@ -67,7 +65,7 @@ def execute(request):
         if layers:
             for layer in layers:
                 try:
-                    layer.findAndReplaceWorkspacePath(old_workspace, new_workspace, validate=True)
+                    layer.findAndReplaceWorkspacePath(old_workspace, new_workspace, validate=False)
                     if item.endswith('.lyr'):
                         layer.save()
                 except ValueError:
@@ -78,7 +76,7 @@ def execute(request):
         if table_views:
             for table_view in table_views:
                 try:
-                    table_view.findAndReplaceWorkspacePath(old_workspace, new_workspace, validate=True)
+                    table_view.findAndReplaceWorkspacePath(old_workspace, new_workspace, validate=False)
                 except ValueError:
                     status_writer.send_status(_('Invalid workspace'))
                     skipped += 1
