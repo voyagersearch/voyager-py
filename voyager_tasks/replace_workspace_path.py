@@ -35,6 +35,10 @@ def execute(request):
     if not os.path.exists(request['folder']):
         os.makedirs(request['folder'])
 
+    if not arcpy.Exists(new_workspace):
+        status_writer.send_state(status.STAT_FAILED, _('{0} does not exist').format(new_workspace))
+        return
+
     i = 1.
     count = len(input_items)
     status_writer.send_percent(0.0, _('Starting to process...'), 'replace_workspace_path')

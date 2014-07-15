@@ -48,6 +48,10 @@ def execute(request):
     if not os.path.exists(request['folder']):
         os.makedirs(request['folder'])
 
+    if not arcpy.Exists(new_data_source):
+        status_writer.send_state(status.STAT_FAILED, _('{0} does not exist').format(new_data_source))
+        return
+
     new_dataset = os.path.basename(new_data_source)
     dsc = arcpy.Describe(os.path.dirname(new_data_source))
     if dsc.dataType == 'FeatureDataset':
