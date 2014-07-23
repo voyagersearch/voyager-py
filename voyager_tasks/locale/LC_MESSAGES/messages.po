@@ -64,6 +64,16 @@ msgstr ""
 msgid "Invalid input type: {0}"
 msgstr ""
 
+#: archive_files.py:78
+#, python-format
+msgid "Archived: {0}"
+msgstr ""
+
+#: archive_files.py:81
+#, python-format
+msgid "Deleted: {0}"
+msgstr ""
+
 #: clip_data.py:
 #, python-format
 msgid "Clipped: {0}"

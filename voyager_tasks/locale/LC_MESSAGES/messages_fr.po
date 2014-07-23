@@ -62,6 +62,16 @@ msgstr "{0} n'existe pas"
 msgid "Invalid input type: {0}"
 msgstr "Invalid type d'entrée: {0}"
 
+#: archive_files.py:78
+#, python-format
+msgid "Archived: {0}"
+msgstr "Archivé: {0}"
+
+#: archive_files.py:81
+#, python-format
+msgid "Deleted: {0}"
+msgstr "Supprimé: {0}"
+
 #: clip_data.py:
 #, python-format
 msgid "Clipped: {0}"
