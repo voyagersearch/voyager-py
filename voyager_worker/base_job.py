@@ -117,6 +117,10 @@ class Job(object):
         return self.job['location']['id']
 
     @property
+    def multiprocess(self):
+        return self.job['location']['config']['multiprocessing']
+
+    @property
     def path(self):
         """Catalog path for esri data types."""
         try:
@@ -163,13 +167,9 @@ class Job(object):
     #
     # Public methods
     #
-    def connect_to_database(self, database_type=''):
+    def connect_to_database(self):
         """Makes an ODBC database connection."""
-        #TODO: test this for oracle -- connString  = "Driver={Microsoft ODBC for Oracle};Server=" + dbInst + ';Uid=' + schema + ';Pwd=' + passwd + ";"
-        # if database_type == 'Oracle':
-        #     self.db_connection = cx_Oracle.connect("sde/sde@voyagerdemo.com/voyager")
-        #     self.db_cursor = self.db_connection.cursor()
-        # else:
+        #TODO: test pyodbc for oracle "Driver={Microsoft ODBC for Oracle};Server=" + dbInst + ';Uid=' + schema + ';Pwd=' + passwd + ";"
         drvr = self.sql_connection_info['connection']['driver']
         srvr = self.sql_connection_info['connection']['server']
         db = self.sql_connection_info['connection']['database']
@@ -178,7 +178,8 @@ class Job(object):
         if drvr == 'Oracle':
             self.db_connection = cx_Oracle.connect("{0}/{1}@{2}/{3}".format(un, pw, srvr, db))
         else:
-            self.db_connection = pyodbc.connect("DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(drvr, srvr, db, un, pw))
+            sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(drvr, srvr, db, un, pw)
+            self.db_connection = pyodbc.connect(sql_server_str)
         self.db_cursor = self.db_connection.cursor()
 
     def map_fields(self, table_name, field_names):
@@ -194,7 +195,7 @@ class Job(object):
                     mapped_field_names = copy.copy(field_names)
                     fmap = mapping['map']
                 else:
-                    return mapped_field_names
+                    continue
                 for i, field in enumerate(mapped_field_names):
                     try:
                         mapped_field_names[i] = fmap[field]

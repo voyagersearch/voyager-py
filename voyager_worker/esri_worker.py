@@ -17,101 +17,104 @@ import sys
 import logging
 import multiprocessing
 import arcpy
+import status
 
 
-def global_job(args):
+def global_job(*args):
     """Create a global job object for multiprocessing."""
     global job
-    job = args
+    job = args[0]
 
 
 def worker(data_path):
     """The worker function to index feature data and tabular data."""
-    job.connect_to_zmq()
-    geo = {}
-    entry = {}
-    dsc = arcpy.Describe(data_path)
+    if data_path:
+        job.connect_to_zmq()
+        geo = {}
+        entry = {}
+        dsc = arcpy.Describe(data_path)
 
-    if dsc.dataType == 'Table':
-        fields = job.search_fields(data_path)
-        query = job.get_table_query(dsc.name)
-        constraint = job.get_table_constraint(dsc.name)
-        if query and constraint:
-            expression = """{0} AND {1}""".format(query, constraint)
-        else:
-            if query:
-                expression = query
+        if dsc.dataType == 'Table':
+            fields = job.search_fields(data_path)
+            query = job.get_table_query(dsc.name)
+            constraint = job.get_table_constraint(dsc.name)
+            if query and constraint:
+                expression = """{0} AND {1}""".format(query, constraint)
             else:
-                expression = constraint
-        with arcpy.da.SearchCursor(data_path, fields, expression) as rows:
-            for i, row in enumerate(rows, 1):
-                mapped_fields = job.map_fields(dsc.name, fields)
-                mapped_fields = dict(zip(mapped_fields, row))
-                mapped_fields['_discoveryID'] = job.discovery_id
-                oid_field = filter(lambda x: x in ('FID', 'OID', 'OBJECTID'), rows.fields)
-                if oid_field:
-                   fld_index = rows.fields.index(oid_field[0])
+                if query:
+                    expression = query
                 else:
-                    fld_index = i
-                entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), row[fld_index])
-                entry['location'] = job.location_id
-                entry['action'] = job.action_type
-                entry['entry'] = {'fields': mapped_fields}
-                job.send_entry(entry)
-    else:
-        sr = arcpy.SpatialReference(4326)
-        geo['spatialReference'] = dsc.spatialReference.name
-        geo['code'] = dsc.spatialReference.factoryCode
-        fields = job.search_fields(dsc.catalogPath)
-        query = job.get_table_query(dsc.name)
-        constraint = job.get_table_constraint(dsc.name)
-        if query and constraint:
-            expression = """{0} AND {1}""".format(query, constraint)
+                    expression = constraint
+            with arcpy.da.SearchCursor(data_path, fields, expression) as rows:
+                for i, row in enumerate(rows, 1):
+                    mapped_fields = job.map_fields(dsc.name, fields)
+                    mapped_fields = dict(zip(mapped_fields, row))
+                    mapped_fields['_discoveryID'] = job.discovery_id
+                    oid_field = filter(lambda x: x in ('FID', 'OID', 'OBJECTID'), rows.fields)
+                    if oid_field:
+                        fld_index = rows.fields.index(oid_field[0])
+                    else:
+                        fld_index = i
+                    entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), row[fld_index])
+                    entry['location'] = job.location_id
+                    entry['action'] = job.action_type
+                    entry['entry'] = {'fields': mapped_fields}
+                    job.send_entry(entry)
         else:
-            if query:
-                expression = query
+            sr = arcpy.SpatialReference(4326)
+            geo['spatialReference'] = dsc.spatialReference.name
+            geo['code'] = dsc.spatialReference.factoryCode
+            fields = job.search_fields(dsc.catalogPath)
+            query = job.get_table_query(dsc.name)
+            constraint = job.get_table_constraint(dsc.name)
+            if query and constraint:
+                expression = """{0} AND {1}""".format(query, constraint)
             else:
-                expression = constraint
-        if dsc.shapeFieldName in fields:
-            fields.remove(dsc.shapeFieldName)
-        if dsc.shapeType == 'Point':
-            with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@XY'] + fields, expression, sr) as rows:
-                for i, row in enumerate(rows):
-                    geo['lon'] = row[0][0]
-                    geo['lat'] = row[0][1]
-                    mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]))
-                    mapped_fields = dict(zip(mapped_fields, row[1:]))
-                    mapped_fields['_discoveryID'] = job.discovery_id
-                    entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
-                    entry['location'] = job.location_id
-                    entry['action'] = job.action_type
-                    entry['entry'] = {'geo': geo, 'fields': mapped_fields}
-                    job.send_entry(entry)
-        else:
-            with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, expression, sr) as rows:
-                for i, row in enumerate(rows):
-                    geo['xmin'] = row[0].extent.XMin
-                    geo['xmax'] = row[0].extent.XMax
-                    geo['ymin'] = row[0].extent.YMin
-                    geo['ymax'] = row[0].extent.YMax
-                    mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]))
-                    mapped_fields = dict(zip(mapped_fields, row[1:]))
-                    mapped_fields['_discoveryID'] = job.discovery_id
-                    entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
-                    entry['location'] = job.location_id
-                    entry['action'] = job.action_type
-                    entry['entry'] = {'geo': geo, 'fields': mapped_fields}
-                    job.send_entry(entry)
+                if query:
+                    expression = query
+                else:
+                    expression = constraint
+            if dsc.shapeFieldName in fields:
+                fields.remove(dsc.shapeFieldName)
+            if dsc.shapeType == 'Point':
+                with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@XY'] + fields, expression, sr) as rows:
+                    for i, row in enumerate(rows):
+                        geo['lon'] = row[0][0]
+                        geo['lat'] = row[0][1]
+                        mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]))
+                        mapped_fields = dict(zip(mapped_fields, row[1:]))
+                        mapped_fields['_discoveryID'] = job.discovery_id
+                        entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
+                        entry['location'] = job.location_id
+                        entry['action'] = job.action_type
+                        entry['entry'] = {'geo': geo, 'fields': mapped_fields}
+                        job.send_entry(entry)
+            else:
+                with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, expression, sr) as rows:
+                    for i, row in enumerate(rows):
+                        geo['xmin'] = row[0].extent.XMin
+                        geo['xmax'] = row[0].extent.XMax
+                        geo['ymin'] = row[0].extent.YMin
+                        geo['ymax'] = row[0].extent.YMax
+                        mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]))
+                        mapped_fields = dict(zip(mapped_fields, row[1:]))
+                        mapped_fields['_discoveryID'] = job.discovery_id
+                        entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
+                        entry['location'] = job.location_id
+                        entry['action'] = job.action_type
+                        entry['entry'] = {'geo': geo, 'fields': mapped_fields}
+                        job.send_entry(entry)
 
 
 def assign_work(esri_job):
     """Determines the data type and each dataset is sent to the worker to be processed."""
+    status_writer = status.Writer()
     job = esri_job
     dsc = arcpy.Describe(job.path)
 
     # A single feature class or table.
     if dsc.dataType in ('DbaseTable', 'FeatureClass', 'Shapefile', 'Table'):
-        global_job(job)
+        global_job(job, int(arcpy.GetCount_management(job.path).getOutput(0)))
         worker(job.path)
         return
 
@@ -146,6 +149,7 @@ def assign_work(esri_job):
             tables = []
             for tbl in job.tables_to_keep:
                 [tables.append(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(tbl)]
+                tables = list(set(tables))
         else:
             tables = [os.path.join(job.path, fc) for fc in arcpy.ListFeatureClasses()]
         if job.tables_to_skip:
@@ -156,14 +160,19 @@ def assign_work(esri_job):
     else:
         sys.exit(1)
 
-    # Multiprocess larger databases and feature datasets.
-    multiprocessing.log_to_stderr()
-    logger = multiprocessing.get_logger()
-    logger.setLevel(logging.INFO)
-    pool = multiprocessing.Pool(initializer=global_job, initargs=(job, ))
-    for i, _ in enumerate(pool.imap_unordered(worker, tables), 1):
-        sys.stderr.write('\rdone {0:%}'.format(i/len(tables)))
-    # Synchronize the main process with the job processes to ensure proper cleanup.
-    pool.close()
-    pool.join()
+    if job.multiprocess.lower() == 'true':
+        # Multiprocess larger databases and feature datasets.
+        multiprocessing.log_to_stderr()
+        logger = multiprocessing.get_logger()
+        logger.setLevel(logging.INFO)
+        pool = multiprocessing.Pool(initializer=global_job, initargs=(job,))
+        for i, _ in enumerate(pool.imap_unordered(worker, tables), 1):
+            status_writer.send_percent(i/len(tables), "{0:%}".format(i/len(tables)), 'esri_worker')
+        # Synchronize the main process with the job processes to ensure proper cleanup.
+        pool.close()
+        pool.join()
+    else:
+        for tbl in tables:
+            global_job(job, len(tables))
+            worker(tbl)
     return
