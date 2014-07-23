@@ -18,8 +18,6 @@ from voyager_worker import base_job
 
 if __name__ == '__main__':
     job = base_job.Job(sys.argv[1])
-    #job = base_job.Job(r"C:\Voyager\oracle_job.json")
-    #job = base_job.Job(r"C:\Voyager\TestJSONFiles\esri_sample.json")
     if job.path:
         from voyager_worker import esri_worker
         esri_worker.assign_work(job)
