@@ -6,10 +6,10 @@ Replaces an old data source for selected layer files and map document layers wit
   - The input search results must be layer files or map documents.
   - By default, back ups are created. Backups are created in the source location with a .bak extension. **RECOMMENDED**
   - The data source will only be updated if the new data source path is a valid.
-  - Partial paths can be updated. For example, a workspace path containing *C:\Data*, can be updated and replaced with *D:\Data*.
+  - A data source is the full catalog path to the dataset.
 
 ###Screen Captures
-This example shows replacing a data source which was one a feature class in a personal geodatabase with a new data source which exist in SDE.
+This example shows replacing a personal geodatabase feature class with a new feature class in SDE.
 
 ![Replace Data Source] (imgs/replace_data_source_0.png "Replace Data Source example")
 
