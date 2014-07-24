@@ -282,12 +282,16 @@ def execute(request):
 
             # Feature dataset
             elif dsc.dataType == 'FeatureDataset':
-                fds_name = os.path.basename(task_utils.create_unique_name(dsc.name, out_workspace))
-                fds = arcpy.CreateFeatureDataset_management(out_workspace, fds_name)
+                if not out_format == 'SHP':
+                    fds_name = os.path.basename(task_utils.create_unique_name(dsc.name, out_workspace))
+                    fds = arcpy.CreateFeatureDataset_management(out_workspace, fds_name)
                 arcpy.env.workspace = ds
                 for fc in arcpy.ListFeatureClasses():
                     try:
-                        arcpy.Clip_analysis(fc, clip_poly, task_utils.create_unique_name(fc, fds))
+                        if not out_format == 'SHP':
+                            arcpy.Clip_analysis(fc, clip_poly, task_utils.create_unique_name(fc, fds))
+                        else:
+                            arcpy.Clip_analysis(fc, clip_poly, task_utils.create_unique_name(fc, out_workspace))
                     except arcpy.ExecuteError:
                         pass
                 arcpy.env.workspace = out_workspace
