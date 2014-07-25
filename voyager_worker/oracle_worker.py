@@ -42,10 +42,11 @@ def worker():
         for tk in job.tables_to_keep:
             [tables.append(t[0]) for t in job.db_cursor.execute("select table_name from user_tables where table_name like '{0}'".format(tk)).fetchall()]
     else:
-        [tables.append(t[0]) for t in job.db_cursor.execute("select table_name from user_tables where object_flags='16391'").fetchall()]
+        [tables.append(t[0]) for t in job.db_cursor.execute("select table_name from all_tables").fetchall()]
     #cur.execute("select spatial_column FROM layers where table_name = 'FC_COUNTRIES'")
 
     # cur.execute("select column_name from all_tab_cols where table_name = 'FC_COUNTRIES' AND column_name like 'CNTRY%'")
+
     for tbl in set(tables):
         try:
             i = 0
@@ -61,6 +62,11 @@ def worker():
                 job.db_cursor.execute("SELECT * FROM {0}".format(tbl))
                 [columns.append(c[0]) for c in job.db_cursor.description]
 
+            if job.fields_to_skip:
+                for col in job.fields_to_skip:
+                    qry = "SELECT COLUMN_NAME FROM all_tab_cols WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
+                    [columns.remove(c[0]) for c in job.execute_query(qry).fetchall()]
+
             #[columns.remove(c) for c in columns if c.startswith('SYS_')]
 
             if 'SHAPE' in columns:
@@ -69,14 +75,14 @@ def worker():
                 schema = job.db_cursor.execute("select SHAPE  from {0}".format(tbl)).fetchone()[0].type.schema
                 shape_type = job.db_cursor.execute("select {0}.ST_GEOMETRYTYPE(SHAPE) from {1}".format(schema, tbl)).fetchone()[0]
                 if 'POINT' in shape_type:
-                    columns.insert(0, '{0}.st_y(SHAPE)'.format(schema, tbl))
-                    columns.insert(0, '{0}.st_x(SHAPE)'.format(schema, tbl))
+                    columns.insert(0, '{0}.st_y(SHAPE)'.format(schema))
+                    columns.insert(0, '{0}.st_x(SHAPE)'.format(schema))
                     is_point = True
                 else:
-                    columns.insert(0, '{0}.st_maxy(SHAPE)'.format(schema, tbl))
-                    columns.insert(0, '{0}.st_maxx(SHAPE)'.format(schema, tbl))
-                    columns.insert(0, '{0}.st_miny(SHAPE)'.format(schema, tbl))
-                    columns.insert(0, '{0}.st_minx(SHAPE)'.format(schema, tbl))
+                    columns.insert(0, '{0}.st_maxy(SHAPE)'.format(schema))
+                    columns.insert(0, '{0}.st_maxx(SHAPE)'.format(schema))
+                    columns.insert(0, '{0}.st_miny(SHAPE)'.format(schema))
+                    columns.insert(0, '{0}.st_minx(SHAPE)'.format(schema))
 
             rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl)).fetchall()
             for i, row in enumerate(rows):
@@ -96,13 +102,13 @@ def worker():
 
                 if has_shape:
                     if is_point:
-                        mapped_cols.pop('meta_{0}.st_y(SHAPE)'.format(schema, tbl))
-                        mapped_cols.pop('meta_{0}.st_x(SHAPE)'.format(schema, tbl))
+                        mapped_cols.pop('meta_{0}.st_y(SHAPE)'.format(schema))
+                        mapped_cols.pop('meta_{0}.st_x(SHAPE)'.format(schema))
                     else:
-                        mapped_cols.pop('meta_{0}.st_maxx(SHAPE)'.format(schema, tbl))
-                        mapped_cols.pop('meta_{0}.st_maxy(SHAPE)'.format(schema, tbl))
-                        mapped_cols.pop('meta_{0}.st_minx(SHAPE)'.format(schema, tbl))
-                        mapped_cols.pop('meta_{0}.st_miny(SHAPE)'.format(schema, tbl))
+                        mapped_cols.pop('meta_{0}.st_maxx(SHAPE)'.format(schema))
+                        mapped_cols.pop('meta_{0}.st_maxy(SHAPE)'.format(schema))
+                        mapped_cols.pop('meta_{0}.st_minx(SHAPE)'.format(schema))
+                        mapped_cols.pop('meta_{0}.st_miny(SHAPE)'.format(schema))
 
                 mapped_cols['_discoveryID'] = job.discovery_id
                 entry['id'] = '{0}_{1}_{2}'.format(job.location_id, tbl, i)
@@ -112,7 +118,7 @@ def worker():
                 job.send_entry(entry)
                 i += 1
             print "Total", tbl, i
-        except Exception:
+        except Exception as ex:
             pass
 
 def assign_job(job_info):

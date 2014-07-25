@@ -15,19 +15,37 @@ import json
 import datetime
 import copy
 import sys
+import decimal
 
 import cx_Oracle
 import pyodbc
 import zmq
 
 
-class DateTimeEncoder(json.JSONEncoder):
+class ObjectEncoder(json.JSONEncoder):
+    """Support non-native Python types for JSON serialization."""
     def default(self, obj):
-        if isinstance(obj, datetime.datetime):
-            encoded_object = list(obj.timetuple())[0:6]
-        else:
-            encoded_object = json.JSONEncoder.default(self, obj)
-        return encoded_object
+        text_chars = ''.join(map(chr, [7,8,9,10,12,13,27] + range(0x20, 0x100)))
+        is_binary_string = lambda bytes: bool(bytes.translate(None, text_chars))
+
+        if isinstance(obj, (list, dict, str, unicode, int, float, bool, type(None))):
+            return json.JSONEncoder.default(self, obj)
+        elif isinstance(obj, decimal.Decimal):
+            return float(obj)
+        elif isinstance(obj, datetime.datetime):
+            return list(obj.timetuple())[0:6]
+        elif isinstance(obj, memoryview):
+            if not is_binary_string(obj.tobytes()):
+                return str(obj)
+            else:
+                return None
+        elif isinstance(obj, cx_Oracle.LOB):
+            if not is_binary_string(cx_Oracle.LOB.read(obj, 1024)):
+                return str(obj)
+            else:
+                return None
+        elif isinstance(obj, cx_Oracle.CLOB):
+            return str(obj)
 
 
 class Job(object):
@@ -249,7 +267,7 @@ class Job(object):
 
     def send_entry(self, entry):
         """Sends an entry to be indexed using pyzmq."""
-        self.zmq_socket.send_json(entry, cls=DateTimeEncoder)
+        self.zmq_socket.send_json(entry, cls=ObjectEncoder)
 
     def search_fields(self, dataset):
         """Returns a valid list of existing fields for the search cursor."""

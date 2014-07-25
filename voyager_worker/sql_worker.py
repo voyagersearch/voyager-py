@@ -35,16 +35,13 @@ def worker():
     """Worker function to index each row in each table in the database."""
     job.connect_to_zmq()
     job.connect_to_database()
-    #job.db_cursor.execute("select name from sysobjects where type='U'")
     tables = []
     if not job.tables_to_keep == ['*']:
         for tk in job.tables_to_keep:
             #tcur = job.db_cursor.execute("select * from sys.objects where name like '{0}'".format(tk))
             [tables.append(t[0]) for t in job.db_cursor.execute("select * from sys.objects where name like '{0}'".format(tk)).fetchall()]
-        #tables = [t[0] for t in job.db_cursor.fetchall() if t[0] in job.tables_to_keep]
     else:
         [tables.append(t[0]) for t in job.db_cursor.execute("select name from sysobjects where type='U'").fetchall()]
-        #tables = [t[0] for t in job.db_cursor.fetchall()]
 
     for tbl in set(tables):
         geo = {}
@@ -60,7 +57,7 @@ def worker():
             else:
                 expression = constraint
 
-        if not job.fields_to_keep == '*':
+        if not job.fields_to_keep == ['*']:
             columns = []
             for col in job.fields_to_keep:
                 qry = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
@@ -73,10 +70,7 @@ def worker():
                 qry = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
                 [columns.remove(c[0]) for c in job.execute_query(qry).fetchall()]
 
-        if job.field_mapping:
-            mapped_cols = job.map_fields(tbl, columns)
-        else:
-            mapped_cols = columns
+        # Check for a geometry column and pull out X,Y for points and extent coordinates for other geometry types.
         for c in job.db_cursor.columns(table=tbl).fetchall():
             if c.type_name == 'geometry':
                 has_shape = True
@@ -93,38 +87,43 @@ def worker():
                     columns.insert(0, "{0}.STEnvelope().STPointN((3)).STX".format(c.column_name))
                     columns.insert(0, "{0}.STEnvelope().STPointN((1)).STY".format(c.column_name))
                     columns.insert(0, "{0}.STEnvelope().STPointN((1)).STX".format(c.column_name))
+                columns.remove(c.column_name)
                 break
 
+        # Query the table for the rows.
         if not expression:
             job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl))
         else:
             job.db_cursor.execute("select {0} from {1} where {2}".format(','.join(columns), tbl, expression))
+
+        # Index each row in the table.
         for i, row in enumerate(job.db_cursor.fetchall()):
-            entry = {}
+            if job.field_mapping:
+                mapped_cols = job.map_fields(tbl, columns)
+            else:
+                mapped_cols = columns
+
             if has_shape:
                 if is_point:
                     geo['lon'] = row[1]
                     geo['lat'] = row[0]
-                    mapped_cols = dict(zip(mapped_cols, row[2:]))
+                    mapped_cols = dict(zip(mapped_cols[2:], row[2:]))
                 else:
                     geo['xmin'] = row[0]
                     geo['ymin'] = row[1]
                     geo['xmax'] = row[2]
                     geo['ymax'] = row[3]
-                    mapped_cols  = dict(zip(mapped_cols, row[4:]))
+                    mapped_cols = dict(zip(mapped_cols[4:], row[4:]))
             else:
                 mapped_cols = dict(zip(mapped_cols, row))
-            try:
-                if job.default_mapping:
-                    mapped_cols.pop('{0}Shape'.format(job.default_mapping))
-                else:
-                    mapped_cols.pop('SHAPE')
-            except KeyError:
-                    pass
+
+            # Create an entry to send to ZMQ for indexing.
+            entry = {}
             entry['id'] = '{0}_{1}_{2}'.format(job.location_id, tbl, i)
             entry['location'] = job.location_id
             entry['action'] = job.action_type
             entry['entry'] = {'geo': geo, 'fields': mapped_cols}
+            entry['entry']['fields']['_discoveryID'] = job.discovery_id
             job.send_entry(entry)
 
 
@@ -133,4 +132,3 @@ def assign_job(job_info):
     job = base_job.Job(job_info)
     global_job(job)
     worker()
-
