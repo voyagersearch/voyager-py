@@ -54,6 +54,7 @@ def execute(request):
 
     input_items = task_utils.get_input_items(parameters)
     map_template = task_utils.get_parameter_value(parameters, 'map_template', 'value')
+    base_map = task_utils.get_parameter_value(parameters, 'base_map', 'value')
     map_title = task_utils.get_parameter_value(parameters, 'map_title', 'value')
     attribute_setting = task_utils.get_parameter_value(parameters, 'attribute_settings', 'value')
     author = task_utils.get_parameter_value(parameters, 'map_author', 'value')
@@ -67,9 +68,17 @@ def execute(request):
     if not os.path.exists(temp_folder):
         os.makedirs(temp_folder)
 
+    if base_map == 'NONE':
+        base_layer = None
+    else:
+        base_layer = arcpy.mapping.Layer(os.path.join(os.path.dirname(__file__), 'supportfiles', 'basemaps', '{0}.lyr'.format(base_map)))
     mxd_path = os.path.join(os.path.dirname(__file__), 'supportfiles', 'frame', map_template)
     mxd = arcpy.mapping.MapDocument(mxd_path)
     data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
+    if base_layer:
+        status_writer.send_status(_('Adding basemap {0}...').format(base_map))
+        arcpy.mapping.AddLayer(data_frame, base_layer)
+
     layer = None
     for item in input_items:
         try:

@@ -19,6 +19,18 @@
       ]
     },
     {
+      "type": "StringChoice",
+      "name": "base_map",
+      "choices": [
+        "NONE",
+        "OCEAN_BASEMAP",
+        "WORLD_IMAGERY",
+        "WORLD_STREET_MAP",
+        "WORLD_TOPO_MAP"
+      ],
+      "value": "NONE"
+    },
+    {
       "type": "MapView",
       "name": "map_view",
       "initWithResultsExtent": true
