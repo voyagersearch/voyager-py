@@ -87,6 +87,11 @@ msgstr "Fichier copié: {0}"
 msgid "Adding basemap: {0}..."
 msgstr "Ajout de carte de base: {0} ..."
 
+#: create_geopdf.py:118
+#, python-format
+msgid "Adding layer: {0}..."
+msgstr "Ajout couche: {0} ..."
+
 #: create_geopdf.py:176
 #, python-format
 msgid "No results can be exported to PDF"

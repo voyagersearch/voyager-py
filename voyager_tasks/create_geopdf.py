@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import sys
 import datetime
 import locale
 import arcpy
@@ -97,9 +96,10 @@ def execute(request):
             elif dsc.dataType == 'FeatureDataset' or dsc.datasetType == 'FeatureDataset':
                 arcpy.env.workspace = item
                 for fc in arcpy.ListFeatureClasses():
-                    layer_file = arcpy.SaveToLayerFile_management(arcpy.MakeFeatureLayer_management(fc, fc),
+                    layer_file = arcpy.SaveToLayerFile_management(arcpy.MakeFeatureLayer_management(fc, fc + '_layer'),
                                                                   os.path.join(temp_folder, fc))
                     layer = arcpy.mapping.Layer(layer_file.getOutput(0))
+                    layer.name = fc
 
             elif dsc.dataType == 'RasterDataset':
                 raster_layer = arcpy.MakeRasterLayer_management(item, os.path.basename(item))
@@ -115,6 +115,7 @@ def execute(request):
                 layer = arcpy.mapping.Layer(layer_file)
 
             if layer:
+                status_writer.send_status(_('Adding layer {0}...').format(layer.name))
                 arcpy.mapping.AddLayer(data_frame, layer)
                 layer = None
                 added_to_map += 1
