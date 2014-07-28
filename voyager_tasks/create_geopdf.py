@@ -74,9 +74,6 @@ def execute(request):
     mxd_path = os.path.join(os.path.dirname(__file__), 'supportfiles', 'frame', map_template)
     mxd = arcpy.mapping.MapDocument(mxd_path)
     data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
-    if base_layer:
-        status_writer.send_status(_('Adding basemap {0}...').format(base_map))
-        arcpy.mapping.AddLayer(data_frame, base_layer)
 
     layer = None
     for item in input_items:
@@ -134,7 +131,7 @@ def execute(request):
         new_extent.XMax, new_extent.YMax = float(extent[2]), float(extent[3])
         data_frame.extent = new_extent
     else:
-        data_frame.zoomToSelectedFeatures()
+       data_frame.zoomToSelectedFeatures()
 
     # Update text elements in map template.
     date_element = arcpy.mapping.ListLayoutElements(mxd, 'TEXT_ELEMENT', 'date')
@@ -177,7 +174,13 @@ def execute(request):
                 new_text = new_text.replace('s', str(dms[2]))
                 e.text = new_text
 
+    # Do this now so it does not affect zoom level or extent.
+    if base_layer:
+        status_writer.send_status(_('Adding basemap {0}...').format(base_map))
+        arcpy.mapping.AddLayer(data_frame, base_layer, 'BOTTOM')
+
     if added_to_map > 0:
+        status_writer.send_status(_('Exporting to PDF...'))
         arcpy.mapping.ExportToPDF(mxd,
                                   os.path.join(request['folder'], 'output.pdf'),
                                   layers_attributes=attribute_setting)
