@@ -42,7 +42,8 @@ def execute(request):
                     os.remove(src_file)
                 except (OSError, WindowsError) as err:
                     status_writer.send_status(_(err))
-                    pass
+                    skipped += 1
+                    continue
                 status_writer.send_percent(i/file_count, _('Deleted: {0}').format(src_file), 'delete_files')
                 deleted += 1
             else:

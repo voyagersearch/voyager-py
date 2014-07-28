@@ -71,7 +71,8 @@ def execute(request):
                     shutil.move(src_file, dst)
                 except (OSError, WindowsError) as err:
                     status_writer.send_status(_(err))
-                    pass
+                    skipped += 1
+                    continue
                 status_writer.send_percent(i/file_count, _('Archived: {0}').format(src_file), 'move_files')
                 moved += 1
             else:
