@@ -1,6 +1,6 @@
 #Replace Data Source
 
-Replaces an old data source for selected layer files and map document layers with a new data source. Unlike Replace Workspace Path, this task is used to change the workspace path, workspace type, and / or change the dataset name.
+Replaces an old data source for selected layer files and map document layers with a new data source. Unlike Replace Workspace Path, this task can be used to change the workspace path, workspace type, and / or change the dataset name.
 
 ###Usage Tips
   - The input search results must be layer files or map documents.
