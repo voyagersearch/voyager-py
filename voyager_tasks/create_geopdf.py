@@ -90,7 +90,7 @@ def execute(request):
                 )
                 layer = arcpy.mapping.Layer(layer_file.getOutput(0))
 
-            elif dsc.dataType == 'FeatureDataset' or dsc.datasetType == 'FeatureDataset':
+            elif dsc.dataType == 'FeatureDataset': #or dsc.datasetType == 'FeatureDataset':
                 arcpy.env.workspace = item
                 for fc in arcpy.ListFeatureClasses():
                     layer_file = arcpy.SaveToLayerFile_management(arcpy.MakeFeatureLayer_management(fc, fc + '_layer'),
@@ -109,7 +109,7 @@ def execute(request):
             elif dsc.catalogPath.endswith('.kml') or dsc.catalogPath.endswith('.kmz'):
                 name = os.path.splitext(dsc.name)[0]
                 layer_file = arcpy.KMLToLayer_conversion(dsc.catalogPath, temp_folder, name)
-                layer = arcpy.mapping.Layer(layer_file)
+                layer = arcpy.mapping.Layer(layer_file.getOutput(1).replace('.gdb', '.lyr'))
 
             if layer:
                 status_writer.send_status(_('Adding layer {0}...').format(layer.name))
