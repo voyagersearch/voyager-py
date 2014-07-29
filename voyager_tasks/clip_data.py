@@ -104,7 +104,7 @@ def clip_mxd_layers(mxd_path, aoi):
     if mxd.description == '':
         mxd.description = os.path.basename(mxd.filePath)
     if arcpy.env.workspace.endswith('.gdb'):
-        new_mxd = os.path.join(os.path.dirname(arcpy.env.worksapce), os.path.basename(mxd.filePath))
+        new_mxd = os.path.join(os.path.dirname(arcpy.env.workspace), os.path.basename(mxd.filePath))
     else:
         new_mxd = os.path.join(arcpy.env.workspace, os.path.basename(mxd.filePath))
     mxd.saveACopy(new_mxd)
@@ -245,6 +245,10 @@ def execute(request):
     status_writer.send_percent(0.0, _('Starting to process...'), 'clip_data')
     for ds, out_name in input_items.iteritems():
         try:
+            #TODO: Add support for WFS services -- currently a bug in _server_admin needing to be fixed.
+            #TODO: Use feature set to load into and then clip it:
+            #TODO:>>> server = _server_admin.Catalog("http://services.arcgis.com/Zs2aNLFN00jrS4gG/ArcGIS/rest/services")
+
             dsc = arcpy.Describe(ds)
             # If no output coord. system, get output spatial reference from input.
             if out_coordinate_system == '':
