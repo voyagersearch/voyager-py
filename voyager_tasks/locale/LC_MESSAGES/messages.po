@@ -149,6 +149,11 @@ msgstr ""
 msgid "{0} is not a layer file or map document"
 msgstr ""
 
+#: mosaic.py:97,117 mosaic_to_workspace:105,125
+#, python-format
+msgid "Generating {0}. Large input {1} will take longer to process."
+msgstr ""
+
 #: mosaic.py:123 mosaic_to_workspace:133
 #, python-format
 msgid "Clipping..."

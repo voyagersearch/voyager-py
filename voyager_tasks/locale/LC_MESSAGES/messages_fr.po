@@ -147,6 +147,11 @@ msgstr "espace de travail valide"
 msgid "{0} is not a layer file or map document"
 msgstr "{0} n'est pas un document de fichier de couche ou une carte"
 
+#: mosaic.py:97,117 mosaic_to_workspace:105,125
+#, python-format
+msgid "Generating {0}. Large input {1} will take longer to process."
+msgstr "Génération {0}. Grande entrée {1} prendra plus de temps à traiter."
+
 #: mosaic.py:123 mosaic_to_workspace:133
 #, python-format
 msgid "Clipping..."

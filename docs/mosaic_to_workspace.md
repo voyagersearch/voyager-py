@@ -13,6 +13,7 @@ Mosaic selected raster datasets to a new raster in an existing workspace.
   - The most common pixel type of the inputs is used.
   - For raster formats JPG, JP2, and FileGDB, the advanced settings for setting compression can be used.
   - The GIF format only supports single-band raster datasets.
+  - Large input rasters will require longer processing times. The status can be checked on the Task History page.
 
 ###Requirements
     - ArcGIS 10.x

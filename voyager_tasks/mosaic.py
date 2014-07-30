@@ -55,6 +55,7 @@ def execute(request):
         except KeyError:
             clip_area = None
 
+    status_writer.send_status(_('Setting the output workspace...'))
     out_workspace = os.path.join(request['folder'], 'temp')
     if not os.path.exists(out_workspace):
         os.makedirs(out_workspace)
@@ -93,6 +94,7 @@ def execute(request):
 
     if output_raster_format == 'MosaicDataset':
         try:
+            status_writer.send_status(_('Generating {0}. Large input {1} will take longer to process.'.format('Mosaic', 'rasters')))
             if out_coordinate_system == '':
                 out_coordinate_system = raster_items[0]
             mosaic_ds = arcpy.CreateMosaicDataset_management(out_workspace,
@@ -112,6 +114,7 @@ def execute(request):
             if len(bands) > 1:
                 status_writer.send_state(status.STAT_FAILED, _('Input rasters must have the same number of bands'))
                 return
+            status_writer.send_status(_('Generating {0}. Large input {1} will take longer to process.'.format('Mosaic', 'rasters')))
             if clip_area:
                 ext = '{0} {1} {2} {3}'.format(clip_area.XMin, clip_area.YMin, clip_area.XMax, clip_area.YMax)
                 tmp_mosaic = arcpy.MosaicToNewRaster_management(
