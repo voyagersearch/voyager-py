@@ -6,7 +6,7 @@ Creates a GeoPDF using the selected search results.
   - The extent of the map view defines the extent of the map in the output PDF.
   - There are four map templates to choose from. The default is page size (8.5 x 11).
   - The output map projection is WGS84.
-  - There four base maps to choose from. The default is NONE. For small scales (i.e. World maps), no base map may provide the visual results. For larger scales (i.e County maps), a base map may provide a good reference. 
+  - There four base maps to choose from. The default is NONE. For small scales (i.e. World maps), no base map may provide the best visual result. For larger scales (i.e County maps), a base map can provide a good reference. 
   - The advanced settings control the inclusion of PDF layer and PDF object data (attributes). The default is Layers only.
 
 ###Screen Captures
