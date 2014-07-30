@@ -30,10 +30,7 @@ def execute(request):
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
     count = len(input_items)
-    if count > 1:
-        out_workspace = os.path.join(request['folder'], 'temp')
-    else:
-        out_workspace = request['folder']
+    out_workspace = os.path.join(request['folder'], 'temp')
     if not os.path.exists(out_workspace):
         os.makedirs(out_workspace)
 
@@ -55,6 +52,7 @@ def execute(request):
     i = 1.
     status_writer = status.Writer()
     status_writer.send_percent(0.0, _('Starting to process...'), 'convert_to_kml')
+    arcpy.env.overwriteOutput = True
     for ds, out_name in input_items.iteritems():
         try:
             dsc = arcpy.Describe(ds)
@@ -67,6 +65,7 @@ def execute(request):
                                             '{0}.kmz'.format(os.path.join(out_workspace, out_name)),
                                             1,
                                             boundary_box_extent=extent)
+                converted += 1
 
             elif dsc.dataType == 'ShapeFile':
                 arcpy.MakeFeatureLayer_management(ds, dsc.name[:-4])
@@ -76,6 +75,7 @@ def execute(request):
                                             '{0}.kmz'.format(os.path.join(out_workspace, out_name)),
                                             1,
                                             boundary_box_extent=extent)
+                converted += 1
 
             elif dsc.dataType == 'RasterDataset':
                 arcpy.MakeRasterLayer_management(ds, dsc.name)
@@ -85,6 +85,7 @@ def execute(request):
                                             '{0}.kmz'.format(os.path.join(out_workspace, out_name)),
                                             1,
                                             boundary_box_extent=extent)
+                converted += 1
 
             elif dsc.dataType == 'Layer':
                 if out_name == '':
@@ -96,6 +97,7 @@ def execute(request):
                                             '{0}.kmz'.format(os.path.join(out_workspace, out_name)),
                                             1,
                                             boundary_box_extent=extent)
+                converted += 1
 
             elif dsc.dataType == 'FeatureDataset':
                 arcpy.env.workspace = ds
@@ -105,21 +107,30 @@ def execute(request):
                                                 '{0}.kmz'.format(os.path.join(out_workspace, fc)),
                                                 1,
                                                 boundary_box_extent=extent)
+                    converted += 1
 
             elif dsc.dataType == 'CadDrawingDataset':
                 arcpy.env.workspace = dsc.catalogPath
                 for cad_fc in arcpy.ListFeatureClasses():
                     if cad_fc.lower() == 'annotation':
-                        cad_anno = arcpy.ImportCADAnnotation_conversion(
-                            cad_fc,
-                            arcpy.CreateUniqueName('cadanno', arcpy.env.scratchGDB)
-                        )
+                        try:
+                            cad_anno = arcpy.ImportCADAnnotation_conversion(
+                                cad_fc,
+                                arcpy.CreateUniqueName('cadanno', arcpy.env.scratchGDB)
+                            )
+                        except arcpy.ExecuteError:
+                            cad_anno = arcpy.ImportCADAnnotation_conversion(
+                                cad_fc,
+                                arcpy.CreateUniqueName('cadanno', arcpy.env.scratchGDB),
+                                1
+                            )
                         arcpy.MakeFeatureLayer_management(cad_anno, 'cad_lyr')
                         name = '{0}_{1}'.format(dsc.name[:-4], cad_fc)
                         arcpy.LayerToKML_conversion('cad_lyr',
                                                     '{0}.kmz'.format(os.path.join(out_workspace, name)),
                                                     1,
                                                     boundary_box_extent=extent)
+                        converted += 1
                     else:
                         arcpy.MakeFeatureLayer_management(cad_fc, 'cad_lyr')
                         name = '{0}_{1}'.format(dsc.name[:-4], cad_fc)
@@ -127,6 +138,7 @@ def execute(request):
                                                     '{0}.kmz'.format(os.path.join(out_workspace, name)),
                                                     1,
                                                     boundary_box_extent=extent)
+                        converted += 1
 
             # Map document to KML.
             elif dsc.dataType == 'MapDocument':
@@ -138,6 +150,7 @@ def execute(request):
                                               df.name,
                                               '{0}.kmz'.format(os.path.join(out_workspace, name)),
                                               extent_to_export=extent)
+                converted += 1
 
             else:
                 status_writer.send_percent(i/count, _('Invalid input type: {0}').format(dsc.name), 'convert_to_kml')
@@ -146,7 +159,6 @@ def execute(request):
 
             status_writer.send_percent(i/count, _('Converted: {0}').format(ds), 'convert_to_kml')
             i += 1.
-            converted += 1
         except Exception as ex:
             status_writer.send_percent(i/count, _('Skipped: {0}').format(ds), 'convert_to_kml')
             status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
@@ -155,7 +167,8 @@ def execute(request):
             pass
 
     # Zip up kmz files if more than one.
-    if count > 1:
+    if converted > 1:
+        status_writer.send_status("Converted: {}".format(converted))
         zip_file = task_utils.zip_data(out_workspace, 'output.zip')
         shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
         shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
@@ -163,6 +176,7 @@ def execute(request):
         kml_file = glob.glob(os.path.join(out_workspace, '*.kmz'))[0]
         tmp_lyr = arcpy.KMLToLayer_conversion(kml_file, out_workspace, 'kml_layer')
         task_utils.make_thumbnail(tmp_lyr.getOutput(0), os.path.join(request['folder'], '_thumb.png'))
+        shutil.move(kml_file, os.path.join(request['folder'], os.path.basename(kml_file)))
 
     # Update state if necessary.
     if skipped > 0 or errors > 0:
