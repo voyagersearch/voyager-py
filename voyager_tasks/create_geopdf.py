@@ -90,11 +90,11 @@ def execute(request):
                 )
                 layer = arcpy.mapping.Layer(layer_file.getOutput(0))
 
-            elif dsc.dataType == 'FeatureDataset': #or dsc.datasetType == 'FeatureDataset':
+            elif dsc.dataType == 'FeatureDataset':
                 arcpy.env.workspace = item
                 for fc in arcpy.ListFeatureClasses():
                     layer_file = arcpy.SaveToLayerFile_management(arcpy.MakeFeatureLayer_management(fc, fc + '_layer'),
-                                                                  os.path.join(temp_folder, fc))
+                                                                  os.path.join(temp_folder, '{0}.lyr'.format(fc)))
                     layer = arcpy.mapping.Layer(layer_file.getOutput(0))
                     layer.name = fc
 
@@ -102,14 +102,14 @@ def execute(request):
                 raster_layer = arcpy.MakeRasterLayer_management(item, os.path.basename(item))
                 layer_file = arcpy.SaveToLayerFile_management(
                     raster_layer,
-                    os.path.join(temp_folder, os.path.basename(item))
+                    os.path.join(temp_folder, '{0}.lyr'.format(os.path.basename(item)))
                 )
                 layer = arcpy.mapping.Layer(layer_file.getOutput(0))
 
             elif dsc.catalogPath.endswith('.kml') or dsc.catalogPath.endswith('.kmz'):
                 name = os.path.splitext(dsc.name)[0]
-                layer_file = arcpy.KMLToLayer_conversion(dsc.catalogPath, temp_folder, name)
-                layer = arcpy.mapping.Layer(layer_file.getOutput(1).replace('.gdb', '.lyr'))
+                arcpy.KMLToLayer_conversion(dsc.catalogPath, temp_folder, name)
+                layer = arcpy.mapping.Layer(os.path.join(temp_folder, '{0}.lyr'.format(name)))
 
             if layer:
                 status_writer.send_status(_('Adding layer {0}...').format(layer.name))
@@ -131,7 +131,7 @@ def execute(request):
         new_extent.XMax, new_extent.YMax = float(extent[2]), float(extent[3])
         data_frame.extent = new_extent
     else:
-       data_frame.zoomToSelectedFeatures()
+        data_frame.zoomToSelectedFeatures()
 
     # Update text elements in map template.
     date_element = arcpy.mapping.ListLayoutElements(mxd, 'TEXT_ELEMENT', 'date')
