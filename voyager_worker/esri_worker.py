@@ -21,9 +21,20 @@ import status
 
 
 def global_job(*args):
-    """Create a global job object for multiprocessing."""
+    """Create a global job object."""
     global job
     job = args[0]
+
+
+def update_row(fields, rows, row):
+    """Updates the coded values in a row with the descriptions."""
+    field_domains = {f.name: f.domain for f in fields if f.domain}
+    fields_values = zip(rows.fields, row)
+    for j, x in enumerate(fields_values):
+        if x[0] in field_domains:
+            domain_name = field_domains[x[0]]
+            row[j] = job.domains[domain_name][x[1]]
+    return row
 
 
 def worker(data_path):
@@ -47,6 +58,15 @@ def worker(data_path):
                     expression = constraint
             with arcpy.da.SearchCursor(data_path, fields, expression) as rows:
                 for i, row in enumerate(rows, 1):
+                    if job.domains:
+                        row = list(row)
+                        field_domains = {f.name: f.domain for f in dsc.fields if f.domain}
+                        fields_values = zip(rows.fields, row)
+                        for j, x in enumerate(fields_values):
+                            if x[0] in field_domains:
+                                domain_name = field_domains[x[0]]
+                                row[j] = job.domains[domain_name][x[1]]
+
                     mapped_fields = job.map_fields(dsc.name, fields)
                     mapped_fields = dict(zip(mapped_fields, row))
                     mapped_fields['_discoveryID'] = job.discovery_id
@@ -79,6 +99,15 @@ def worker(data_path):
             if dsc.shapeType == 'Point':
                 with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@XY'] + fields, expression, sr) as rows:
                     for i, row in enumerate(rows):
+                        if job.domains:
+                            row = list(row)
+                            field_domains = {f.name: f.domain for f in dsc.fields if f.domain}
+                            field_vals = zip(rows.fields, row)
+                            for j, x in enumerate(field_vals):
+                                if x[0] in field_domains:
+                                    domain_name = field_domains[x[0]]
+                                    row[j] = job.domains[domain_name][x[1]]
+
                         geo['lon'] = row[0][0]
                         geo['lat'] = row[0][1]
                         mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]))
@@ -92,6 +121,15 @@ def worker(data_path):
             else:
                 with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, expression, sr) as rows:
                     for i, row in enumerate(rows):
+                        if job.domains:
+                            row = list(row)
+                            field_domains = {f.name: f.domain for f in dsc.fields if f.domain}
+                            field_vals = zip(rows.fields, row)
+                            for j, x in enumerate(field_vals):
+                                if x[0] in field_domains:
+                                    domain_name = field_domains[x[0]]
+                                    row[j] = job.domains[domain_name][x[1]]
+
                         geo['xmin'] = row[0].extent.XMin
                         geo['xmax'] = row[0].extent.XMax
                         geo['ymin'] = row[0].extent.YMin
@@ -173,6 +211,6 @@ def assign_work(esri_job):
         pool.join()
     else:
         for tbl in tables:
-            global_job(job, len(tables))
+            global_job(job)
             worker(tbl)
     return

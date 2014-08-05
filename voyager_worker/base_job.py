@@ -53,18 +53,20 @@ class Job(object):
         self.job_file = job_file
         self.job = json.load(open(job_file, 'r'))
 
+        self.domains = {}
+        self._sql_queries = []
+        self.db_connection = None
+        self.db_cursor = None
+        self.db_query = None
+        self.zmq_socket = None
+
         self.__tables_to_keep = []
         self.__tables_to_skip = []
         self.__field_mapping = []
         self.__table_constraints = []
         self.__table_queries = []
         self.__get_table_config()
-
-        self._sql_queries = []
-        self.db_connection = None
-        self.db_cursor = None
-        self.db_query = None
-        self.zmq_socket = None
+        self.__get_domains()
 
     def __del__(self):
         """Close open connections, streams, etc. after all references to Job are deleted."""
@@ -72,6 +74,13 @@ class Job(object):
             self.zmq_socket.close()
         if self.db_connection:
             self.db_connection.close()
+
+    @property
+    def use_coded_value_descriptions(self):
+        try:
+            return self.job['location']['config']['convert_coded_values']
+        except KeyError:
+            return None
 
     @property
     def fields_to_keep(self):
@@ -286,6 +295,16 @@ class Job(object):
     #
     # Private functions.
     #
+
+    def __get_domains(self):
+        """List of workspace domains (for Esri workspace types)."""
+        if self.use_coded_value_descriptions:
+            for ext in ('.gdb', '.mdb', '.sde'):
+                if ext in self.path:
+                    import arcpy
+                    workspace = '{0}{1}'.format(self.path.split(ext)[0], ext)
+                    self.domains = {d.name: d.codedValues for d in arcpy.da.ListDomains(workspace)}
+                    break
 
     def __get_table_config(self):
         """List of tables to keep (may include wild card)."""
