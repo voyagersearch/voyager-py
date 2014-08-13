@@ -18,12 +18,20 @@ from voyager_worker import base_job
 
 if __name__ == '__main__':
     job = base_job.Job(sys.argv[1])
+    #job = base_job.Job(r"C:\Voyager\oracle_blob.json")
+    #job = base_job.Job(r"C:\Voyager\oracle_exclude_shape.json")
+    #job = base_job.Job(r"C:\Voyager\sqlserver2.json")
+    #job = base_job.Job(r"C:\Voyager\TestJSONFiles\cv_sample.json")
+    #job = base_job.Job(r"C:\Voyager\TestJSONFiles\mongodb_sample.json")
     if job.path:
         from voyager_worker import esri_worker
         esri_worker.assign_work(job)
     elif job.url:
         from voyager_worker import gdal_worker
         gdal_worker.assign_job(job.job_file)
+    elif job.mongodb_client_info():
+        from voyager_worker import mongodb_worker
+        mongodb_worker.assign_job(job.job_file)
     elif job.sql_connection_info:
         if job.sql_driver == 'SQL Server':
             from voyager_worker import sql_worker

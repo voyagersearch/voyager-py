@@ -19,6 +19,7 @@ import decimal
 
 import cx_Oracle
 import pyodbc
+import pymongo
 import zmq
 
 
@@ -53,7 +54,7 @@ class Job(object):
         self.job_file = job_file
         self.job = json.load(open(job_file, 'r'))
 
-        self.domains = {}
+        self.domains = {}  # For Geodatabase coded value domains
         self._sql_queries = []
         self.db_connection = None
         self.db_cursor = None
@@ -163,6 +164,19 @@ class Job(object):
         except KeyError:
             return ''
 
+    def mongodb_client_info(self):
+        """The mongoDB client connection string."""
+        try:
+            return self.job['location']['config']['mongodb']['client']
+        except KeyError:
+            return ''
+
+    def mongodb_database(self):
+        try:
+            return self.job['location']['config']['mongodb']['database']
+        except KeyError:
+            return ''
+
     @property
     def sql_driver(self):
         try:
@@ -204,10 +218,14 @@ class Job(object):
         pw = self.sql_connection_info['connection']['pwd']
         if drvr == 'Oracle':
             self.db_connection = cx_Oracle.connect("{0}/{1}@{2}/{3}".format(un, pw, srvr, db))
-        else:
+            self.db_cursor = self.db_connection.cursor()
+        elif drvr == 'SQL Server':
             sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(drvr, srvr, db, un, pw)
             self.db_connection = pyodbc.connect(sql_server_str)
-        self.db_cursor = self.db_connection.cursor()
+            self.db_cursor = self.db_connection.cursor()
+        elif self.mongodb_client_info():
+            client = pymongo.MongoClient(self.mongodb_client_info())
+            self.db_connection = client[self.mongodb_database()]
 
     def map_fields(self, table_name, field_names):
         """Returns mapped field names. Order matters."""
