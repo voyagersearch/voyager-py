@@ -14,6 +14,7 @@
 import json
 import datetime
 import copy
+import math
 import sys
 import decimal
 
@@ -178,6 +179,13 @@ class Job(object):
             return ''
 
     @property
+    def has_gridfs(self):
+        try:
+            return self.job['location']['config']['mongodb']['gridfs']
+        except KeyError:
+            return ''
+
+    @property
     def sql_driver(self):
         try:
             return self.job['location']['config']['sql']['connection']['driver']
@@ -226,6 +234,13 @@ class Job(object):
         elif self.mongodb_client_info():
             client = pymongo.MongoClient(self.mongodb_client_info())
             self.db_connection = client[self.mongodb_database()]
+
+    def get_increment(self, count):
+        """Returns a suitable base 10 increment."""
+        p = int(math.log10(count))
+        if not p:
+            p = 1
+        return int(math.pow(10, p - 1))
 
     def map_fields(self, table_name, field_names):
         """Returns mapped field names. Order matters."""

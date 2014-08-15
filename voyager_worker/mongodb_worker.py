@@ -14,6 +14,7 @@
 import decimal
 import json
 import base_job
+import gridfs
 import status
 
 
@@ -36,10 +37,18 @@ def worker():
     """Worker function to index each document in each collection in the database."""
     job.connect_to_zmq()
     job.connect_to_database()
-    collection_names = [col for col in job.db_connection.collection_names() if not col == 'system.indexes']
+    if job.tables_to_keep == ['*']:
+        collection_names = [col for col in job.db_connection.collection_names() if not col.find('system.') > -1]
+    else:
+        collection_names = job.tables_to_keep
 
     status_writer = status.Writer()
+    grid_fs = None
     for collection_name in collection_names:
+        if job.has_gridfs:
+            if collection_name.find('.files') > 0:
+                grid_fs = gridfs.GridFS(job.db_connection, collection_name.split('.')[0])
+
         i = 0
         col = job.db_connection[collection_name]
         query = job.get_table_query(col)
@@ -47,7 +56,18 @@ def worker():
             documents = col.find(eval(query))
         else:
             documents = col.find()
+
+        # Index each document -- get a suitable base 10 increment for reporting percentage.
+        increment = job.get_increment(documents.count())
         for doc in documents:
+            fields = doc.keys()
+            if grid_fs:
+                grid_out = grid_fs.get(doc['_id'])
+                if hasattr(grid_out, 'metadata'):
+                    fields += grid_out.metadata.keys()
+                    values = [doc[k] for k in doc.keys() if not k == 'metadata']
+                    values += grid_out.metadata.values()
+                    fields.remove('metadata')
             entry = {}
             geo = {}
             if 'loc' in doc:
@@ -59,19 +79,23 @@ def worker():
                     geo['xmax'] = doc['loc'][0][1]
                     geo['ymin'] = doc['loc'][1][0]
                     geo['ymax'] = doc['loc'][1][1]
-
-            fields = doc.keys()
-            fields.remove('loc')
+                fields.remove('loc')
+            #fields = doc.keys()
+            #fields.remove('loc')
             mapped_fields = job.map_fields(col.name, fields)
-            mapped_fields = dict(zip(mapped_fields, doc.values()))
+            #mapped_fields = dict(zip(mapped_fields, doc.values()))
+            mapped_fields = dict(zip(mapped_fields, values))
             mapped_fields['_discoveryID'] = job.discovery_id
-            entry['id'] = '{0}_{1}_{2}'.format(job.location_id, col.name, i)
+            entry['id'] = str(doc['_id']) # '{0}_{1}_{2}'.format(job.location_id, col.name, i)
             entry['location'] = job.location_id
             entry['action'] = job.action_type
             entry['entry'] = {'geo': geo, 'fields': mapped_fields}
             job.send_entry(entry)
             i += 1
-            status_writer.send_percent(float(i/documents.count()), collection_name, 'MongoDB')
+            if (i % increment) == 0:
+                status_writer.send_percent(float(i)/documents.count(),
+                                           '{0}: {1:%}'.format(collection_name, float(i)/documents.count()),
+                                           'MongoDB')
 
 
 def assign_job(job_info):
