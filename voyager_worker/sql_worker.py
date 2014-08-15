@@ -14,6 +14,7 @@
 import decimal
 import json
 import base_job
+import status
 
 
 class ComplexEncoder(json.JSONEncoder):
@@ -33,6 +34,7 @@ def global_job(args):
 
 def worker():
     """Worker function to index each row in each table in the database."""
+    status_writer = status.Writer()
     job.connect_to_zmq()
     job.connect_to_database()
     tables = []
@@ -97,7 +99,9 @@ def worker():
             job.db_cursor.execute("select {0} from {1} where {2}".format(','.join(columns), tbl, expression))
 
         # Index each row in the table.
-        for i, row in enumerate(job.db_cursor.fetchall()):
+        rows = job.db_cursor.fetchall()
+        increment = job.get_increment(len(rows))
+        for i, row in enumerate(rows):
             if job.field_mapping:
                 mapped_cols = job.map_fields(tbl, columns)
             else:
@@ -125,7 +129,8 @@ def worker():
             entry['entry'] = {'geo': geo, 'fields': mapped_cols}
             entry['entry']['fields']['_discoveryID'] = job.discovery_id
             job.send_entry(entry)
-
+            if (i % increment) == 0:
+                status_writer.send_percent(float(i)/len(rows), '{0}: {1:%}'.format(tbl, float(i)/len(rows)), 'sql_server')
 
 def assign_job(job_info):
     """Connects to ZMQ, connects to the database, and assigns the job."""
