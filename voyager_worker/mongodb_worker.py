@@ -68,6 +68,8 @@ def worker():
                     values = [doc[k] for k in doc.keys() if not k == 'metadata']
                     values += grid_out.metadata.values()
                     fields.remove('metadata')
+            else:
+                values = doc.values()
             entry = {}
             geo = {}
             if 'loc' in doc:
