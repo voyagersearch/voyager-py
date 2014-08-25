@@ -111,6 +111,7 @@ def execute(request):
                                 layer.replaceDataSource(new_workspace, workspace_type, validate=False)
                             else:
                                 layer.replaceDataSource(new_workspace, workspace_type, new_dataset, False)
+                            status_writer.send_status(_('Updated layer: {0}'.format(layer.name)))
                     elif layer.isRasterLayer:
                         if layer.dataSource.lower() == old_data_source.lower():
                             if layer.datasetName.lower() == new_dataset.lower():
