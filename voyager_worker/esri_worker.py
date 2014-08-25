@@ -189,7 +189,8 @@ def assign_work(esri_job):
         pool.close()
         pool.join()
     else:
-        for tbl in tables:
+        for i, tbl in enumerate(tables, 1):
             global_job(job)
             worker(tbl)
+            status_writer.send_percent(i/len(tables), "{0:%}".format(i/len(tables)), 'esri_worker')
     return
