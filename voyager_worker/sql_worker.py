@@ -61,11 +61,20 @@ def worker():
 
         if not job.fields_to_keep == ['*']:
             columns = []
+            column_types = {}
             for col in job.fields_to_keep:
-                qry = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
-                [columns.append(c[0]) for c in job.execute_query(qry).fetchall()]
+                qry = "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
+                #[columns.append(c[0]) for c in job.execute_query(qry).fetchall()]
+                for c in job.execute_query(qry).fetchall():
+                    columns.append(c[0])
+                    column_types[c[0]] = c[1]
         else:
-            columns = [c.column_name for c in job.db_cursor.columns(table=tbl).fetchall()]
+            #columns = [c.column_name for c in job.db_cursor.columns(table=tbl).fetchall()]
+            columns = []
+            column_types = {}
+            for c in job.db_cursor.columns(table=tbl).fetchall():
+                columns.append(c.column_name)
+                column_types[c.column_name] = c.type_name
 
         if job.fields_to_skip:
             for col in job.fields_to_skip:
@@ -103,7 +112,7 @@ def worker():
         increment = job.get_increment(len(rows))
         for i, row in enumerate(rows):
             if job.field_mapping:
-                mapped_cols = job.map_fields(tbl, columns)
+                mapped_cols = job.map_fields(tbl, columns, column_types)
             else:
                 mapped_cols = columns
 

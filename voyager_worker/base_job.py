@@ -21,6 +21,7 @@ import decimal
 import cx_Oracle
 import pyodbc
 import pymongo
+import bson
 import zmq
 
 
@@ -35,7 +36,11 @@ class ObjectEncoder(json.JSONEncoder):
         elif isinstance(obj, decimal.Decimal):
             return float(obj)
         elif isinstance(obj, datetime.datetime):
-            return list(obj.timetuple())[0:6]
+            #TODO: format date to iso 8601
+            if obj.tzinfo:
+                return obj.strftime('%Y-%m-%dT%H:%M:%S.%f%Z')
+            else:
+                return obj.strftime("%Y-%m-%dT%H:%M:%S.%fZ") #list(obj.timetuple())[0:6]
         elif isinstance(obj, memoryview):
             if not is_binary_string(obj.tobytes()):
                 return str(obj)
@@ -105,12 +110,56 @@ class Job(object):
         return self.__field_mapping
 
     @property
-    def default_mapping(self):
+    def field_types(self):
+        return {cx_Oracle.STRING: 'meta_',
+                cx_Oracle.FIXED_CHAR: 'fs_',
+                cx_Oracle.NUMBER: 'ff_',
+                cx_Oracle.DATETIME: 'fd_',
+                cx_Oracle.TIMESTAMP: 'fd_',
+                unicode: 'fs_',
+                long: 'fl_',
+                datetime.datetime: 'fd_',
+                bson.objectid.ObjectId: 'fl_',
+                "Date":"fd_",
+                "Double":"fu_",
+                "Guid":"meta_",
+                "Integer":"fl_",
+                "OID":"fl_",
+                "Single":"ff_",
+                "SmallInteger": "fi_",
+                "String":'fs_',
+                'int': 'fl_',
+                'int identity': 'fl_',
+                'smallint': 'fi_',
+                'bigint': 'fl_',
+                'char': 'fs_',
+                'nchar': 'fs_',
+                'nvarchar': 'fs_',
+                'varchar': 'fs_',
+                'numeric': 'fu_',
+                'date': 'fd_',
+                'smalldatetime': 'fd_',
+                'bit': 'fb_',
+                'float': 'ff_',
+                'text': 'fs_',
+                'ntext': 'fs_',
+                'decimal': 'ff_'}
+
+    #@property
+    def default_mapping(self, field_type=''):
         """Default prefix name to append to each field."""
-        try:
-            return self.job['location']['config']['fields']['map_default_prefix']
-        except KeyError:
-            return None
+        #TODO: add voyager default field mappings
+        #try:
+        if field_type:
+            try:
+                ft = self.field_types[field_type]
+                return ft
+            except KeyError:
+                return 'meta_'
+        else:
+            return None #self.job['location']['config']['fields']['map_default_prefix']
+        #except KeyError:
+        #    return 'meta_'
 
     @property
     def tables_to_keep(self):
@@ -242,10 +291,10 @@ class Job(object):
             p = 1
         return int(math.pow(10, p - 1))
 
-    def map_fields(self, table_name, field_names):
+    def map_fields(self, table_name, field_names, field_types={}):
         """Returns mapped field names. Order matters."""
         mapped_field_names = copy.copy(field_names)
-        default_map = self.default_mapping
+        #default_map = self.default_mapping
         #TODO: revisit this logic...
         if self.__field_mapping:
             for mapping in self.field_mapping:
@@ -260,11 +309,19 @@ class Job(object):
                     try:
                         mapped_field_names[i] = fmap[field]
                     except KeyError:
-                        if default_map:
-                            mapped_field_names[i] = '{0}{1}'.format(default_map, field)
-        elif self.default_mapping:
+                        #if default_map:
+                        if field_types:
+                            if field_types.has_key(field):
+                                field_map = self.default_mapping(field_types[field])
+                                mapped_field_names[i] = '{0}{1}'.format(field_map, field)
+                            else:
+                                mapped_field_names[i] = '{0}{1}'.format('meta_', field)
+                        else:
+                            mapped_field_names[i] = '{0}{1}'.format('meta_', field)
+        elif self.default_mapping():
             for i, field in enumerate(mapped_field_names):
-                mapped_field_names[i] = '{0}{1}'.format(default_map, field)
+                mapped_field_names[i] = '{0}{1}'.format(self.default_mapping(field_types[field]), field)
+                #mapped_field_names[i] = '{0}{1}'.format(default_map, field)
         else:
             return mapped_field_names
 
@@ -310,20 +367,26 @@ class Job(object):
     def send_entry(self, entry):
         """Sends an entry to be indexed using pyzmq."""
         self.zmq_socket.send_json(entry, cls=ObjectEncoder)
+        #self.zmq_socket.send_pyobj(entry)
 
     def search_fields(self, dataset):
         """Returns a valid list of existing fields for the search cursor."""
         import arcpy
-        fields = []
+        #fields = []
+        fields = {}
+        #dict((key, value) for (key, value) in iterable)
         if not self.fields_to_keep == ['*']:
             for fld in self.fields_to_keep:
-                [fields.append(f.name) for f in arcpy.ListFields(dataset, fld)]
+                fdict = dict((f.name, f.type) for f in arcpy.ListFields(dataset, fld))
+                fields = dict(fields.items() + fdict.items()) #dict((f.name, f.type) for f in arcpy.ListFields(dataset, fld)).items()
+                #[fields.append(f.name) for f in arcpy.ListFields(dataset, fld)]
         if self.fields_to_skip:
             for fld in self.fields_to_skip:
-                [fields.remove(f.name) for f in arcpy.ListFields(dataset, fld)]
+                #[fields.remove(f.name) for f in arcpy.ListFields(dataset, fld)]
+                [fields.pop(f.name) for f in arcpy.ListFields(dataset, fld) if fields.has_key(f.name)]
             return fields
         else:
-            return [f.name for f in arcpy.ListFields(dataset)]
+            return dict((f.name, f.type) for f in arcpy.ListFields(dataset)) #[f.name for f in arcpy.ListFields(dataset)]
 
     #
     # Private functions.

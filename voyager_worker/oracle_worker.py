@@ -54,13 +54,25 @@ def worker():
         has_shape = False
         is_point = False
         columns = []
+        #TODO:
+        column_types = {}
+
         if not job.fields_to_keep == ['*']:
             for col in job.fields_to_keep:
                 qry = "SELECT COLUMN_NAME FROM all_tab_cols WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
-                [columns.append(c[0]) for c in job.execute_query(qry).fetchall()]
+                #[columns.append(c[0]) for c in job.execute_query(qry).fetchall()]
+                #TODO:
+                for c in job.execute_query(qry).fetchall():
+                    columns.append(c[0])
+                    column_types[c[0]] = c[1]
         else:
             job.db_cursor.execute("SELECT * FROM {0}".format(tbl))
-            [columns.append(c[0]) for c in job.db_cursor.description]
+
+            #TODO: get column types -- needed to map fields to voyager fields
+            for c in job.db_cursor.description:
+                columns.append(c[0])
+                column_types[c[0]] = c[1]
+            #[columns.append(c[0]) for c in job.db_cursor.description]
 
         if job.fields_to_skip:
             for col in job.fields_to_skip:
@@ -72,7 +84,7 @@ def worker():
         if 'SHAPE' in columns:
             has_shape = True
             columns.remove('SHAPE')
-            schema = job.db_cursor.execute("select SHAPE  from {0}".format(tbl)).fetchone()[0].type.schema
+            schema = job.db_cursor.execute("select SHAPE from {0}".format(tbl)).fetchone()[0].type.schema
             shape_type = job.db_cursor.execute("select {0}.ST_GEOMETRYTYPE(SHAPE) from {1}".format(schema, tbl)).fetchone()[0]
             if 'POINT' in shape_type:
                 columns.insert(0, '{0}.st_y(SHAPE)'.format(schema))
@@ -98,7 +110,8 @@ def worker():
                     geo['xmax'] = row[2]
                     geo['ymax'] = row[3]
 
-            mapped_cols = job.map_fields(tbl, columns)
+            #TODO: add column types arg
+            mapped_cols = job.map_fields(tbl, columns, column_types)
             mapped_cols = dict(zip(mapped_cols, row))
 
             if has_shape:

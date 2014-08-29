@@ -61,10 +61,14 @@ def worker():
         increment = job.get_increment(documents.count())
         for doc in documents:
             fields = doc.keys()
+            field_types = dict((k, type(v)) for k,v in doc.iteritems())
             if grid_fs:
                 grid_out = grid_fs.get(doc['_id'])
                 if hasattr(grid_out, 'metadata'):
+                    #with open(r"c:\temp\{0}".format(grid_out.filename), "wb") as fp:
+                        #fp.write(grid_out.read())
                     fields += grid_out.metadata.keys()
+                    field_types = dict(field_types.items() + dict((k, type(v)) for k, v in grid_out.metadata.iteritems()).items())
                     values = [doc[k] for k in doc.keys() if not k == 'metadata']
                     values += grid_out.metadata.values()
                     fields.remove('metadata')
@@ -84,7 +88,7 @@ def worker():
                 fields.remove('loc')
             #fields = doc.keys()
             #fields.remove('loc')
-            mapped_fields = job.map_fields(col.name, fields)
+            mapped_fields = job.map_fields(col.name, fields, field_types)
             #mapped_fields = dict(zip(mapped_fields, doc.values()))
             mapped_fields = dict(zip(mapped_fields, values))
             mapped_fields['_discoveryID'] = job.discovery_id

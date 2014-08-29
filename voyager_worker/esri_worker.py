@@ -46,7 +46,8 @@ def worker(data_path):
         dsc = arcpy.Describe(data_path)
 
         if dsc.dataType == 'Table':
-            fields = job.search_fields(data_path)
+            field_types = job.search_fields(data_path)
+            fields = field_types.keys()
             query = job.get_table_query(dsc.name)
             constraint = job.get_table_constraint(dsc.name)
             if query and constraint:
@@ -60,7 +61,7 @@ def worker(data_path):
                 for i, row in enumerate(rows, 1):
                     if job.domains:
                         row = update_row(dsc.fields, rows, list(row))
-                    mapped_fields = job.map_fields(dsc.name, fields)
+                    mapped_fields = job.map_fields(dsc.name, fields, field_types)
                     mapped_fields = dict(zip(mapped_fields, row))
                     mapped_fields['_discoveryID'] = job.discovery_id
                     oid_field = filter(lambda x: x in ('FID', 'OID', 'OBJECTID'), rows.fields)
@@ -77,7 +78,8 @@ def worker(data_path):
             sr = arcpy.SpatialReference(4326)
             geo['spatialReference'] = dsc.spatialReference.name
             geo['code'] = dsc.spatialReference.factoryCode
-            fields = job.search_fields(dsc.catalogPath)
+            field_types = job.search_fields(dsc.catalogPath)
+            fields = field_types.keys()
             query = job.get_table_query(dsc.name)
             constraint = job.get_table_constraint(dsc.name)
             if query and constraint:
@@ -96,7 +98,7 @@ def worker(data_path):
                             row = update_row(dsc.fields, rows, list(row))
                         geo['lon'] = row[0][0]
                         geo['lat'] = row[0][1]
-                        mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]))
+                        mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
                         mapped_fields = dict(zip(mapped_fields, row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
@@ -113,7 +115,7 @@ def worker(data_path):
                         geo['xmax'] = row[0].extent.XMax
                         geo['ymin'] = row[0].extent.YMin
                         geo['ymax'] = row[0].extent.YMax
-                        mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]))
+                        mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
                         mapped_fields = dict(zip(mapped_fields, row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
