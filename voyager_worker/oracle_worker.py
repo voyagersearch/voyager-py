@@ -33,7 +33,13 @@ def global_job(args):
 
 
 def worker():
-    """Worker function to index each row in each table in the database."""
+    """Worker function to index each row in each table in the database.
+
+    Example select statements:
+    #cur.execute("select spatial_column FROM layers where table_name = 'FC_COUNTRIES'")
+    #cur.execute("select column_name from all_tab_cols where table_name = 'FC_COUNTRIES' AND column_name like 'CNTRY%'")
+
+    """
     status_writer = status.Writer()
     job.connect_to_zmq()
     job.connect_to_database()
@@ -41,45 +47,36 @@ def worker():
 
     if not job.tables_to_keep == ['*']:
         for tk in job.tables_to_keep:
-            [tables.append(t[0]) for t in job.db_cursor.execute("select table_name from user_tables where table_name like '{0}'".format(tk)).fetchall()]
+            statement = "select table_name from user_tables where table_name like"
+            [tables.append(t[0]) for t in job.db_cursor.execute("{0} '{1}'".format(statement, tk)).fetchall()]
     else:
         [tables.append(t[0]) for t in job.db_cursor.execute("select table_name from all_tables").fetchall()]
-    #cur.execute("select spatial_column FROM layers where table_name = 'FC_COUNTRIES'")
-    # cur.execute("select column_name from all_tab_cols where table_name = 'FC_COUNTRIES' AND column_name like 'CNTRY%'")
 
     for tbl in set(tables):
-
-        i = 0
         geo = {}
         has_shape = False
         is_point = False
         columns = []
-        #TODO:
         column_types = {}
 
         if not job.fields_to_keep == ['*']:
             for col in job.fields_to_keep:
                 qry = "SELECT COLUMN_NAME FROM all_tab_cols WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
-                #[columns.append(c[0]) for c in job.execute_query(qry).fetchall()]
-                #TODO:
                 for c in job.execute_query(qry).fetchall():
                     columns.append(c[0])
                     column_types[c[0]] = c[1]
         else:
             job.db_cursor.execute("SELECT * FROM {0}".format(tbl))
 
-            #TODO: get column types -- needed to map fields to voyager fields
+            # Get column types -- needed to map fields to voyager fields.
             for c in job.db_cursor.description:
                 columns.append(c[0])
                 column_types[c[0]] = c[1]
-            #[columns.append(c[0]) for c in job.db_cursor.description]
 
         if job.fields_to_skip:
             for col in job.fields_to_skip:
                 qry = "SELECT COLUMN_NAME FROM all_tab_cols WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
                 [columns.remove(c[0]) for c in job.execute_query(qry).fetchall()]
-
-        #[columns.remove(c) for c in columns if c.startswith('SYS_')]
 
         if 'SHAPE' in columns:
             has_shape = True
@@ -110,7 +107,6 @@ def worker():
                     geo['xmax'] = row[2]
                     geo['ymax'] = row[3]
 
-            #TODO: add column types arg
             mapped_cols = job.map_fields(tbl, columns, column_types)
             mapped_cols = dict(zip(mapped_cols, row))
 
@@ -132,8 +128,10 @@ def worker():
             job.send_entry(entry)
             i += 1
             if (i % increment) == 0:
-                status_writer.send_percent(float(i)/len(rows), "{0}: {1:%}".format(tbl, float(i)/len(rows)), 'oracle_worker')
-        #print "Total", tbl, i
+                status_writer.send_percent(float(i)/len(rows),
+                                           "{0}: {1:%}".format(tbl, float(i)/len(rows)),
+                                           'oracle_worker')
+
 
 def assign_job(job_info):
     """Connects to ZMQ, connects to the database, and assigns the job."""

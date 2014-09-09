@@ -61,10 +61,11 @@ def worker():
         increment = job.get_increment(documents.count())
         for doc in documents:
             fields = doc.keys()
-            field_types = dict((k, type(v)) for k,v in doc.iteritems())
+            field_types = dict((k, type(v)) for k, v in doc.iteritems())
             if grid_fs:
                 grid_out = grid_fs.get(doc['_id'])
                 if hasattr(grid_out, 'metadata'):
+                    #TODO: Determine how to ingest files stored in the database.
                     #with open(r"c:\temp\{0}".format(grid_out.filename), "wb") as fp:
                         #fp.write(grid_out.read())
                     fields += grid_out.metadata.keys()
@@ -86,13 +87,10 @@ def worker():
                     geo['ymin'] = doc['loc'][1][0]
                     geo['ymax'] = doc['loc'][1][1]
                 fields.remove('loc')
-            #fields = doc.keys()
-            #fields.remove('loc')
             mapped_fields = job.map_fields(col.name, fields, field_types)
-            #mapped_fields = dict(zip(mapped_fields, doc.values()))
             mapped_fields = dict(zip(mapped_fields, values))
             mapped_fields['_discoveryID'] = job.discovery_id
-            entry['id'] = str(doc['_id']) # '{0}_{1}_{2}'.format(job.location_id, col.name, i)
+            entry['id'] = str(doc['_id'])
             entry['location'] = job.location_id
             entry['action'] = job.action_type
             entry['entry'] = {'geo': geo, 'fields': mapped_fields}

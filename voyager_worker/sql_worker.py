@@ -40,8 +40,8 @@ def worker():
     tables = []
     if not job.tables_to_keep == ['*']:
         for tk in job.tables_to_keep:
-            #tcur = job.db_cursor.execute("select * from sys.objects where name like '{0}'".format(tk))
-            [tables.append(t[0]) for t in job.db_cursor.execute("select * from sys.objects where name like '{0}'".format(tk)).fetchall()]
+            statement = "select * from sys.objects where name like"
+            [tables.append(t[0]) for t in job.db_cursor.execute("{0} '{1}'".format(statement, tk)).fetchall()]
     else:
         [tables.append(t[0]) for t in job.db_cursor.execute("select name from sysobjects where type='U'").fetchall()]
 
@@ -64,12 +64,10 @@ def worker():
             column_types = {}
             for col in job.fields_to_keep:
                 qry = "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
-                #[columns.append(c[0]) for c in job.execute_query(qry).fetchall()]
                 for c in job.execute_query(qry).fetchall():
                     columns.append(c[0])
                     column_types[c[0]] = c[1]
         else:
-            #columns = [c.column_name for c in job.db_cursor.columns(table=tbl).fetchall()]
             columns = []
             column_types = {}
             for c in job.db_cursor.columns(table=tbl).fetchall():
@@ -139,7 +137,10 @@ def worker():
             entry['entry']['fields']['_discoveryID'] = job.discovery_id
             job.send_entry(entry)
             if (i % increment) == 0:
-                status_writer.send_percent(float(i)/len(rows), '{0}: {1:%}'.format(tbl, float(i)/len(rows)), 'sql_server')
+                status_writer.send_percent(float(i)/len(rows),
+                                           '{0}: {1:%}'.format(tbl, float(i)/len(rows)),
+                                           'sql_server')
+
 
 def assign_job(job_info):
     """Connects to ZMQ, connects to the database, and assigns the job."""

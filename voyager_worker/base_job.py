@@ -28,7 +28,7 @@ import zmq
 class ObjectEncoder(json.JSONEncoder):
     """Support non-native Python types for JSON serialization."""
     def default(self, obj):
-        text_chars = ''.join(map(chr, [7,8,9,10,12,13,27] + range(0x20, 0x100)))
+        text_chars = ''.join(map(chr, [7, 8, 9, 10, 12, 13, 27] + range(0x20, 0x100)))
         is_binary_string = lambda bytes: bool(bytes.translate(None, text_chars))
 
         if isinstance(obj, (list, dict, str, unicode, int, float, bool, type(None))):
@@ -36,11 +36,14 @@ class ObjectEncoder(json.JSONEncoder):
         elif isinstance(obj, decimal.Decimal):
             return float(obj)
         elif isinstance(obj, datetime.datetime):
-            #TODO: format date to iso 8601
-            if obj.tzinfo:
-                return obj.strftime('%Y-%m-%dT%H:%M:%S.%f%Z')
-            else:
-                return obj.strftime("%Y-%m-%dT%H:%M:%S.%fZ") #list(obj.timetuple())[0:6]
+            # Format date to iso 8601
+            try:
+                if obj.tzinfo:
+                    return obj.strftime('%Y-%m-%dT%H:%M:%S.%f%Z')
+                else:
+                    return obj.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            except Exception:
+                return list(obj.timetuple())[0:6]
         elif isinstance(obj, memoryview):
             if not is_binary_string(obj.tobytes()):
                 return str(obj)
@@ -120,14 +123,14 @@ class Job(object):
                 long: 'fl_',
                 datetime.datetime: 'fd_',
                 bson.objectid.ObjectId: 'fl_',
-                "Date":"fd_",
-                "Double":"fu_",
-                "Guid":"meta_",
-                "Integer":"fl_",
-                "OID":"fl_",
-                "Single":"ff_",
+                "Date": "fd_",
+                "Double": "fu_",
+                "Guid": "meta_",
+                "Integer": "fl_",
+                "OID": "fl_",
+                "Single": "ff_",
                 "SmallInteger": "fi_",
-                "String":'fs_',
+                "String": 'fs_',
                 'int': 'fl_',
                 'int identity': 'fl_',
                 'smallint': 'fi_',
@@ -144,22 +147,6 @@ class Job(object):
                 'text': 'fs_',
                 'ntext': 'fs_',
                 'decimal': 'ff_'}
-
-    #@property
-    def default_mapping(self, field_type=''):
-        """Default prefix name to append to each field."""
-        #TODO: add voyager default field mappings
-        #try:
-        if field_type:
-            try:
-                ft = self.field_types[field_type]
-                return ft
-            except KeyError:
-                return 'meta_'
-        else:
-            return None #self.job['location']['config']['fields']['map_default_prefix']
-        #except KeyError:
-        #    return 'meta_'
 
     @property
     def tables_to_keep(self):
@@ -214,6 +201,7 @@ class Job(object):
         except KeyError:
             return ''
 
+    @property
     def mongodb_client_info(self):
         """The mongoDB client connection string."""
         try:
@@ -221,6 +209,7 @@ class Job(object):
         except KeyError:
             return ''
 
+    @property
     def mongodb_database(self):
         try:
             return self.job['location']['config']['mongodb']['database']
@@ -267,7 +256,7 @@ class Job(object):
     #
     def connect_to_database(self):
         """Makes an ODBC database connection."""
-        #TODO: test pyodbc for oracle "Driver={Microsoft ODBC for Oracle};Server=" + dbInst + ';Uid=' + schema + ';Pwd=' + passwd + ";"
+        #TODO: test "Driver={Microsoft ODBC for Oracle};Server=" + dbInst + ';Uid=' + schema + ';Pwd=' + passwd + ";"
         drvr = self.sql_connection_info['connection']['driver']
         srvr = self.sql_connection_info['connection']['server']
         db = self.sql_connection_info['connection']['database']
@@ -291,10 +280,20 @@ class Job(object):
             p = 1
         return int(math.pow(10, p - 1))
 
+    def default_mapping(self, field_type=''):
+        """Get the default prefix name to append to each field."""
+        if field_type:
+            try:
+                ft = self.field_types[field_type]
+                return ft
+            except KeyError:
+                return 'meta_'
+        else:
+            return None
+
     def map_fields(self, table_name, field_names, field_types={}):
         """Returns mapped field names. Order matters."""
         mapped_field_names = copy.copy(field_names)
-        #default_map = self.default_mapping
         #TODO: revisit this logic...
         if self.__field_mapping:
             for mapping in self.field_mapping:
@@ -309,9 +308,8 @@ class Job(object):
                     try:
                         mapped_field_names[i] = fmap[field]
                     except KeyError:
-                        #if default_map:
                         if field_types:
-                            if field_types.has_key(field):
+                            if field in field_types:
                                 field_map = self.default_mapping(field_types[field])
                                 mapped_field_names[i] = '{0}{1}'.format(field_map, field)
                             else:
@@ -321,7 +319,6 @@ class Job(object):
         elif self.default_mapping():
             for i, field in enumerate(mapped_field_names):
                 mapped_field_names[i] = '{0}{1}'.format(self.default_mapping(field_types[field]), field)
-                #mapped_field_names[i] = '{0}{1}'.format(default_map, field)
         else:
             return mapped_field_names
 
@@ -374,19 +371,16 @@ class Job(object):
         import arcpy
         #fields = []
         fields = {}
-        #dict((key, value) for (key, value) in iterable)
         if not self.fields_to_keep == ['*']:
             for fld in self.fields_to_keep:
                 fdict = dict((f.name, f.type) for f in arcpy.ListFields(dataset, fld))
-                fields = dict(fields.items() + fdict.items()) #dict((f.name, f.type) for f in arcpy.ListFields(dataset, fld)).items()
-                #[fields.append(f.name) for f in arcpy.ListFields(dataset, fld)]
+                fields = dict(fields.items() + fdict.items())
         if self.fields_to_skip:
             for fld in self.fields_to_skip:
-                #[fields.remove(f.name) for f in arcpy.ListFields(dataset, fld)]
-                [fields.pop(f.name) for f in arcpy.ListFields(dataset, fld) if fields.has_key(f.name)]
+                [fields.pop(f.name) for f in arcpy.ListFields(dataset, fld) if f.name in fields]
             return fields
         else:
-            return dict((f.name, f.type) for f in arcpy.ListFields(dataset)) #[f.name for f in arcpy.ListFields(dataset)]
+            return dict((f.name, f.type) for f in arcpy.ListFields(dataset))
 
     #
     # Private functions.
