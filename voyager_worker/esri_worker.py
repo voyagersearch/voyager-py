@@ -128,6 +128,7 @@ def worker(data_path):
 def assign_work(esri_job):
     """Determines the data type and each dataset is sent to the worker to be processed."""
     status_writer = status.Writer()
+    status_writer.send_percent(0.0, "Initializing... 0.0%", 'esri_worker')
     job = esri_job
     dsc = arcpy.Describe(job.path)
 
@@ -194,5 +195,5 @@ def assign_work(esri_job):
         for i, tbl in enumerate(tables, 1):
             global_job(job)
             worker(tbl)
-            status_writer.send_percent(i/len(tables), "{0:%}".format(i/len(tables)), 'esri_worker')
+            status_writer.send_percent(i/len(tables), "{0} {1:%}".format(tbl, i/len(tables)), 'esri_worker')
     return
