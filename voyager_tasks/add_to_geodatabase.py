@@ -60,6 +60,12 @@ def execute(request):
         # For performance reasons, only doing this if the out_gdb does not exist.
         if is_feature_dataset(out_gdb):
             is_fds = True
+        elif out_gdb.endswith('.gdb'):
+            arcpy.CreateFileGDB_management(os.path.dirname(out_gdb), os.path.basename(out_gdb))
+            status_writer.send_status(_('Created output workspace: {0}').format(out_gdb))
+        elif out_gdb.endswith('.mdb'):
+            arcpy.CreatePersonalGDB_management(os.path.dirname(out_gdb), os.path.basename(out_gdb))
+            status_writer.send_status(_('Created output workspace: {0}').format(out_gdb))
         else:
             status_writer.send_state(status.STAT_FAILED, _('{0} does not exist').format(out_gdb))
             return
