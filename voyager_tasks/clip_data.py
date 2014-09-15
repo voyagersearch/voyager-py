@@ -18,6 +18,7 @@ import shutil
 import arcpy
 from voyager_tasks.utils import task_utils
 from voyager_tasks.utils import status
+from voyager_tasks import _
 
 
 def clip_layer_file(layer_file, aoi):

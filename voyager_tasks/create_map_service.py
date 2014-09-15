@@ -29,7 +29,6 @@ from voyager_tasks import _
 
 status_writer = status.Writer()
 
-
 # Custom Exceptions
 class AnalyzeServiceException(Exception):
     pass

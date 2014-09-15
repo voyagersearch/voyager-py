@@ -17,6 +17,7 @@ import collections
 import arcpy
 from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
+from voyager_tasks import _
 
 
 pixel_types = {"U1": "1_BIT",

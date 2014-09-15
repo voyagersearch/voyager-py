@@ -8,6 +8,7 @@ import sys
 import arcpy
 from voyager_tasks.utils import status
 from voyager_tasks.utils import task_utils
+from voyager_tasks import _
 
 
 """All tasks should have an execute function. This function takes a request as a required argument.
