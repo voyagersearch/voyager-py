@@ -56,7 +56,7 @@
 		"server":
 		{
 		    "display": "ArcGIS for Server location",
-		    "description": "The path to the ArcGIS Server (i.e. GIS Servers\server name) or the path to the connection file ( .ags ). Not required for MY_HOSTED_SERVICES."
+		    "description": "The path to the ArcGIS Server (i.e. GIS Servers/server name) or the path to the connection file ( .ags ). Not required for MY_HOSTED_SERVICES."
 		},
 		"service_name":
 		{
