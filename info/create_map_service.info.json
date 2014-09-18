@@ -27,8 +27,12 @@
     },
     {
       "type": "String",
+      "name": "folder_name",
+    },
+    {
+      "type": "String",
       "name": "portal_url",
-      "value": "http://www.arcgis.com"
+      "value": "https://www.arcgis.com"
     },
     {
       "type": "String",
@@ -62,6 +66,11 @@
 		{
 		    "display": "Service name",
 		    "description": "The name can only contain alphanumeric characters and underscores. No spaces or special characters are allowed."
+		},
+		"folder_name":
+		{
+		    "display": "Folder name",
+		    "description": "The folder name. If the folder does not exist, it will be created. The default folder is the server root level."
 		},
 		"portal_url":
 		{

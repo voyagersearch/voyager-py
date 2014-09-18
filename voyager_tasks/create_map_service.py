@@ -89,7 +89,8 @@ class AGOLHandler(object):
 
         return 'success'
 
-def create_service(temp_folder, map_document, server_type, server_path, service_name, portal_url='', username='', password=''):
+def create_service(temp_folder, map_document, server_type, server_path,
+                   service_name,  folder_name='', portal_url='', username='', password=''):
     """Creates a map service on an ArcGIS Server machine or in an ArcGIS Online account.
 
     :param temp_folder: folder path where temporary files are created
@@ -108,6 +109,7 @@ def create_service(temp_folder, map_document, server_type, server_path, service_
                                    draft_file,
                                    service_name,
                                    server_type,
+                                   folder_name=folder_name,
                                    copy_data_to_server=True,
                                    summary=map_document.description,
                                    tags=map_document.tags)
@@ -129,7 +131,7 @@ def create_service(temp_folder, map_document, server_type, server_path, service_
         status_writer.send_status(_('Publishing the map service to: {0}...'.format(server_path)))
         arcpy.UploadServiceDefinition_server(stage_file, server_path, service_name)
     else:
-        status_writer.send_status(_('Publishing the map service to: {0}...'.format(server_path)))
+        status_writer.send_status(_('Publishing the map service to: {0}...'.format(portal_url)))
         agol_handler = AGOLHandler(portal_url, username, password, service_name)
         agol_handler.publish(stage_file, map_document.description, map_document.tags)
         status_writer.send_status(_('Successfully published to {0}.'.format(portal_url)))
@@ -144,10 +146,18 @@ def execute(request):
     server_type = task_utils.get_parameter_value(parameters, 'server_type', 'value')
     server = task_utils.get_parameter_value(parameters, 'server', 'value')
     service_name = task_utils.get_parameter_value(parameters, 'service_name', 'value')
+    folder_name = task_utils.get_parameter_value(parameters, 'folder_name', 'value')
     if server_type == 'MY_HOSTED_SERVICES':
         url = task_utils.get_parameter_value(parameters, 'portal_url', 'value')
         username = task_utils.get_parameter_value(parameters, 'user_name', 'value')
         password = task_utils.get_parameter_value(parameters, 'password', 'value')
+    else:
+        if not server:
+            status_writer.send_state(status.STAT_FAILED, _('A server path is required'))
+            return
+        url = ''
+        username = ''
+        password = ''
 
     request_folder = os.path.join(request['folder'], 'temp')
     if not os.path.exists(request_folder):
@@ -167,12 +177,12 @@ def execute(request):
                 pkg_folder = os.path.join(request_folder, glob.glob1(request_folder, 'v*')[0])
                 mxd_file = os.path.join(pkg_folder, glob.glob1(pkg_folder, '*.mxd')[0])
                 mxd = arcpy.mapping.MapDocument(mxd_file)
-                create_service(request_folder, mxd, server_type, server, service_name, url, username, password)
+                create_service(request_folder, mxd, server_type, server, service_name, folder_name, url, username, password)
             else:
                 data_type = arcpy.Describe(item).dataType
                 if data_type == 'MapDocument':
                     mxd = arcpy.mapping.MapDocument(item)
-                    create_service(request_folder, mxd, server_type, server, service_name, url, username, password)
+                    create_service(request_folder, mxd, server_type, server, service_name, folder_name, url, username, password)
                 elif data_type == 'Layer':
                     if item.endswith('.lpk'):
                         status_writer.send_status(_('Extracting: {0}'.format(item)))
@@ -181,10 +191,13 @@ def execute(request):
                         item = os.path.join(pkg_folder, glob.glob1(pkg_folder, '*.lyr')[0])
                     layer = arcpy.mapping.Layer(item)
                     mxd = arcpy.mapping.MapDocument(map_template)
+                    mxd.description = layer.name
+                    mxd.tags = layer.name
+                    mxd.save()
                     data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
                     arcpy.mapping.AddLayer(data_frame, layer)
                     mxd.save()
-                    create_service(request_folder, mxd, server_type, server, service_name, url, username, password)
+                    create_service(request_folder, mxd, server_type, server, service_name, folder_name, url, username, password)
                 elif data_type in ('FeatureClass', 'ShapeFile', 'RasterDataset'):
                     if data_type == 'RasterDataset':
                         arcpy.MakeRasterLayer_management(item, os.path.basename(item))
@@ -196,17 +209,19 @@ def execute(request):
                     data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
                     arcpy.mapping.AddLayer(data_frame, layer)
                     mxd.save()
-                    create_service(request_folder, mxd, server_type, server, service_name, url, username, password)
+                    create_service(request_folder, mxd, server_type, server, service_name, folder_name, url, username, password)
         except AnalyzeServiceException as ase:
             status_writer.send_state(status.STAT_FAILED, _(ase))
             return
-        except requests.RequestException as re:
-            status_writer.send_state(status.STAT_FAILED, _(re))
-            return
+        # except requests.RequestException as re:
+        #     status_writer.send_state(status.STAT_FAILED, _(re))
+        #     return
         except PublishException as pe:
             status_writer.send_state(status.STAT_FAILED, _(pe))
             return
         except arcpy.ExecuteError as ee:
             status_writer.send_state(status.STAT_FAILED, _(ee))
             return
-
+        except Exception as ex:
+            status_writer.send_state(status.STAT_FAILED, _(ex))
+            return
