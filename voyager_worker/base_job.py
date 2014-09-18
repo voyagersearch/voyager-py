@@ -114,11 +114,12 @@ class Job(object):
 
     @property
     def field_types(self):
-        return {cx_Oracle.STRING: 'meta_',
+        return {cx_Oracle.STRING: 'fs_',
                 cx_Oracle.FIXED_CHAR: 'fs_',
                 cx_Oracle.NUMBER: 'ff_',
                 cx_Oracle.DATETIME: 'fd_',
                 cx_Oracle.TIMESTAMP: 'fd_',
+                cx_Oracle.UNICODE: 'fs_',
                 unicode: 'fs_',
                 long: 'fl_',
                 datetime.datetime: 'fd_',
@@ -183,7 +184,10 @@ class Job(object):
 
     @property
     def multiprocess(self):
-        return self.job['location']['config']['multiprocessing']
+        try:
+            return bool(self.job['location']['config']['multiprocessing'])
+        except KeyError:
+            return False
 
     @property
     def path(self):
@@ -200,6 +204,14 @@ class Job(object):
             return self.job['location']['config']['url']
         except KeyError:
             return ''
+
+    @property
+    def include_wkt(self):
+        """Include well-known text (wkt) to geo information."""
+        try:
+            return bool(self.job['location']['config']['wkt'])
+        except KeyError:
+            return False
 
     @property
     def mongodb_client_info(self):
@@ -219,9 +231,9 @@ class Job(object):
     @property
     def has_gridfs(self):
         try:
-            return self.job['location']['config']['mongodb']['gridfs']
+            return bool(self.job['location']['config']['mongodb']['gridfs'])
         except KeyError:
-            return ''
+            return False
 
     @property
     def sql_driver(self):

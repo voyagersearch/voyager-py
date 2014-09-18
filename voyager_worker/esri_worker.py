@@ -92,12 +92,14 @@ def worker(data_path):
             if dsc.shapeFieldName in fields:
                 fields.remove(dsc.shapeFieldName)
             if dsc.shapeType == 'Point':
-                with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@XY'] + fields, expression, sr) as rows:
+                with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, expression, sr) as rows:
                     for i, row in enumerate(rows):
                         if job.domains:
                             row = update_row(dsc.fields, rows, list(row))
-                        geo['lon'] = row[0][0]
-                        geo['lat'] = row[0][1]
+                        geo['lon'] = row[0].firstPoint.X #row[0][0]
+                        geo['lat'] = row[0].firstPoint.Y #row[0][1]
+                        if job.include_wkt:
+                            geo['wkt'] = row[0].WKT
                         mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
                         mapped_fields = dict(zip(mapped_fields, row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
@@ -115,6 +117,8 @@ def worker(data_path):
                         geo['xmax'] = row[0].extent.XMax
                         geo['ymin'] = row[0].extent.YMin
                         geo['ymax'] = row[0].extent.YMax
+                        if job.include_wkt:
+                            geo['wkt'] = row[0].WKT
                         mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
                         mapped_fields = dict(zip(mapped_fields, row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
@@ -180,7 +184,7 @@ def assign_work(esri_job):
     else:
         sys.exit(1)
 
-    if job.multiprocess.lower() == 'true':
+    if job.multiprocess:
         # Multiprocess larger databases and feature datasets.
         multiprocessing.log_to_stderr()
         logger = multiprocessing.get_logger()

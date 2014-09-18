@@ -48,6 +48,7 @@ def worker():
     for tbl in set(tables):
         geo = {}
         has_shape = False
+        is_point = False
 
         query = job.get_table_query(tbl)
         constraint = job.get_table_constraint(tbl)
@@ -90,12 +91,13 @@ def worker():
                     is_point = True
                     columns.insert(0, "{0}.STPointN(1).STX".format(c.column_name))
                     columns.insert(0, "{0}.STPointN(1).STY".format(c.column_name))
+                    columns.insert(0, "{0}.STAsText() as WKT".format(c.column_name))
                 else:
-                    is_point = False
                     columns.insert(0, "{0}.STEnvelope().STPointN((3)).STY".format(c.column_name))
                     columns.insert(0, "{0}.STEnvelope().STPointN((3)).STX".format(c.column_name))
                     columns.insert(0, "{0}.STEnvelope().STPointN((1)).STY".format(c.column_name))
                     columns.insert(0, "{0}.STEnvelope().STPointN((1)).STX".format(c.column_name))
+                    columns.insert(0, "{0}.STAsText() as WKT".format(c.column_name))
                 columns.remove(c.column_name)
                 break
 
@@ -115,16 +117,18 @@ def worker():
                 mapped_cols = columns
 
             if has_shape:
+                if job.include_wkt:
+                    geo['wkt'] = row[0]
                 if is_point:
-                    geo['lon'] = row[1]
-                    geo['lat'] = row[0]
-                    mapped_cols = dict(zip(mapped_cols[2:], row[2:]))
+                    geo['lon'] = row[2]
+                    geo['lat'] = row[1]
+                    mapped_cols = dict(zip(mapped_cols[3:], row[3:]))
                 else:
-                    geo['xmin'] = row[0]
-                    geo['ymin'] = row[1]
-                    geo['xmax'] = row[2]
-                    geo['ymax'] = row[3]
-                    mapped_cols = dict(zip(mapped_cols[4:], row[4:]))
+                    geo['xmin'] = row[1]
+                    geo['ymin'] = row[2]
+                    geo['xmax'] = row[3]
+                    geo['ymax'] = row[4]
+                    mapped_cols = dict(zip(mapped_cols[5:], row[5:]))
             else:
                 mapped_cols = dict(zip(mapped_cols, row))
 
