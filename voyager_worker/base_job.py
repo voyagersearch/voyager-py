@@ -436,6 +436,8 @@ class Job(object):
             except KeyError:
                 pass
             try:
+                if self.sql_queries:
+                    self.__table_queries.append({'name': '*', 'query': self.sql_queries[0]})
                 self.__table_queries.append({'name': table['name'], 'query': table['query']})
             except KeyError:
                 pass
