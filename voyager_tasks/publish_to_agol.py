@@ -125,10 +125,10 @@ def create_service(temp_folder, map_document, portal_url, username, password, se
         raise AnalyzeServiceException(analysis['errors'])
 
     # Upload/publish the service.
-    status_writer.send_status(_('Publishing the map service to: {0}...'.format(portal_url)))
+    status_writer.send_status(_('Publishing the map service to: {0}...').format(portal_url))
     agol_handler = AGOLHandler(portal_url, username, password, service_name)
     map_service_url = agol_handler.publish(stage_file, map_document.description, map_document.tags)
-    status_writer.send_status(_('Successfully created to {0}.'.format(map_service_url)))
+    status_writer.send_status(_('Successfully created: {0}').format(map_service_url))
 
 def execute(request):
     """Deletes files.
@@ -156,7 +156,7 @@ def execute(request):
         try:
             # Code required because of an Esri bug - cannot describe a map package (raises IOError).
             if item.endswith('.mpk'):
-                status_writer.send_status(_('Extracting: {0}'.format(item)))
+                status_writer.send_status(_('Extracting: {0}').format(item))
                 arcpy.ExtractPackage_management(item, request_folder)
                 pkg_folder = os.path.join(request_folder, glob.glob1(request_folder, 'v*')[0])
                 mxd_file = os.path.join(pkg_folder, glob.glob1(pkg_folder, '*.mxd')[0])
@@ -169,7 +169,7 @@ def execute(request):
                     create_service(request_folder, mxd, url, username, password,  service_name, folder_name)
                 elif data_type == 'Layer':
                     if item.endswith('.lpk'):
-                        status_writer.send_status(_('Extracting: {0}'.format(item)))
+                        status_writer.send_status(_('Extracting: {0}').format(item))
                         arcpy.ExtractPackage_management(item, request_folder)
                         pkg_folder = os.path.join(request_folder, glob.glob1(request_folder, 'v*')[0])
                         item = os.path.join(pkg_folder, glob.glob1(pkg_folder, '*.lyr')[0])
@@ -195,7 +195,6 @@ def execute(request):
                     data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
                     arcpy.mapping.AddLayer(data_frame, layer)
                     mxd.save()
-                    #TODO: return map service url in the status.
                     create_service(request_folder, mxd, url, username, password,  service_name, folder_name)
         except AnalyzeServiceException as ase:
             status_writer.send_state(status.STAT_FAILED, _(ase))

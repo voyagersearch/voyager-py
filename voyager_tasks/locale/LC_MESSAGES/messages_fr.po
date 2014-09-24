@@ -182,6 +182,46 @@ msgstr "N'existe pas espace de travail cible"
 msgid "Target workspace must be a geodatabase"
 msgstr "Espace de travail cible doit être une géodatabase"
 
+#: publish_to_agol.py:150 publish_to_ags.py:88
+#, python-format
+msgid "Initializing..."
+msgstr "Initialisation ..."
+
+#: publish_to_agol.py:159,172 publish_to_ags.py:97, 110
+#, python-format
+msgid "Extracting: {0}"
+msgstr "Extraction: {0}"
+
+#: publish_to_agol.py:105 publish_to_ags.py:41
+#, python-format
+msgid "Creating map sd draft..."
+msgstr "Création de carte sd projet ..."
+
+#: publish_to_agol.py:116 publish_to_ags.py:52
+#, python-format
+msgid "Analyzing the map sd draft..."
+msgstr "Analyse de la carte sd projet ..."
+
+#: publish_to_agol.py:121 publish_to_ags.py:57
+#, python-format
+msgid "Staging the map service..."
+msgstr "Mise en scène le service de carte ..."
+
+#: publish_to_agol.py:128 publish_to_ags.py:64
+#, python-format
+msgid "Publishing the map service to: {0}..."
+msgstr "Publication du service de la carte pour: {0} ..."
+
+#: publish_to_agol.py:131 publish_to_ags.py:66
+#, python-format
+msgid "Successfully created: {0}"
+msgstr "Créé avec succès: {0}"
+
+#: publish_to_ags.py:81
+#, python-format
+msgid "A server path is required"
+msgstr "Un chemin du serveur est nécessaire"
+
 #: write_metadata.py:139
 #, python-format
 msgid "Metadata updated for: {0}"

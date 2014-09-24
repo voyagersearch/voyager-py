@@ -61,9 +61,9 @@ def create_service(temp_folder, map_document, server_path, service_name,  folder
         raise AnalyzeServiceException(analysis['errors'])
 
     # Upload/publish the service.
-    status_writer.send_status(_('Publishing the map service to: {0}...'.format(server_path)))
+    status_writer.send_status(_('Publishing the map service to: {0}...').format(server_path))
     result = arcpy.UploadServiceDefinition_server(stage_file, server_path, service_name)
-    status_writer.send_status(result.getOutput(0))
+    status_writer.send_status(_('Successfully created: {0}').format(result.getOutput(0)))
     return
 
 
@@ -94,7 +94,7 @@ def execute(request):
         try:
             # Code required because of an Esri bug - cannot describe a map package (raises IOError).
             if item.endswith('.mpk'):
-                status_writer.send_status(_('Extracting: {0}'.format(item)))
+                status_writer.send_status(_('Extracting: {0}').format(item))
                 arcpy.ExtractPackage_management(item, request_folder)
                 pkg_folder = os.path.join(request_folder, glob.glob1(request_folder, 'v*')[0])
                 mxd_file = os.path.join(pkg_folder, glob.glob1(pkg_folder, '*.mxd')[0])
@@ -107,7 +107,7 @@ def execute(request):
                     create_service(request_folder, mxd, server_conn, service_name, folder_name)
                 elif data_type == 'Layer':
                     if item.endswith('.lpk'):
-                        status_writer.send_status(_('Extracting: {0}'.format(item)))
+                        status_writer.send_status(_('Extracting: {0}').format(item))
                         arcpy.ExtractPackage_management(item, request_folder)
                         pkg_folder = os.path.join(request_folder, glob.glob1(request_folder, 'v*')[0])
                         item = os.path.join(pkg_folder, glob.glob1(pkg_folder, '*.lyr')[0])
