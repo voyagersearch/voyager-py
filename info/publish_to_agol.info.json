@@ -1,0 +1,74 @@
+{
+  "name": "publish_to_agol",
+  "runner": "python",
+  "categories": ["download"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "String",
+      "name": "url",
+      "value": "https://www.arcgis.com",
+      "required": "true"
+    },
+    {
+      "type": "String",
+      "name": "username",
+      "required": "true"
+    },
+    {
+      "type": "String",
+      "name": "password",
+      "required": "true"
+    },
+    {
+      "type": "String",
+      "name": "service_name",
+      "required": "true"
+    },
+    {
+      "type": "String",
+      "name": "folder_name"
+    }
+  ],
+  "display":
+  {
+    "en":
+    {
+      "display": "Publish to Portal for ArcGIS",
+      "description": "Publish results as a map service to a portal for ArcGIS",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#publish_to_agol",
+      "params":
+      {
+		"url":
+		{
+		    "display": "Portal URL",
+		    "description": "URL to ArcGIS Online or Portal for ArcGIS."
+		},
+		"username":
+		{
+		    "display": "Username",
+		    "description": "Portal for ArcGIS username"
+		},
+		"password":
+		{
+		    "display": "Password",
+		    "description": "Portal for ArcGIS password"
+		},
+		"service_name":
+		{
+		    "display": "Service Name",
+		    "description": "The name can only contain alphanumeric characters and underscores. No spaces or special characters are allowed."
+		},
+		"folder_name":
+		{
+		    "display": "Folder Name",
+		    "description": "The folder name. If the folder does not exist, it will be created. The default folder is the server root level."
+		}
+      }
+    }
+  }
+}

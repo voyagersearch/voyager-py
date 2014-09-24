@@ -1,0 +1,53 @@
+{
+  "name": "publish_to_ags",
+  "runner": "python",
+  "categories": ["download"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "CatalogPath",
+      "name": "server_connection_path",
+      "required": "true"
+    },
+    {
+      "type": "String",
+      "name": "service_name",
+      "required": "true"
+    },
+    {
+      "type": "String",
+      "name": "folder_name"
+    }
+  ],
+  "display":
+  {
+    "en":
+    {
+      "display": "Publish to ArcGIS Server",
+      "description": "Publish results as a map service on ArcGIS for Server",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#publish_to_ags",
+      "params":
+      {
+		"server_connection_path":
+		{
+		    "display": "ArcGIS for Server Connection Path",
+		    "description": "Either the ArcCatalog path to ArcGIS for Server (i.e. GIS Servers/server name) or the path to a connection file ( .ags )."
+		},
+		"service_name":
+		{
+		    "display": "Service Name",
+		    "description": "The name can only contain alphanumeric characters and underscores. No spaces or special characters are allowed."
+		},
+		"folder_name":
+		{
+		    "display": "Folder Name",
+		    "description": "The folder name. If the folder does not exist, it will be created. The default folder is the server root level."
+		}
+      }
+    }
+  }
+}
