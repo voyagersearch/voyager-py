@@ -2,6 +2,7 @@
   "name": "copy_files",
   "runner": "python",
   "categories": ["download"],
+  "security": ["_ADMIN", "_LOGGEDIN"],
   "params": [
     {
       "type": "VoyagerResults",

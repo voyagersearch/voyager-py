@@ -2,6 +2,7 @@
   "name": "delete_files",
   "runner": "python",
   "categories": ["download"],
+  "security": ["_ADMIN"],
   "params": [
     {
       "type": "VoyagerResults",
