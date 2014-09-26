@@ -119,6 +119,16 @@ def execute(request):
                                             os.path.join(os.path.dirname(out_workspace), 'output.mpk'),
                                             'PRESERVE',
                                             extent=clip_area)
+            elif arcpy.GetInstallInfo()['Version'] == '10.1':
+                arcpy.PackageMap_management(mxd.filePath,
+                                            os.path.join(os.path.dirname(out_workspace), 'output.mpk'),
+                                            'PRESERVE',
+                                            extent=clip_area,
+                                            ArcGISRuntime='RUNTIME',
+                                            version='10',
+                                            additional_files=files,
+                                            summary=summary,
+                                            tags=tags)
             else:
                 arcpy.PackageMap_management(mxd.filePath,
                                             os.path.join(os.path.dirname(out_workspace), 'output.mpk'),
