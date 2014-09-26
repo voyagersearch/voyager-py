@@ -8,6 +8,7 @@ Copies files to a target folder.
   - When copying Shapefiles, all supporting files such as .shp, .dbf, .shx, etc., are copied.
   - When copying Smart Data Compression files, all supporting files such as .sdc, .sdi, etc., are copied.
   - By default, a file's directory structure is maintained when copied.
+  - By default, this task is only accessable to Voyager users whom are logged in or have administrator permissions. However, administrators can change these permissions by editing the copy_files.info.json file. At the top of the copy_files.info.json file, edit the "security" field to add new groups.
   
 
 ###Screen Captures
