@@ -3,9 +3,9 @@
 Adds selected search results to an existing geodatabase.
 
 ###Usage Tips
-  - The target geodatabase or feature dataset must exist.
-  - The projection is used to project the output results. The default is WGS84.
-  - If the target workspace is a geodatabase feature dataset, the output will be the projection of the target feature dataset.
+  - The target geodatabase or feature dataset will be created if it does not exist. 
+  - The projection is used to project the output results. The default is WGS84 (4326).
+  - If the target workspace is an existing geodatabase feature dataset, the output will be the projection of the target feature dataset.
   - If the input is a map document (.mxd), the data source for each layer and table view is added to the geodatabase.
 
 

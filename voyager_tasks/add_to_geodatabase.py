@@ -59,17 +59,29 @@ def execute(request):
     is_fds = False
     if not os.path.exists(out_gdb):
         # For performance reasons, only doing this if the out_gdb does not exist.
-        if is_feature_dataset(out_gdb):
-            is_fds = True
-        elif out_gdb.endswith('.gdb'):
+        # if is_feature_dataset(out_gdb, arcpy.env.outputCoordinateSystem):
+        #     is_fds = True
+        if out_gdb.endswith('.gdb'):
             arcpy.CreateFileGDB_management(os.path.dirname(out_gdb), os.path.basename(out_gdb))
             status_writer.send_status(_('Created output workspace: {0}').format(out_gdb))
         elif out_gdb.endswith('.mdb'):
             arcpy.CreatePersonalGDB_management(os.path.dirname(out_gdb), os.path.basename(out_gdb))
             status_writer.send_status(_('Created output workspace: {0}').format(out_gdb))
-        else:
+        elif out_gdb.endswith('.sde'):
             status_writer.send_state(status.STAT_FAILED, _('{0} does not exist').format(out_gdb))
             return
+        else:
+            # Possible a feature dataset.
+            is_fds = is_feature_dataset(out_gdb)
+            if not is_fds:
+                if os.path.dirname(out_gdb).endswith('.gdb'):
+                    arcpy.CreateFileGDB_management(os.path.dirname(os.path.dirname(out_gdb)),
+                                                   os.path.basename(os.path.dirname(out_gdb)))
+                    arcpy.CreateFeatureDataset_management(os.path.dirname(out_gdb), os.path.basename((out_gdb)))
+                elif os.path.dirname(out_gdb).endswith('.mdb'):
+                    arcpy.CreatePersonalGDB_management(os.path.dirname(os.path.dirname(out_gdb)),
+                                                   os.path.basename(os.path.dirname(out_gdb)))
+                    arcpy.CreateFeatureDataset_management(os.path.dirname(out_gdb), os.path.basename((out_gdb)))
 
     status_writer.send_status(_('Setting the output workspace...'))
     arcpy.env.workspace = out_gdb
