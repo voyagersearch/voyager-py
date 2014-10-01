@@ -16,6 +16,7 @@ import json
 import base_job
 import gridfs
 import status
+import worker_utils
 
 
 class ComplexEncoder(json.JSONEncoder):
@@ -77,8 +78,21 @@ def worker():
                 values = doc.values()
             entry = {}
             geo = {}
+            geo_json_converter = worker_utils.GeoJSONConverter()
             if 'loc' in doc:
-                if isinstance(doc['loc'][0], float):
+                if 'type' in doc['loc']:
+                    if job.include_wkt:
+                        geo_json_converter.convert_to_wkt(doc['loc'], 3)
+                    else:
+                        if 'bbox' in doc['loc']:
+                            geo['xmin'] = doc['loc']['bbox'][0]
+                            geo['ymin'] = doc['loc']['bbox'][1]
+                            geo['xmax'] = doc['loc']['bbox'][2]
+                            geo['ymax'] = doc['loc']['bbox'][3]
+                        elif 'Point' in doc['loc']['type']:
+                            geo['lon'] = doc['loc']['coordinates'][0]
+                            geo['lat'] = doc['loc']['coordinates'][1]
+                elif isinstance(doc['loc'][0], float):
                     geo['lon'] = doc['loc'][0]
                     geo['lat'] = doc['loc'][1]
                 else:

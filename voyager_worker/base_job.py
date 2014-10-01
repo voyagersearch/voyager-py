@@ -80,10 +80,13 @@ class Job(object):
 
     def __del__(self):
         """Close open connections, streams, etc. after all references to Job are deleted."""
-        if self.zmq_socket:
-            self.zmq_socket.close()
-        if self.db_connection:
-            self.db_connection.close()
+        try:
+            if self.zmq_socket:
+                self.zmq_socket.close()
+            if self.db_connection:
+                self.db_connection.close()
+        except TypeError:
+            pass
 
     @property
     def use_coded_value_descriptions(self):
@@ -281,9 +284,9 @@ class Job(object):
             sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(drvr, srvr, db, un, pw)
             self.db_connection = pyodbc.connect(sql_server_str)
             self.db_cursor = self.db_connection.cursor()
-        elif self.mongodb_client_info():
-            client = pymongo.MongoClient(self.mongodb_client_info())
-            self.db_connection = client[self.mongodb_database()]
+        elif self.mongodb_client_info:
+            client = pymongo.MongoClient(self.mongodb_client_info)
+            self.db_connection = client[self.mongodb_database]
 
     def get_increment(self, count):
         """Returns a suitable base 10 increment."""
