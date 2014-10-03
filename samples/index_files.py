@@ -17,7 +17,7 @@ import urllib2
 import os
 
 
-def send_job(file_location, url):
+def send_job(file_location, url, username, password):
     """Posts a discovery job to Voyager for indexing.
     :param file_location: the location of the file to be indexed.
     :param url: request url i.e. http://localhost:8888/api/rest/discovery/job/index/
@@ -29,6 +29,9 @@ def send_job(file_location, url):
 
     # Build the request and post.
     try:
+        passman = urllib2.HTTPPasswordMgrWithDefaultRealm()
+        passman.add_password(None, url, username, password)
+        urllib2.install_opener(urllib2.build_opener(urllib2.HTTPBasicAuthHandler(passman)))
         request = urllib2.Request(url, json.dumps(data), headers={'Content-type': 'application/json'})
         response = urllib2.urlopen(request)
         if response.code == 200:
@@ -51,10 +54,12 @@ if __name__ == '__main__':
     argument_parser.add_argument('-u', '--request_url', action='store',
                                  help='The request URL',
                                  default='http://localhost:8888/api/rest/discovery/job/index/')
+    argument_parser.add_argument('-un', '--username', action="store", help="Voyager account username", default='admin')
+    argument_parser.add_argument('-pw', '--password', action="store", help="Voyager account password", default='admin')
     arguments = argument_parser.parse_args()
 
     # For each line (path to a file), send it to be indexed.
     with open(arguments.file_list, 'rb') as f:
         for location in f:
-            send_job(location.strip('\r\n'), arguments.request_url)
+            send_job(location.strip('\r\n'), arguments.request_url, arguments.username, arguments.password)
 
