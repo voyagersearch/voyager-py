@@ -223,7 +223,7 @@ def execute(request):
     if not os.path.exists(out_workspace):
         os.makedirs(out_workspace)
 
-    if out_coordinate_system:
+    if not out_coordinate_system == '0': # Same as Input
         out_sr = task_utils.get_spatial_reference(out_coordinate_system)
         arcpy.env.outputCoordinateSystem = out_sr
 
@@ -252,7 +252,7 @@ def execute(request):
 
             dsc = arcpy.Describe(ds)
             # If no output coord. system, get output spatial reference from input.
-            if out_coordinate_system == '':
+            if out_coordinate_system == '0':
                 try:
                     out_sr = dsc.spatialReference
                     arcpy.env.outputCoordinateSystem = out_sr

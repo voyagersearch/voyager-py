@@ -29,7 +29,8 @@ def execute(request):
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
     out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
-    arcpy.env.outputCoordinateSystem = task_utils.get_spatial_reference(out_coordinate_system)
+    if not out_coordinate_system == '0':
+        arcpy.env.outputCoordinateSystem = task_utils.get_spatial_reference(out_coordinate_system)
     out_format = task_utils.get_parameter_value(parameters, 'output_format', 'value')
     summary = task_utils.get_parameter_value(parameters, 'summary')
     tags = task_utils.get_parameter_value(parameters, 'tags')

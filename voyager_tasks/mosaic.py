@@ -52,7 +52,10 @@ def execute(request):
         # Get the clip region as an extent object.
         try:
             clip_area_wkt = task_utils.get_parameter_value(parameters, 'processing_extent', 'wkt')
-            clip_area = task_utils.get_clip_region(clip_area_wkt, out_coordinate_system)
+            if not out_coordinate_system == '0':
+                clip_area = task_utils.get_clip_region(clip_area_wkt, out_coordinate_system)
+            else:
+                clip_area = task_utils.get_clip_region(clip_area_wkt)
         except KeyError:
             clip_area = None
 
@@ -96,7 +99,7 @@ def execute(request):
     if output_raster_format == 'MosaicDataset':
         try:
             status_writer.send_status(_('Generating {0}. Large input {1} will take longer to process.'.format('Mosaic', 'rasters')))
-            if out_coordinate_system == '':
+            if out_coordinate_system == '0':
                 out_coordinate_system = raster_items[0]
             mosaic_ds = arcpy.CreateMosaicDataset_management(out_workspace,
                                                              output_name,

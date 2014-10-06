@@ -48,7 +48,7 @@ def execute(request):
 
     # Retrieve the coordinate system code.
     out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
-    if out_coordinate_system:
+    if not out_coordinate_system == '0': # Same as Input
         arcpy.env.outputCoordinateSystem = task_utils.get_spatial_reference(out_coordinate_system)
 
     task_folder = request['folder']
@@ -58,9 +58,6 @@ def execute(request):
     # Check if the geodatabase exists or if it is a feature dataset.
     is_fds = False
     if not os.path.exists(out_gdb):
-        # For performance reasons, only doing this if the out_gdb does not exist.
-        # if is_feature_dataset(out_gdb, arcpy.env.outputCoordinateSystem):
-        #     is_fds = True
         if out_gdb.endswith('.gdb'):
             arcpy.CreateFileGDB_management(os.path.dirname(out_gdb), os.path.basename(out_gdb))
             status_writer.send_status(_('Created output workspace: {0}').format(out_gdb))
