@@ -72,12 +72,14 @@ def execute(request):
             is_fds = is_feature_dataset(out_gdb)
             if not is_fds:
                 if os.path.dirname(out_gdb).endswith('.gdb'):
-                    arcpy.CreateFileGDB_management(os.path.dirname(os.path.dirname(out_gdb)),
-                                                   os.path.basename(os.path.dirname(out_gdb)))
+                    if not os.path.exists(os.path.dirname(out_gdb)):
+                        arcpy.CreateFileGDB_management(os.path.dirname(os.path.dirname(out_gdb)),
+                                                       os.path.basename(os.path.dirname(out_gdb)))
                     arcpy.CreateFeatureDataset_management(os.path.dirname(out_gdb), os.path.basename((out_gdb)))
                 elif os.path.dirname(out_gdb).endswith('.mdb'):
-                    arcpy.CreatePersonalGDB_management(os.path.dirname(os.path.dirname(out_gdb)),
-                                                   os.path.basename(os.path.dirname(out_gdb)))
+                    if not os.path.exists(os.path.dirname(out_gdb)):
+                        arcpy.CreatePersonalGDB_management(os.path.dirname(os.path.dirname(out_gdb)),
+                                                       os.path.basename(os.path.dirname(out_gdb)))
                     arcpy.CreateFeatureDataset_management(os.path.dirname(out_gdb), os.path.basename((out_gdb)))
 
     status_writer.send_status(_('Setting the output workspace...'))
