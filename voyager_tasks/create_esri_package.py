@@ -29,7 +29,7 @@ def execute(request):
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
     out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
-    if not out_coordinate_system == '0':
+    if not int(out_coordinate_system) == 0:
         arcpy.env.outputCoordinateSystem = task_utils.get_spatial_reference(out_coordinate_system)
     out_format = task_utils.get_parameter_value(parameters, 'output_format', 'value')
     summary = task_utils.get_parameter_value(parameters, 'summary')
@@ -37,8 +37,10 @@ def execute(request):
 
     # Get the clip region as an extent object.
     try:
+        clip_area = None
         clip_area_wkt = task_utils.get_parameter_value(parameters, 'processing_extent', 'wkt')
-        clip_area = task_utils.get_clip_region(clip_area_wkt, out_coordinate_system)
+        if not int(out_coordinate_system) == 0:
+            clip_area = task_utils.get_clip_region(clip_area_wkt, out_coordinate_system)
     except KeyError:
         clip_area = None
 
@@ -52,6 +54,11 @@ def execute(request):
     files = []
     for item in input_items:
         try:
+            if not int(out_coordinate_system) == 0 and clip_area is None:
+                try:
+                    task_utils.get_clip_region(clip_area_wkt)
+                except Exception:
+                    pass
             if item.endswith('.lyr'):
                 layers.append(arcpy.mapping.Layer(item))
             else:
