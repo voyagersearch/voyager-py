@@ -210,6 +210,8 @@ def execute(request):
     try:
         try:
             clip_area = task_utils.get_parameter_value(parameters, 'clip_geometry', 'wkt')
+            if not clip_area:
+                clip_area = 'POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))'
         except KeyError:
             clip_area = task_utils.get_parameter_value(parameters, 'clip_geometry', 'feature')
     except KeyError:
@@ -268,7 +270,12 @@ def execute(request):
                             geo_transformation = arcpy.ListTransformations(gcs_sr, out_sr)[0]
                             clip_poly = gcs_clip_poly.projectAs(out_sr, geo_transformation)
                         except AttributeError:
-                            clip_poly = gcs_clip_poly.projectAs(out_sr)
+                            try:
+                                clip_poly = gcs_clip_poly.projectAs(out_sr)
+                            except AttributeError:
+                                clip_poly = gcs_clip_poly
+                        except ValueError:
+                            clip_poly = gcs_clip_poly
                     else:
                         clip_poly = gcs_clip_poly
                         extent = clip_poly.extent
