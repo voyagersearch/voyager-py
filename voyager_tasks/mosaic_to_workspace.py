@@ -109,6 +109,8 @@ def execute(request):
             status_writer.send_status(_('Generating {0}. Large input {1} will take longer to process.'.format('Mosaic', 'rasters')))
             if out_coordinate_system == '0':
                 out_coordinate_system = raster_items[0]
+            else:
+                out_coordinate_system = None
             mosaic_ds = arcpy.CreateMosaicDataset_management(target_workspace,
                                                              output_name,
                                                              out_coordinate_system,
@@ -126,6 +128,8 @@ def execute(request):
             if len(bands) > 1:
                 status_writer.send_state(status.STAT_FAILED, _('Input rasters must have the same number of bands'))
                 return
+            if out_coordinate_system == '0':
+                out_coordinate_system = None
             status_writer.send_status(_('Generating {0}. Large input {1} will take longer to process.'.format('Mosaic', 'rasters')))
             if clip_area:
                 ext = '{0} {1} {2} {3}'.format(clip_area.XMin, clip_area.YMin, clip_area.XMax, clip_area.YMax)
