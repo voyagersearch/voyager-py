@@ -224,6 +224,11 @@ msgstr ""
 msgid "A server path is required"
 msgstr ""
 
+#: publish_to_agol.py:126 publish_to_ags.py:62
+#, python-format
+msgid "Cannot publish results. One or more inputs is missing a spatial reference."
+msgstr ""
+
 #: write_metadata.py:139
 #, python-format
 msgid "Metadata updated for: {0}"

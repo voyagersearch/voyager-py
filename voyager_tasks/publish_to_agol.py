@@ -122,7 +122,11 @@ def create_service(temp_folder, map_document, portal_url, username, password, se
         arcpy.StageService_server(draft_file, stage_file)
     else:
         # If the sddraft analysis contained errors, display them and quit.
-        raise AnalyzeServiceException(analysis['errors'])
+        if (u'Data frame does not have a spatial reference', 2) in analysis['errors']:
+            errors = 'Cannot publish results. One or more inputs is missing a spatial reference.'
+        else:
+            errors = analysis['errors']
+        raise AnalyzeServiceException(errors)
 
     # Upload/publish the service.
     status_writer.send_status(_('Publishing the map service to: {0}...').format(portal_url))

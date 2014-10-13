@@ -222,6 +222,11 @@ msgstr "Créé avec succès: {0}"
 msgid "A server path is required"
 msgstr "Un chemin du serveur est nécessaire"
 
+#: publish_to_agol.py:126 publish_to_ags.py:62
+#, python-format
+msgid "Cannot publish results. One or more inputs is missing a spatial reference."
+msgstr "Vous ne pouvez pas publier les résultats. Une ou plusieurs entrées est manquant une référence spatiale."
+
 #: write_metadata.py:139
 #, python-format
 msgid "Metadata updated for: {0}"
