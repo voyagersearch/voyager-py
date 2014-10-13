@@ -62,6 +62,8 @@ def execute(request):
         # Get the clip region as an extent object.
         try:
             clip_area_wkt = task_utils.get_parameter_value(parameters, 'processing_extent', 'wkt')
+            if not clip_area_wkt:
+                clip_area_wkt = 'POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))'
             if not out_coordinate_system == '0':
                 clip_area = task_utils.get_clip_region(clip_area_wkt, out_coordinate_system)
             else:
