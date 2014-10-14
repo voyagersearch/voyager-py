@@ -2,6 +2,7 @@
   "name": "copy_files",
   "runner": "python",
   "categories": ["download"],
+  "group": "Managing Data and Files",
   "security": ["_ADMIN", "_LOGGEDIN"],
   "params": [
     {

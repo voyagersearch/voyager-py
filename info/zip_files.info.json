@@ -2,6 +2,7 @@
   "name": "zip_files",
   "runner": "python",
   "categories": ["download"],
+  "group": "Extracting Data",
   "params": [
     {
       "type": "VoyagerResults",

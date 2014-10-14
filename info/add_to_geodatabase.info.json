@@ -2,6 +2,7 @@
   "name": "add_to_geodatabase",
   "runner": "python",
   "categories": ["download"],
+  "group": "Managing Data and Files",
   "params": [
     {
       "type": "VoyagerResults",
@@ -15,7 +16,8 @@
     },
     {
       "type": "Projection",
-      "name": "output_projection"
+      "name": "output_projection",
+      "code": "Same as Input"
     }
   ],
   "display":

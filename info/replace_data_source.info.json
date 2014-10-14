@@ -2,6 +2,7 @@
   "name": "replace_data_source",
   "runner": "python",
   "categories": ["download"],
+  "group": "Managing Data and Files",
   "params": [
     {
       "type": "VoyagerResults",

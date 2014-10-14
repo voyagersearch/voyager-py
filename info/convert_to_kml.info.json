@@ -2,6 +2,7 @@
   "name": "convert_to_kml",
   "runner": "python",
   "categories": ["download"],
+  "group": "Extracting Data",
   "params": [
     {
       "type": "Geometry",

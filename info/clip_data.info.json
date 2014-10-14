@@ -2,6 +2,7 @@
   "name": "clip_data",
   "runner": "python",
   "categories": ["download"],
+  "group": "Extracting Data",
   "params": [
     {
       "type": "VoyagerResults",

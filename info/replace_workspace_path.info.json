@@ -2,6 +2,7 @@
   "name": "replace_workspace_path",
   "runner": "python",
   "categories": ["download"],
+  "group": "Managing Data and Files",
   "params": [
     {
       "type": "VoyagerResults",

@@ -3,6 +3,7 @@
   "parent": "mosaic",
   "runner": "python",
   "categories": ["download"],
+  "group": "Managing Raster",
   "params": [
     {
       "type": "VoyagerResults",

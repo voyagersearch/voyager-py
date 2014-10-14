@@ -2,6 +2,7 @@
   "name": "publish_to_ags",
   "runner": "python",
   "categories": ["download"],
+  "group": "Publishing Services",
   "params": [
     {
       "type": "VoyagerResults",

@@ -2,6 +2,7 @@
   "name": "write_metadata",
   "runner": "python",
   "categories": ["metadata"],
+  "group": "Managing Data and Files",
   "params": [
       {
       "type": "VoyagerResults",

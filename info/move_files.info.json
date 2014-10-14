@@ -2,6 +2,7 @@
   "name": "move_files",
   "runner": "python",
   "categories": ["download"],
+  "group": "Managing Data and Files",
   "security": ["_ADMIN"],
   "params": [
     {
