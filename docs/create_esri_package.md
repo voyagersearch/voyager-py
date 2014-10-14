@@ -3,6 +3,7 @@
 Package selected search results into a single compressed file (.mpk or .lpk).
 
 ###Usage Tips
+  - Inputs must have a spatial reference.
   - A processing extent can be specified to limit the geographic area being packaged.
   - If no processing extent is specified, the full extent of inputs is used.
   - The projection is used to project the output results. The default is WGS84.
