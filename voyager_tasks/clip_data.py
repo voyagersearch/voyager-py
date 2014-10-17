@@ -203,39 +203,41 @@ def execute(request):
     clipped = 0
     errors = 0
     skipped = 0
+    fds = None
+
     status_writer = status.Writer()
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
     # Retrieve clip geometry.
     try:
-        try:
-            clip_area = task_utils.get_parameter_value(parameters, 'clip_geometry', 'wkt')
-            if not clip_area:
-                clip_area = 'POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))'
-        except KeyError:
-            clip_area = task_utils.get_parameter_value(parameters, 'clip_geometry', 'feature')
+        clip_area = task_utils.get_parameter_value(parameters, 'clip_geometry', 'wkt')
+        if not clip_area:
+            clip_area = 'POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))'
     except KeyError:
         clip_area = 'POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))'
 
     # Retrieve the coordinate system code.
-    out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
+    out_coordinate_system = int(task_utils.get_parameter_value(parameters, 'output_projection', 'code'))
     # Retrieve the output format type.
     out_format = task_utils.get_parameter_value(parameters, 'output_format', 'value')
+    # Retrieve the clip features and where statement.
+    clip_feature_class = task_utils.get_parameter_value(parameters, 'clip_features', 'value')
+    where_statement = task_utils.get_parameter_value(parameters, 'where_statement', 'value')
+
+    # Create the temporary workspace if clip_feature_class:
     out_workspace = os.path.join(request['folder'], 'temp')
     if not os.path.exists(out_workspace):
         os.makedirs(out_workspace)
 
-    if not out_coordinate_system == '0': # Same as Input
+    if not out_coordinate_system == 0:  # Same as Input
         out_sr = task_utils.get_spatial_reference(out_coordinate_system)
         arcpy.env.outputCoordinateSystem = out_sr
 
-    if clip_area.startswith('POLYGON'):
+    if not clip_feature_class:
         gcs_sr = task_utils.get_spatial_reference(4326)
         gcs_clip_poly = task_utils.from_wkt(clip_area, gcs_sr)
         if not gcs_clip_poly.area > 0:
             gcs_clip_poly = task_utils.from_wkt('POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))', gcs_sr)
-    else:
-        clip_poly = clip_area
 
     status_writer.send_status(_('Setting the output workspace...'))
     if not out_format == 'SHP':
@@ -254,7 +256,7 @@ def execute(request):
 
             dsc = arcpy.Describe(ds)
             # If no output coord. system, get output spatial reference from input.
-            if out_coordinate_system == '0':
+            if out_coordinate_system == 0:
                 try:
                     out_sr = dsc.spatialReference
                     arcpy.env.outputCoordinateSystem = out_sr
@@ -264,7 +266,12 @@ def execute(request):
 
             # If a file, no need to project the clip area.
             if not dsc.dataType in ('File', 'TextFile'):
-                if clip_area.startswith('POLYGON'):
+                if clip_feature_class:
+                    clip_poly = clip_feature_class
+                    if where_statement:
+                        clip_poly = arcpy.MakeFeatureLayer_management(clip_poly, 'clip_polygons', where_statement)
+
+                else:
                     if not out_sr.name == gcs_sr.name:
                         try:
                             geo_transformation = arcpy.ListTransformations(gcs_sr, out_sr)[0]
@@ -279,10 +286,6 @@ def execute(request):
                     else:
                         clip_poly = gcs_clip_poly
                         extent = clip_poly.extent
-                else:
-                    if not arcpy.Describe(clip_poly).spatialReference == out_sr:
-                        clip_poly = arcpy.Project_management(clip_poly, 'clip_features', out_sr)
-                    extent = arcpy.Describe(clip_poly).extent
 
             # Feature class
             if dsc.dataType == 'FeatureClass':
@@ -382,7 +385,7 @@ def execute(request):
             clipped += 1
         # Continue. Process as many as possible.
         except Exception as ex:
-            status_writer.send_percent(i/count, _('Skipped: {0}').format(dsc.name), 'clip_data')
+            status_writer.send_percent(i/count, _('Skipped: {0}').format(os.path.basename(ds)), 'clip_data')
             status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
             i += 1.
             errors += 1

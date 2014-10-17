@@ -9,6 +9,14 @@
       "name": "input_items",
       "required": true
     },
+	{
+	  "type": "CatalogPath",
+	  "name": "clip_features",
+	},
+	{
+	  "type": "String",
+	  "name": "where_statement"
+	},
     {
       "type": "Projection",
       "name": "output_projection"
@@ -38,15 +46,23 @@
       "params": {
         "clip_geometry": {
           "display": "Clip Geometry",
-          "description": "The geographic extent or polygon used to clip the data. If not specified, the input results are copied."
+          "description": "Draw a geographic extent or polygon to clip the data"
         },
+		"clip_features": {
+		  "display": "Clip Feature Class",
+		  "description": "Enter a clip feature class"
+		},
+		"where_statement": {
+		  "display": "Where Statement",
+		  "description": "Enter a where statement to select a subset of of clip polygons"
+		},
         "output_projection": {
           "display": "Projection",
-          "description": "The output projection."
+          "description": "Choose an output projection"
         },
         "output_format": {
           "display": "Output Format",
-          "description": "The output format."
+          "description": "Choose the output format"
         }
       }
     },
