@@ -56,6 +56,11 @@ def execute(request):
     arcpy.env.overwriteOutput = True
     for ds, out_name in input_items.iteritems():
         try:
+            # Is the input a mxd data frame.
+            map_frame_name = task_utils.get_data_frame_name(ds)
+            if map_frame_name:
+                ds = ds.split('|')[0].strip()
+
             dsc = arcpy.Describe(ds)
 
             if dsc.dataType == 'FeatureClass':
@@ -144,7 +149,10 @@ def execute(request):
             # Map document to KML.
             elif dsc.dataType == 'MapDocument':
                 mxd = arcpy.mapping.MapDocument(ds)
-                data_frames = arcpy.mapping.ListDataFrames(mxd)
+                if map_frame_name:
+                    data_frames = arcpy.mapping.ListDataFrames(mxd, map_frame_name)
+                else:
+                    data_frames = arcpy.mapping.ListDataFrames(mxd)
                 for df in data_frames:
                     name = '{0}_{1}'.format(dsc.name[:-4], df.name)
                     arcpy.MapToKML_conversion(ds,

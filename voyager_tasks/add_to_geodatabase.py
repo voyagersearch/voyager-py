@@ -89,6 +89,11 @@ def execute(request):
     status_writer.send_percent(0.0, _('Starting to process...'), 'add_to_geodatabase')
     for ds, out_name in input_items.iteritems():
         try:
+            # Is the input a mxd data frame.
+            map_frame_name = task_utils.get_data_frame_name(ds)
+            if map_frame_name:
+                ds = ds.split('|')[0].strip()
+
             dsc = arcpy.Describe(ds)
             if dsc.dataType == 'FeatureClass':
                 if out_name == '':
@@ -179,7 +184,11 @@ def execute(request):
 
             elif dsc.dataType == 'MapDocument':
                 mxd = arcpy.mapping.MapDocument(dsc.catalogPath)
-                layers = arcpy.mapping.ListLayers(mxd)
+                if map_frame_name:
+                    df = arcpy.mapping.ListDataFrames(mxd, map_frame_name)[0]
+                    layers = arcpy.mapping.ListLayers(mxd, data_frame=df)
+                else:
+                    layers = arcpy.mapping.ListLayers(mxd)
                 for layer in layers:
                     if layer.isFeatureLayer:
                         arcpy.CopyFeatures_management(layer.dataSource,

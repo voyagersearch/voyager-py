@@ -21,6 +21,9 @@ from voyager_tasks.utils import status
 from voyager_tasks import _
 
 
+status_writer = status.Writer()
+
+
 def clip_layer_file(layer_file, aoi):
     """Clips each layer in the layer file to the output workspace
     and re-sources each layer and saves a copy of the layer file."""
@@ -71,35 +74,41 @@ def clip_layer_file(layer_file, aoi):
             pass
 
 
-def clip_mxd_layers(mxd_path, aoi):
+def clip_mxd_layers(mxd_path, aoi, map_frame=None):
     """Clips each layer in the map document to output workspace
     and re-sources each layer and saves a copy of the mxd.
     """
+    df = map_frame
     mxd = arcpy.mapping.MapDocument(mxd_path)
-    layers = arcpy.mapping.ListLayers(mxd)
+    if map_frame:
+        df = arcpy.mapping.ListDataFrames(mxd, map_frame)[0]
+    layers = arcpy.mapping.ListLayers(mxd, data_frame=df)
     for layer in layers:
-        if layer.isFeatureLayer:
-            arcpy.Clip_analysis(layer.dataSource, aoi, layer.name)
-            if arcpy.env.workspace.endswith('.gdb'):
-                layer.replaceDataSource(arcpy.env.workspace,
-                                        'FILEGDB_WORKSPACE',
-                                        os.path.splitext(layer.datasetName)[0],
-                                        False)
-            else:
-                layer.replaceDataSource(arcpy.env.workspace, 'SHAPEFILE_WORKSPACE', layer.datasetName, False)
-        elif layer.isRasterLayer:
-            ext = '{0} {1} {2} {3}'.format(aoi.extent.XMin, aoi.extent.YMin, aoi.extent.XMax, aoi.extent.YMax)
-            arcpy.Clip_management(layer.dataSource, ext, layer.name)
-            if arcpy.env.workspace.endswith('.gdb'):
-                layer.replaceDataSource(arcpy.env.workspace,
-                                        'FILEGDB_WORKSPACE',
-                                        os.path.splitext(layer.datasetName)[0],
-                                        False)
-            else:
-                layer.replaceDataSource(arcpy.env.workspace,
-                                        'RASTER_WORKSPACE',
-                                        os.path.splitext(layer.datasetName)[0],
-                                        False)
+        try:
+            if layer.isFeatureLayer:
+                arcpy.Clip_analysis(layer.dataSource, aoi, arcpy.CreateUniqueName(layer.datasetName, arcpy.env.workspace))
+                if arcpy.env.workspace.endswith('.gdb'):
+                    layer.replaceDataSource(arcpy.env.workspace,
+                                            'FILEGDB_WORKSPACE',
+                                            os.path.splitext(layer.datasetName)[0],
+                                            False)
+                else:
+                    layer.replaceDataSource(arcpy.env.workspace, 'SHAPEFILE_WORKSPACE', layer.datasetName, False)
+            elif layer.isRasterLayer:
+                ext = '{0} {1} {2} {3}'.format(aoi.extent.XMin, aoi.extent.YMin, aoi.extent.XMax, aoi.extent.YMax)
+                arcpy.Clip_management(layer.dataSource, ext, arcpy.CreateUniqueName(layer.datasetName, arcpy.env.workspace))
+                if arcpy.env.workspace.endswith('.gdb'):
+                    layer.replaceDataSource(arcpy.env.workspace,
+                                            'FILEGDB_WORKSPACE',
+                                            os.path.splitext(layer.datasetName)[0],
+                                            False)
+                else:
+                    layer.replaceDataSource(arcpy.env.workspace,
+                                            'RASTER_WORKSPACE',
+                                            os.path.splitext(layer.datasetName)[0],
+                                            False)
+        except arcpy.ExecuteError:
+            status_writer.send_state(status.STAT_WARNING, _(arcpy.GetMessages(2)))
 
     # Save a new copy of the mxd with all layers clipped and re-sourced.
     if mxd.description == '':
@@ -204,8 +213,6 @@ def execute(request):
     errors = 0
     skipped = 0
     fds = None
-
-    status_writer = status.Writer()
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
     # Retrieve clip geometry.
@@ -254,6 +261,11 @@ def execute(request):
             #TODO: Use feature set to load into and then clip it:
             #TODO:>>> server = _server_admin.Catalog("http://services.arcgis.com/Zs2aNLFN00jrS4gG/ArcGIS/rest/services")
 
+            # Before describe, check if the path is a MXD data frame type.
+            map_frame_name = task_utils.get_data_frame_name(ds)
+            if map_frame_name:
+                ds = ds.split('|')[0].strip()
+
             dsc = arcpy.Describe(ds)
             # If no output coord. system, get output spatial reference from input.
             if out_coordinate_system == 0:
@@ -286,7 +298,6 @@ def execute(request):
                     else:
                         clip_poly = gcs_clip_poly
                         extent = clip_poly.extent
-
             # Feature class
             if dsc.dataType == 'FeatureClass':
                 if out_name == '':
@@ -372,7 +383,7 @@ def execute(request):
 
             # Map document
             elif dsc.dataType == 'MapDocument':
-                clip_mxd_layers(dsc.catalogPath, clip_poly)
+                clip_mxd_layers(dsc.catalogPath, clip_poly, map_frame_name)
 
             else:
                 status_writer.send_percent(i/count, _('Invalid input type: {0}').format(ds), 'clip_data')

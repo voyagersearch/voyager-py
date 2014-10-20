@@ -62,6 +62,10 @@ def execute(request):
             if item.endswith('.lyr'):
                 layers.append(arcpy.mapping.Layer(item))
             else:
+                # Is the item a mxd data frame.
+                map_frame_name = task_utils.get_data_frame_name(item)
+                if map_frame_name:
+                    item = item.split('|')[0].strip()
                 dsc = arcpy.Describe(item)
                 if dsc.dataType in ('FeatureClass', 'ShapeFile', 'RasterDataset'):
                     if dsc.dataType == 'RasterDataset':
@@ -77,7 +81,11 @@ def execute(request):
                     arcpy.env.workspace = out_workspace
                 elif dsc.dataType == 'MapDocument':
                     in_mxd = arcpy.mapping.MapDocument(item)
-                    mxd_layers = arcpy.mapping.ListLayers(in_mxd)
+                    if map_frame_name:
+                        df = arcpy.mapping.ListDataFrames(in_mxd, map_frame_name)[0]
+                        mxd_layers = arcpy.mapping.ListLayers(in_mxd, data_frame=df)
+                    else:
+                        mxd_layers = arcpy.mapping.ListLayers(in_mxd)
                     layers += mxd_layers
                 elif item.endswith('.gdb') or item.endswith('.mdb'):
                     arcpy.env.workspace = item

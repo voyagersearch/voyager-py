@@ -76,12 +76,17 @@ def execute(request):
     mxd = arcpy.mapping.MapDocument(mxd_path)
     data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
 
-    layer = None
+    layers = []
     for item in input_items:
         try:
+            # Is the item a mxd data frame.
+            map_frame_name = task_utils.get_data_frame_name(item)
+            if map_frame_name:
+                item = item.split('|')[0].strip()
+
             dsc = arcpy.Describe(item)
             if dsc.dataType == 'Layer':
-                layer = arcpy.mapping.Layer(dsc.catalogPath)
+                layers.append(arcpy.mapping.Layer(dsc.catalogPath))
 
             elif dsc.dataType == 'FeatureClass' or dsc.dataType == 'ShapeFile':
                 feature_layer = arcpy.MakeFeatureLayer_management(item, os.path.basename(item))
@@ -89,7 +94,7 @@ def execute(request):
                     feature_layer,
                     os.path.join(temp_folder, '{0}.lyr'.format(os.path.basename(item)))
                 )
-                layer = arcpy.mapping.Layer(layer_file.getOutput(0))
+                layers.append(arcpy.mapping.Layer(layer_file.getOutput(0)))
 
             elif dsc.dataType == 'FeatureDataset':
                 arcpy.env.workspace = item
@@ -98,6 +103,7 @@ def execute(request):
                                                                   os.path.join(temp_folder, '{0}.lyr'.format(fc)))
                     layer = arcpy.mapping.Layer(layer_file.getOutput(0))
                     layer.name = fc
+                    layers.append(layer)
 
             elif dsc.dataType == 'RasterDataset':
                 raster_layer = arcpy.MakeRasterLayer_management(item, os.path.basename(item))
@@ -105,18 +111,30 @@ def execute(request):
                     raster_layer,
                     os.path.join(temp_folder, '{0}.lyr'.format(os.path.basename(item)))
                 )
-                layer = arcpy.mapping.Layer(layer_file.getOutput(0))
+                layers.append(arcpy.mapping.Layer(layer_file.getOutput(0)))
 
             elif dsc.catalogPath.endswith('.kml') or dsc.catalogPath.endswith('.kmz'):
                 name = os.path.splitext(dsc.name)[0]
                 arcpy.KMLToLayer_conversion(dsc.catalogPath, temp_folder, name)
-                layer = arcpy.mapping.Layer(os.path.join(temp_folder, '{0}.lyr'.format(name)))
+                layers.append(arcpy.mapping.Layer(os.path.join(temp_folder, '{0}.lyr'.format(name))))
 
-            if layer:
-                status_writer.send_status(_('Adding layer {0}...').format(layer.name))
-                arcpy.mapping.AddLayer(data_frame, layer)
-                layer = None
-                added_to_map += 1
+            elif dsc.dataType == 'MapDocument':
+                input_mxd = arcpy.mapping.MapDocument(item)
+                if map_frame_name:
+                    df = arcpy.mapping.ListDataFrames(input_mxd, map_frame_name)[0]
+                    layers = arcpy.mapping.ListLayers(input_mxd, data_frame=df)
+                else:
+                    layers = arcpy.mapping.ListLayers(input_mxd)
+                # for layer in layers:
+                #     arcpy.mapping.AddLayer(data_frame, layer)
+                # layer = None
+
+            if layers:
+                for layer in layers:
+                    status_writer.send_status(_('Adding layer {0}...').format(layer.name))
+                    arcpy.mapping.AddLayer(data_frame, layer)
+                    added_to_map += 1
+                    layers = []
             else:
                 status_writer.send_status(_('Invalid input type: {0}').format(item))
                 skipped += 1

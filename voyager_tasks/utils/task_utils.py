@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import re
 import sys
 import glob
 import json
@@ -148,6 +149,8 @@ def get_data_path(item):
 
         if os.path.exists(item['path']):
             return item['path']
+        elif item['format'] == 'application/vnd.esri.map.data.frame':
+            return item['path']
         elif os.path.exists(item['[lyrFile]']):
             return item['[lyrFile]']
         else:
@@ -166,6 +169,20 @@ def get_data_path(item):
                 raise IOError
         except (KeyError, IOError, ImportError):
             raise IOError
+
+
+def get_data_frame_name(path):
+    """Return the mxd's data frame name by removing voyager's index potion of the path.
+
+    :param path: The map frame path from Voyager
+    """
+    map_frame_name = None
+    if '|' in path:
+        map_frame_name = path.split('|')[1]
+        match = re.search('[[0-9]]', map_frame_name)
+        if match:
+            map_frame_name = map_frame_name.replace(map_frame_name[match.start()-1:match.end()], '').strip()
+    return map_frame_name
 
 
 def from_wkt(wkt, sr):
