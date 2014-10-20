@@ -140,6 +140,12 @@ def get_data_path(item):
     :rtype : str
     """
     try:
+        # If input is a Geodatabase feature class.
+        if [ any(ext) for ext in ('.sde', '.gdb', '.mdb') if ext in item['path'] ]:
+            import arcpy
+            if arcpy.Exists(item['path']):
+                return item['path']
+
         if os.path.exists(item['path']):
             return item['path']
         elif os.path.exists(item['[lyrFile]']):
