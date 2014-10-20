@@ -57,7 +57,7 @@ def worker():
             documents = col.find(eval(query))
         else:
             documents = col.find()
-
+            
         # Index each document -- get a suitable base 10 increment for reporting percentage.
         increment = job.get_increment(documents.count())
         for doc in documents:
@@ -82,16 +82,17 @@ def worker():
             if 'loc' in doc:
                 if 'type' in doc['loc']:
                     if job.include_wkt:
-                        geo_json_converter.convert_to_wkt(doc['loc'], 3)
+                        geo['wkt'] = geo_json_converter.convert_to_wkt(doc['loc'], 3)
+                    if 'bbox' in doc['loc']:
+                        geo['xmin'] = doc['loc']['bbox'][0]
+                        geo['ymin'] = doc['loc']['bbox'][1]
+                        geo['xmax'] = doc['loc']['bbox'][2]
+                        geo['ymax'] = doc['loc']['bbox'][3]
+                    elif 'Point' in doc['loc']['type']:
+                        geo['lon'] = doc['loc']['coordinates'][0]
+                        geo['lat'] = doc['loc']['coordinates'][1]
                     else:
-                        if 'bbox' in doc['loc']:
-                            geo['xmin'] = doc['loc']['bbox'][0]
-                            geo['ymin'] = doc['loc']['bbox'][1]
-                            geo['xmax'] = doc['loc']['bbox'][2]
-                            geo['ymax'] = doc['loc']['bbox'][3]
-                        elif 'Point' in doc['loc']['type']:
-                            geo['lon'] = doc['loc']['coordinates'][0]
-                            geo['lat'] = doc['loc']['coordinates'][1]
+                        status_writer.send_state(status.STAT_WARNING, 'No bbox information for {0}.'.format(doc['_id']))
                 elif isinstance(doc['loc'][0], float):
                     geo['lon'] = doc['loc'][0]
                     geo['lat'] = doc['loc'][1]

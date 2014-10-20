@@ -29,7 +29,7 @@ if __name__ == '__main__':
     elif job.url:
         from voyager_worker import gdal_worker
         gdal_worker.assign_job(job.job_file)
-    elif job.mongodb_client_info():
+    elif job.mongodb_client_info:
         from voyager_worker import mongodb_worker
         mongodb_worker.assign_job(job.job_file)
     elif job.sql_connection_info:
