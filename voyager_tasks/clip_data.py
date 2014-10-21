@@ -80,33 +80,30 @@ def clip_mxd_layers(mxd_path, aoi, map_frame=None):
     """
     df = map_frame
     mxd = arcpy.mapping.MapDocument(mxd_path)
+    layers = arcpy.mapping.ListLayers(mxd)
     if map_frame:
         df = arcpy.mapping.ListDataFrames(mxd, map_frame)[0]
-    layers = arcpy.mapping.ListLayers(mxd, data_frame=df)
+        df_layers = arcpy.mapping.ListLayers(mxd, data_frame=df)
+        [[arcpy.mapping.RemoveLayer(d, l) for l in arcpy.mapping.ListLayers(mxd)] for d in arcpy.mapping.ListDataFrames(mxd)]
+        [arcpy.mapping.AddLayer(df, l) for l in df_layers]
+        layers = df_layers
     for layer in layers:
         try:
+            out_name = arcpy.CreateUniqueName(layer.datasetName, arcpy.env.workspace)
             if layer.isFeatureLayer:
-                arcpy.Clip_analysis(layer.dataSource, aoi, arcpy.CreateUniqueName(layer.datasetName, arcpy.env.workspace))
+                arcpy.Clip_analysis(layer.dataSource, aoi, out_name)
                 if arcpy.env.workspace.endswith('.gdb'):
-                    layer.replaceDataSource(arcpy.env.workspace,
-                                            'FILEGDB_WORKSPACE',
-                                            os.path.splitext(layer.datasetName)[0],
-                                            False)
+                    layer.replaceDataSource(arcpy.env.workspace, 'FILEGDB_WORKSPACE', out_name, False)
                 else:
-                    layer.replaceDataSource(arcpy.env.workspace, 'SHAPEFILE_WORKSPACE', layer.datasetName, False)
+                    layer.replaceDataSource(arcpy.env.workspace, 'SHAPEFILE_WORKSPACE', out_name, False)
+
             elif layer.isRasterLayer:
                 ext = '{0} {1} {2} {3}'.format(aoi.extent.XMin, aoi.extent.YMin, aoi.extent.XMax, aoi.extent.YMax)
-                arcpy.Clip_management(layer.dataSource, ext, arcpy.CreateUniqueName(layer.datasetName, arcpy.env.workspace))
+                arcpy.Clip_management(layer.dataSource, ext, out_name)
                 if arcpy.env.workspace.endswith('.gdb'):
-                    layer.replaceDataSource(arcpy.env.workspace,
-                                            'FILEGDB_WORKSPACE',
-                                            os.path.splitext(layer.datasetName)[0],
-                                            False)
+                    layer.replaceDataSource(arcpy.env.workspace, 'FILEGDB_WORKSPACE', out_name, False)
                 else:
-                    layer.replaceDataSource(arcpy.env.workspace,
-                                            'RASTER_WORKSPACE',
-                                            os.path.splitext(layer.datasetName)[0],
-                                            False)
+                    layer.replaceDataSource(arcpy.env.workspace, 'RASTER_WORKSPACE', out_name, False)
         except arcpy.ExecuteError:
             status_writer.send_state(status.STAT_WARNING, _(arcpy.GetMessages(2)))
 
@@ -133,7 +130,7 @@ def create_lpk(data_location, additional_files):
             layer.save()
 
     # Save data to layer files.
-    task_utils.save_to_layer_file(data_location, True)
+    task_utils.save_to_layer_file(data_location, False)
 
     # Package all layer files.
     layer_files = glob.glob(os.path.join(data_location, '*.lyr'))
@@ -185,13 +182,13 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
         elif ds.endswith('.lyr'):
             # Add all layer files to the mxd template.
             arcpy.mapping.AddLayer(df, arcpy.mapping.Layer(ds))
-        elif ds.endswith('.mxd') and not ds == mxd.filePath:
-            # Add all layers from all map documents to the map template.
-            temp_mxd = arcpy.mapping.MapDocument(ds)
-            layers = arcpy.mapping.ListLayers(temp_mxd)
-            for layer in layers:
-                arcpy.mapping.AddLayer(df, layer)
-            del temp_mxd
+        # elif ds.endswith('.mxd') and not ds == mxd.filePath:
+        #     # Add all layers from all map documents to the map template.
+        #     temp_mxd = arcpy.mapping.MapDocument(ds)
+        #     layers = arcpy.mapping.ListLayers(temp_mxd)
+        #     for layer in layers:
+        #         arcpy.mapping.AddLayer(df, layer)
+        #     del temp_mxd
 
     mxd.save()
     if mpk:
