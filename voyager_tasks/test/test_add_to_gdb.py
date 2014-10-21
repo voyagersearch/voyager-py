@@ -30,7 +30,7 @@ class TestAddToGeodatabase(unittest.TestCase):
         raster = os.path.join(os.getcwd(), 'test-data', 'raster', 'worldextent')
         dwg_file = os.path.join(os.getcwd(), 'test-data', 'cabottrail.DWG')
         self.request['params'][0]['response']['docs'][0]['path'] = shp_file
-        self.request['params'][0]['response']['docs'][1]['[lyrFile]'] = lyr_file
+        self.request['params'][0]['response']['docs'][1]['path'] = lyr_file
         self.request['params'][0]['response']['docs'][2]['path'] = dbf_file
         self.request['params'][0]['response']['docs'][3]['path'] = raster
         self.request['params'][0]['response']['docs'][4]['path'] = dwg_file
