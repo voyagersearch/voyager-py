@@ -45,6 +45,12 @@ if __name__ == '__main__':
                      task_info['tasks'].append({'name': task, 'available': False, 'warning': '{0}. Requires ArcGIS'.format(str(ie))})
                 else:
                     task_info['tasks'].append({'name': task, 'available': False, 'warning': str(ie)})
+            except RuntimeError as re:
+                if 'NotInitialized' in re:
+                    task_info['tasks'].append({'name': task, 'available': False, 'warning': '{0}. ArcGIS is not licensed.'.format(str(re))})
+                else:
+                    task_info['tasks'].append({'name': task, 'available': False, 'warning': str(re)})
+
         sys.stdout.write(json.dumps(task_info, indent=2))
         sys.stdout.flush()
     elif sys.argv[1] == '--license':
