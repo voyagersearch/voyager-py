@@ -26,7 +26,7 @@ class TestReplaceDataSource(unittest.TestCase):
         """Testing replace workspace path for a layer file"""
         shutil.copy2(os.path.join(os.getcwd(), 'test-data', 'Cities.lyr'), self.temp_folder)
         lyr_file = os.path.join(self.temp_folder, 'Cities.lyr')
-        self.request['params'][0]['response']['docs'][0]['[lyrFile]'] = lyr_file
+        self.request['params'][0]['response']['docs'][0]['path'] = lyr_file
         __import__(self.request['task'])
         old_workspace = "C:\\GISData\\MDB\\USA.mdb\\cities"
         new_workspace = os.path.join(os.getcwd(), 'test-data', 'TestData_v10.gdb', 'cities')
