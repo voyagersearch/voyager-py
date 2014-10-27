@@ -11,7 +11,7 @@
     },
 	{
 	  "type": "CatalogPath",
-	  "name": "clip_features",
+	  "name": "clip_features"
 	},
 	{
 	  "type": "String",
