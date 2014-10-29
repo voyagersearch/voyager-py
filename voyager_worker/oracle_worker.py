@@ -50,7 +50,7 @@ def worker():
             statement = "select table_name from user_tables where table_name like"
             [tables.append(t[0]) for t in job.db_cursor.execute("{0} '{1}'".format(statement, tk)).fetchall()]
     else:
-        [tables.append(t[0]) for t in job.db_cursor.execute("select table_name from all_tables").fetchall()]
+        [tables.append(t[0]) for t in job.db_cursor.execute("select table_name from user_tables").fetchall()]
 
     for tbl in set(tables):
         geo = {}
@@ -81,7 +81,11 @@ def worker():
         if 'SHAPE' in columns:
             has_shape = True
             columns.remove('SHAPE')
-            schema = job.db_cursor.execute("select SHAPE from {0}".format(tbl)).fetchone()[0].type.schema
+            if job.db_cursor.execute("select SHAPE from {0}".format(tbl)).fetchone() == None:
+                continue
+            else:
+                schema = job.db_cursor.execute("select SHAPE from {0}".format(tbl)).fetchone()[0].type.schema
+
             shape_type = job.db_cursor.execute("select {0}.ST_GEOMETRYTYPE(SHAPE) from {1}".format(schema, tbl)).fetchone()[0]
             geo['code'] = int(job.db_cursor.execute("select {0}.ST_SRID(SHAPE) from {1}".format(schema, tbl)).fetchone()[0])
             if 'POINT' in shape_type:
@@ -97,24 +101,43 @@ def worker():
                     for x in ('maxy', 'maxx', 'miny', 'minx', 'astext'):
                         columns.insert(0, '{0}.st_{1}(SHAPE)'.format(schema, x))
                 else:
-                    for x in ('maxy', 'maxx', 'miny', 'minx', 'astext'):
-                        columns.insert(0, '{0}.st_{1}({0}.st_transform(SHAPE, 4326))'.format(schema, x))
+                    try:
+                        job.db_cursor.execute("select {0}.st_maxy(SDE.st_transform(SHAPE, 4326)) from {1}".format(schema, tbl))
+                        for x in ('maxy', 'maxx', 'miny', 'minx', 'astext'):
+                            columns.insert(0, '{0}.st_{1}({0}.st_transform(SHAPE, 4326))'.format(schema, x))
+                    except Exception:
+                        for x in ('maxy', 'maxx', 'miny', 'minx', 'astext'):
+                            columns.insert(0, '{0}.st_{1}(SHAPE)'.format(schema, x))
 
-        rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl)).fetchall()
+        try:
+            rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl)).fetchall()
+        except Exception:
+            columns.pop(0)
+            geo['wkt'] = None
+            rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl)).fetchall()
         increment = job.get_increment(len(rows))
         for i, row in enumerate(rows):
             entry = {}
             if has_shape:
                 if job.include_wkt:
                     geo['wkt'] = row[0]
-                if is_point:
-                    geo['lon'] = row[1]
-                    geo['lat'] = row[2]
+                    if is_point:
+                        geo['lon'] = row[1]
+                        geo['lat'] = row[2]
+                    else:
+                        geo['xmin'] = row[1]
+                        geo['ymin'] = row[2]
+                        geo['xmax'] = row[3]
+                        geo['ymax'] = row[4]
                 else:
-                    geo['xmin'] = row[1]
-                    geo['ymin'] = row[2]
-                    geo['xmax'] = row[3]
-                    geo['ymax'] = row[4]
+                    if is_point:
+                        geo['lon'] = row[0]
+                        geo['lat'] = row[1]
+                    else:
+                        geo['xmin'] = row[0]
+                        geo['ymin'] = row[1]
+                        geo['xmax'] = row[2]
+                        geo['ymax'] = row[3]
 
             mapped_cols = job.map_fields(tbl, columns, column_types)
             mapped_cols = dict(zip(mapped_cols, row))
