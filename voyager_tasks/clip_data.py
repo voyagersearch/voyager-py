@@ -198,6 +198,7 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
                                     'PRESERVE',
                                     version='10',
                                     additional_files=additional_files)
+
     task_utils.make_thumbnail(mxd.filePath, os.path.join(os.path.dirname(data_location), '_thumb.png'))
     del mxd
 
@@ -264,6 +265,8 @@ def execute(request):
                 ds = ds.split('|')[0].strip()
 
             dsc = arcpy.Describe(ds)
+            if dsc.spatialReference.name == 'Unknown':
+                status_writer.send_state(status.STAT_WARNING, _('{0} has an Unknown projection. Output may be invalid or empty.').format(dsc.name))
             # If no output coord. system, get output spatial reference from input.
             if out_coordinate_system == 0:
                 try:
@@ -402,16 +405,23 @@ def execute(request):
     if arcpy.env.workspace.endswith('.gdb'):
         out_workspace = os.path.dirname(arcpy.env.workspace)
     if clipped > 0:
-        if out_format == 'MPK':
-            create_mxd_or_mpk(out_workspace, files_to_package, True)
-            shutil.move(os.path.join(out_workspace, 'output.mpk'),
-                        os.path.join(os.path.dirname(out_workspace), 'output.mpk'))
-        elif out_format == 'LPK':
-            create_lpk(out_workspace, files_to_package)
-        else:
-            create_mxd_or_mpk(out_workspace)
-            zip_file = task_utils.zip_data(out_workspace, 'output.zip')
-            shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
+        try:
+            if out_format == 'MPK':
+                create_mxd_or_mpk(out_workspace, files_to_package, True)
+                shutil.move(os.path.join(out_workspace, 'output.mpk'),
+                            os.path.join(os.path.dirname(out_workspace), 'output.mpk'))
+            elif out_format == 'LPK':
+                create_lpk(out_workspace, files_to_package)
+            else:
+                create_mxd_or_mpk(out_workspace)
+                zip_file = task_utils.zip_data(out_workspace, 'output.zip')
+                shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
+        except arcpy.ExecuteError as ee:
+            status_writer.send_state(status.STAT_FAILED, _(ee))
+            import sys
+            sys.exit(1)
+    else:
+        status_writer.send_state(status.STAT_FAILED, _('No output created. Zero inputs were clipped.'))
 
     # Update state if necessary.
     if errors > 0 or skipped > 0:

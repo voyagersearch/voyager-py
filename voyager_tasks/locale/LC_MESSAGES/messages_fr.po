@@ -87,6 +87,11 @@ msgstr "Biseauté: {0}"
 msgid "Copied file: {0}"
 msgstr "Fichier copié: {0}"
 
+#: clip_data.py:269
+#, python-format
+msgid "{0} has an Unknown projection. Output may be invalid or empty."
+msgstr "{0} pince a une projection inconnue. Sortie peut être invalide ou vide."
+
 #: create_geopdf.py:79
 #, python-format
 msgid "Adding basemap: {0}..."

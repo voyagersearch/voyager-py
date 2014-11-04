@@ -89,6 +89,11 @@ msgstr ""
 msgid "Copied file: {0}"
 msgstr ""
 
+#: clip_data.py:269
+#, python-format
+msgid "{0} has an Unknown projection. Output may be invalid or empty."
+msgstr ""
+
 #: create_geopdf.py:79
 #, python-format
 msgid "Adding basemap: {0}..."
