@@ -13,33 +13,50 @@
 # limitations under the License.
 """Submits a indexing job for a data location."""
 import sys
+import json
+import collections
 import voyager_worker
-from voyager_worker import base_job
+
 
 if __name__ == '__main__':
-    job = base_job.Job(sys.argv[1])
-    #job = base_job.Job(r"C:\Voyager\oracle_blob.json")
-    #job = base_job.Job(r"C:\Voyager\oracle_exclude_shape.json")
-    #job = base_job.Job(r"C:\Voyager\sqlserver2.json")
-    #job = base_job.Job(r"C:\Voyager\TestJSONFiles\cv_sample.json")
-    #job = base_job.Job(r"C:\Voyager\TestJSONFiles\mongodb_sample.json")
-    if job.path:
-        from voyager_worker import esri_worker
-        esri_worker.assign_work(job)
-    elif job.url:
-        from voyager_worker import gdal_worker
-        gdal_worker.assign_job(job.job_file)
-    elif job.mongodb_client_info:
-        from voyager_worker import mongodb_worker
-        mongodb_worker.assign_job(job.job_file)
-    elif job.sql_connection_info:
-        if job.sql_driver == 'SQL Server':
-            from voyager_worker import sql_worker
-            sql_worker.assign_job(job.job_file)
-        elif job.sql_driver == 'Oracle':
-            from voyager_worker import oracle_worker
-            oracle_worker.assign_job(job.job_file)
+    if sys.argv[1] == '--info':
+        worker_info = collections.defaultdict(list)
+        try:
+            __import__('zmq')
+        except ImportError as ie:
+            sys.stdout.write('{0}. Please contact Voyager Search support.'.format(ie.message))
+            sys.exit(1)
+
+        for module, worker in {'arcpy': 'esri_worker', 'cx_Oracle': 'oracle_worker',
+                       'pyodbc': 'sql_worker', 'pymongo': 'mongodb_worker', 'ogr': 'gdal_worker'}.iteritems():
+            try:
+                __import__(module)
+                worker_info['workers'].append({'name': worker, 'available': True})
+            except ImportError as ie:
+                worker_info['workers'].append({'name': worker, 'available': False, 'warning': str(ie)})
+                pass
+        sys.stdout.write(json.dumps(worker_info, indent=2))
+        sys.stdout.flush()
     else:
-        sys.stdout.write("No job information.")
-        sys.exit(1)
+        from voyager_worker import base_job
+        job = base_job.Job(sys.argv[1])
+        if job.path:
+            from voyager_worker import esri_worker
+            esri_worker.assign_work(job)
+        elif job.url:
+            from voyager_worker import gdal_worker
+            gdal_worker.assign_job(job.job_file)
+        elif job.mongodb_client_info:
+            from voyager_worker import mongodb_worker
+            mongodb_worker.assign_job(job.job_file)
+        elif job.sql_connection_info:
+            if job.sql_driver == 'SQL Server':
+                from voyager_worker import sql_worker
+                sql_worker.assign_job(job.job_file)
+            elif job.sql_driver == 'Oracle':
+                from voyager_worker import oracle_worker
+                oracle_worker.assign_job(job.job_file)
+        else:
+            sys.stdout.write("No worker information.")
+            sys.exit(1)
     sys.exit(0)

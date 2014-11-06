@@ -17,17 +17,13 @@ import copy
 import math
 import sys
 import decimal
-
-import cx_Oracle
-import pyodbc
-import pymongo
-import bson
 import zmq
 
 
 class ObjectEncoder(json.JSONEncoder):
     """Support non-native Python types for JSON serialization."""
     def default(self, obj):
+        import cx_Oracle
         text_chars = ''.join(map(chr, [7, 8, 9, 10, 12, 13, 27] + range(0x20, 0x100)))
         is_binary_string = lambda bytes: bool(bytes.translate(None, text_chars))
 
@@ -70,12 +66,15 @@ class Job(object):
         self.db_query = None
         self.zmq_socket = None
 
+        self.__layers_to_keep = []
+        self.__layers_to_skip = []
         self.__tables_to_keep = []
         self.__tables_to_skip = []
         self.__field_mapping = []
         self.__table_constraints = []
         self.__table_queries = []
         self.__get_table_config()
+        self.__get_layer_config()
         self.__get_domains()
 
     def __del__(self):
@@ -117,6 +116,8 @@ class Job(object):
 
     @property
     def field_types(self):
+        import cx_Oracle
+        import bson
         return {cx_Oracle.STRING: 'fs_',
                 cx_Oracle.FIXED_CHAR: 'fs_',
                 cx_Oracle.NUMBER: 'ff_',
@@ -151,6 +152,16 @@ class Job(object):
                 'text': 'fs_',
                 'ntext': 'fs_',
                 'decimal': 'ff_'}
+
+    @property
+    def layers_to_keep(self):
+        """List of layers and views to keep."""
+        return self.__layers_to_keep
+
+    @property
+    def layers_to_skip(self):
+        """List of layers and views to skip."""
+        return self.__layers_to_skip
 
     @property
     def tables_to_keep(self):
@@ -278,13 +289,17 @@ class Job(object):
         un = self.sql_connection_info['connection']['uid']
         pw = self.sql_connection_info['connection']['pwd']
         if drvr == 'Oracle':
+            import cx_Oracle
             self.db_connection = cx_Oracle.connect("{0}/{1}@{2}/{3}".format(un, pw, srvr, db))
             self.db_cursor = self.db_connection.cursor()
         elif drvr == 'SQL Server':
+            import pyodbc
             sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(drvr, srvr, db, un, pw)
             self.db_connection = pyodbc.connect(sql_server_str)
             self.db_cursor = self.db_connection.cursor()
         elif self.mongodb_client_info:
+            import pymongo
+            import bson
             client = pymongo.MongoClient(self.mongodb_client_info)
             self.db_connection = client[self.mongodb_database]
 
@@ -410,6 +425,24 @@ class Job(object):
                     workspace = '{0}{1}'.format(self.path.split(ext)[0], ext)
                     self.domains = {d.name: d.codedValues for d in arcpy.da.ListDomains(workspace)}
                     break
+
+    def __get_layer_config(self):
+        """List of layers and view to keep (may include wild card)."""
+        try:
+            layers = self.job['location']['config']['layers']
+            for layer in layers:
+                try:
+                    if layer['action'] == 'INCLUDE':
+                        self.__layers_to_keep.append((layer['name'], layer['owner']))
+                        self.__get_info(layer)
+                    elif layer['action'] == 'EXCLUDE':
+                        self.__layers_to_skip.append(layer['name'])
+                except KeyError:
+                    self.__get_info(layer)
+                    continue
+        except KeyError:
+            self.__layers_to_keep = ['*']
+
 
     def __get_table_config(self):
         """List of tables to keep (may include wild card)."""

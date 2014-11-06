@@ -27,7 +27,7 @@ class ComplexEncoder(json.JSONEncoder):
 
 
 def global_job(args):
-    """Create a global job object for multiprocessing."""
+    """Create a global job object for multiprocessing. (NOT YET SUPPORTED HERE)"""
     global job
     job = args
 
@@ -45,13 +45,46 @@ def worker():
     job.connect_to_database()
     tables = []
 
-    if not job.tables_to_keep == ['*']:
+    # Create the list of tables to index based on the user connected to the database.
+    if '*' in job.tables_to_skip:
+        pass
+    elif not job.tables_to_keep == ['*']:
         for tk in job.tables_to_keep:
-            statement = "select table_name from user_tables where table_name like"
-            [tables.append(t[0]) for t in job.db_cursor.execute("{0} '{1}'".format(statement, tk)).fetchall()]
+            statement = "select table_name from user_tables where table_name like '{0}'".format(tk)
+            [tables.append(t[0]) for t in job.db_cursor.execute(statement).fetchall()]
     else:
         [tables.append(t[0]) for t in job.db_cursor.execute("select table_name from user_tables").fetchall()]
 
+    # Remove any tables from the list meant to be excluded.
+    if job.tables_to_skip:
+        for tk in job.tables_to_skip:
+            statement = "select table_name from user_tables where table_name like '{0}'".format(tk)
+            [tables.remove(t[0]) for t in job.db_cursor.execute(statement).fetchall()]
+
+    # Create the list of layers/views to index based on Owner.
+    if '*' in job.layers_to_skip:
+        pass
+    elif not job.layers_to_keep[0][0] == '*':
+        for lk in job.layers_to_keep:
+            statement = "select table_name, owner from sde.layers where table_name like '{0}' and owner = '{1}'".format(lk[0], lk[1])
+            [tables.append(l) for l in job.db_cursor.execute(statement).fetchall()]
+    else:
+        try:
+            # If there is no owner, catch the error and continue.
+            owner = job.layers_to_keep[0][1]
+            statement = "select table_name, owner from sde.layers where owner = '{0}'".format(owner)
+            [tables.append(l) for l in job.db_cursor.execute(statement).fetchall()]
+        except IndexError:
+            pass
+
+    # Remove any layers/views from the list meant to be excluded.
+    if job.layers_to_skip:
+        for lk in job.layers_to_skip:
+            statement = "select table_name, owner from sde.layers where owner = '{0}'".format(lk[1])
+            [tables.remove(l) for l in job.db_cursor.execute(statement).fetchall()]
+
+
+    # Begin indexing.
     for tbl in set(tables):
         geo = {}
         has_shape = False
@@ -59,6 +92,11 @@ def worker():
         columns = []
         column_types = {}
 
+        # Check if the table is a layer/view and set name as "owner.tablename".
+        if isinstance(tbl, tuple):
+            tbl = "{0}.{1}".format(tbl[1], tbl[0])
+
+        # Create the list of columns to include in the index.
         if not job.fields_to_keep == ['*']:
             for col in job.fields_to_keep:
                 qry = "SELECT COLUMN_NAME FROM all_tab_cols WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
@@ -67,21 +105,23 @@ def worker():
                     column_types[c[0]] = c[1]
         else:
             job.db_cursor.execute("SELECT * FROM {0}".format(tbl))
-
             # Get column types -- needed to map fields to voyager fields.
             for c in job.db_cursor.description:
                 columns.append(c[0])
                 column_types[c[0]] = c[1]
 
+        # Remove fields meant to be excluded.
         if job.fields_to_skip:
             for col in job.fields_to_skip:
                 qry = "SELECT COLUMN_NAME FROM all_tab_cols WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
                 [columns.remove(c[0]) for c in job.execute_query(qry).fetchall()]
 
+        # If there is a shape column, get the geographic information.
         if 'SHAPE' in columns:
             has_shape = True
             columns.remove('SHAPE')
             if job.db_cursor.execute("select SHAPE from {0}".format(tbl)).fetchone() == None:
+                status_writer.send_status("Skipping {0} - no records.".format(tbl))
                 continue
             else:
                 schema = job.db_cursor.execute("select SHAPE from {0}".format(tbl)).fetchone()[0].type.schema
@@ -109,12 +149,22 @@ def worker():
                         for x in ('maxy', 'maxx', 'miny', 'minx', 'astext'):
                             columns.insert(0, '{0}.st_{1}(SHAPE)'.format(schema, x))
 
+
+        # Select all the rows.
         try:
             rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl)).fetchall()
         except Exception:
+            # This can occur for ST_GEOMETRY when spatial operators are un-available (See: http://tinyurl.com/lvvhwyl)
             columns.pop(0)
             geo['wkt'] = None
             rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl)).fetchall()
+
+        # Continue if the table has zero records.
+        if not rows:
+            status_writer.send_status("Skipping {0} - no records.".format(tbl))
+            continue
+
+        # Index each row.
         increment = job.get_increment(len(rows))
         for i, row in enumerate(rows):
             entry = {}
