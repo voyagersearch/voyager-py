@@ -54,11 +54,21 @@ def execute(request):
         else:
             try:
                 # Build pyramids
-                arcpy.BuildPyramids_management(result,
-                                               resample_technique=resampling_options[resampling_method],
-                                               compression_type=compression_method,
-                                               compression_quality=compression_quality
-                )
+                if dsc.dataType in ('RasterCatalog', 'MosaicDataset'):
+                    arcpy.BuildPyramidsandStatistics_management(
+                        result,
+                        calculate_statistics='NONE',
+                        resample_technique=resampling_options[resampling_method],
+                        compression_type=compression_method,
+                        compression_quality=compression_quality
+                    )
+                else:
+                    arcpy.BuildPyramids_management(
+                        result,
+                        resample_technique=resampling_options[resampling_method],
+                        compression_type=compression_method,
+                        compression_quality=compression_quality
+                    )
                 status_writer.send_percent(i/count, _('Built Pyramids for: {0}').format(dsc.name), 'build_raster_pyramids')
                 i += 1
                 processed += 1
