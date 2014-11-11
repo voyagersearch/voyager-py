@@ -1,0 +1,68 @@
+{
+  "name": "build_raster_pyramids",
+  "runner": "python",
+  "categories": ["download"],
+  "group": "Managing Raster",
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "StringChoice",
+      "name": "resampling_method",
+      "choices": [
+        "NEAREST_NEIGHBOR",
+        "BILINEAR_INTERPOLATION",
+        "CUBIC_CONVOLUTION"
+      ],
+  	  "value": "NEAREST_NEIGHBOR"
+    },
+    {
+      "type": "StringChoice",
+      "name": "compression_method",
+      "choices": [
+        "DEFAULT",
+        "LZ77",
+        "JPEG",
+        "JPEG_YCbCr",
+        "NONE"
+      ],
+      "advanced":true,
+      "value": "DEFAULT"
+    },
+    {
+      "type": "Integer",
+      "name": "compression_quality",
+      "advanced":true,
+      "value": 75,
+      "min": 1,
+      "max": 100
+    }
+  ],
+  "display":
+  {
+    "en":
+    {
+      "display": "Build Raster Pyramids",
+      "description": "Builds pyramids for input raster datasets. Pyramids improves display performance.",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#build_raster_pyramids",
+  	  "params":
+  	  {
+    		"resampling_metod": {
+    			"display": "Resampling Method",
+    			"description": "The resampling method used to build your pyramids"
+    		},
+    		"compression_method": {
+    			"display": "Compression Method",
+    			"description": "The compression method"
+    		},
+    		"compression_quality": {
+  		    "display": "Compression Quality",
+  		    "description": "The compression quality from 0 to 100 to use when pyramids are built with the JPEG compression method"
+    		}
+	    }
+	  }
+  }
+}
