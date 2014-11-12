@@ -21,7 +21,7 @@
       "required": "true"
     },
     {
-      "type": "String",
+      "type": "Password",
       "name": "password",
       "required": "true"
     },
