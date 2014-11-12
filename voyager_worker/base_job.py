@@ -119,11 +119,18 @@ class Job(object):
         import cx_Oracle
         import bson
         return {cx_Oracle.STRING: 'fs_',
+                'STRING': 'fs_',
                 cx_Oracle.FIXED_CHAR: 'fs_',
+                'FIXED_CHAR': 'fs_',
+                'NVARCHAR2': 'fs_',
                 cx_Oracle.NUMBER: 'ff_',
+                'NUMBER': 'ff_',
                 cx_Oracle.DATETIME: 'fd_',
+                'DATETIME': 'fd_',
                 cx_Oracle.TIMESTAMP: 'fd_',
+                'TIMESTAMP': 'fd_',
                 cx_Oracle.UNICODE: 'fs_',
+                'UNICODE': 'fs_',
                 unicode: 'fs_',
                 long: 'fl_',
                 datetime.datetime: 'fd_',
@@ -482,7 +489,8 @@ class Job(object):
             except KeyError:
                 pass
             try:
-                self.__field_mapping.append({'name': table['name'], 'map': table['map']})
+                if not {'name': table['name'], 'map': table['map']} in self.__field_mapping:
+                    self.__field_mapping.append({'name': table['name'], 'map': table['map']})
             except KeyError:
                 pass
         except KeyError:

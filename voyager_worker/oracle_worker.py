@@ -78,86 +78,134 @@ def worker():
             pass
 
     # Remove any layers/views from the list meant to be excluded.
-    if job.layers_to_skip:
+    if not '*' in job.layers_to_skip:
         for lk in job.layers_to_skip:
             statement = "select table_name, owner from sde.layers where owner = '{0}'".format(lk[1])
             [tables.remove(l) for l in job.db_cursor.execute(statement).fetchall()]
 
-
     # Begin indexing.
     for tbl in set(tables):
         geo = {}
-        has_shape = False
-        is_point = False
         columns = []
         column_types = {}
+        is_point = False
+        has_shape = False
+        geometry_field = None
 
-        # Check if the table is a layer/view and set name as "owner.tablename".
+        # Check if the table is a layer/view and set name as "owner.table".
         if isinstance(tbl, tuple):
-            tbl = "{0}.{1}".format(tbl[1], tbl[0])
+            column_query = "select column_name, data_type from all_tab_cols where " \
+                           "table_name = '{0}' and column_name like".format(tbl[0])
+            if not job.db_connection.username == tbl[1]:
+                tbl = "{0}.{1}".format(tbl[1], tbl[0])
+            else:
+                tbl = tbl[0]
+        else:
+            column_query = "select column_name, data_type from all_tab_cols where " \
+                           "table_name = '{0}' and column_name like".format(tbl)
 
-        # Create the list of columns to include in the index.
+        # Create the list of columns and column types to include in the index.
         if not job.fields_to_keep == ['*']:
             for col in job.fields_to_keep:
-                qry = "SELECT COLUMN_NAME FROM all_tab_cols WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
-                for c in job.execute_query(qry).fetchall():
+                for c in job.db_cursor.execute("{0} '{1}'".format(column_query, col)).fetchall():
                     columns.append(c[0])
                     column_types[c[0]] = c[1]
+                    if c[1] in ('SDO_GEOMETRY', 'ST_GEOMETRY'):
+                        has_shape = True
+                        geometry_field = c[0]
+                        geometry_type = c[1]
         else:
-            job.db_cursor.execute("SELECT * FROM {0}".format(tbl))
-            # Get column types -- needed to map fields to voyager fields.
-            for c in job.db_cursor.description:
+            for i, c in enumerate(job.db_cursor.execute("select * from {0}".format(tbl)).description):
                 columns.append(c[0])
                 column_types[c[0]] = c[1]
+                try:
+                    if c[1] in ('SDO_GEOMETRY', 'ST_GEOMETRY'):
+                        has_shape = True
+                        geometry_field = c[0]
+                        geometry_type = c[1]
+                    elif job.db_cursor.fetchvars[i].type.name == 'ST_GEOMETRY':
+                        has_shape = True
+                        geometry_field = c[0]
+                        geometry_type = 'ST_GEOMETRY'
+                    elif job.db_cursor.fetchvars[i].type.name == 'SDO_GEOMETRY':
+                        has_shape = True
+                        geometry_field = c[0]
+                        geometry_type = 'SDO_GEOMETRY'
+                except AttributeError:
+                    continue
 
         # Remove fields meant to be excluded.
         if job.fields_to_skip:
             for col in job.fields_to_skip:
-                qry = "SELECT COLUMN_NAME FROM all_tab_cols WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
-                [columns.remove(c[0]) for c in job.execute_query(qry).fetchall()]
+                [columns.remove(c[0]) for c in job.execute_query("{0} '{1}'".format(column_query, col)).fetchall()]
 
         # If there is a shape column, get the geographic information.
-        if 'SHAPE' in columns:
-            has_shape = True
-            columns.remove('SHAPE')
-            if job.db_cursor.execute("select SHAPE from {0}".format(tbl)).fetchone() == None:
+        if geometry_field:
+            columns.remove(geometry_field)
+
+            if job.db_cursor.execute("select SHAPE from {0}".format(tbl)).fetchone() is None:
                 status_writer.send_status("Skipping {0} - no records.".format(tbl))
                 continue
             else:
                 schema = job.db_cursor.execute("select SHAPE from {0}".format(tbl)).fetchone()[0].type.schema
 
-            shape_type = job.db_cursor.execute("select {0}.ST_GEOMETRYTYPE(SHAPE) from {1}".format(schema, tbl)).fetchone()[0]
-            geo['code'] = int(job.db_cursor.execute("select {0}.ST_SRID(SHAPE) from {1}".format(schema, tbl)).fetchone()[0])
-            if 'POINT' in shape_type:
-                is_point = True
-                if geo['code'] == 4326:
-                    for x in ('y', 'x', 'astext'):
-                        columns.insert(0, '{0}.st_{1}(SHAPE)'.format(schema, x))
+            # Figure out if geometry type is ST or SDO.
+            if geometry_type == 'SDO_GEOMETRY':
+                geo['code'] = job.db_cursor.execute("select c.{0}.SDO_SRID from {1} c".format(geometry_field, tbl)).fetchone()[0]
+                dimension = job.db_cursor.execute("select c.shape.Get_Dims() from {0} c".format(tbl)).fetchone()[0]
+                if not job.db_cursor.execute("select c.{0}.SDO_POINT from {1} c".format(geometry_field, tbl)).fetchone()[0] is None:
+                    is_point = True
+                    if geo['code'] == 4326:
+                        columns.insert(0, '{0}.{1}.SDO_POINT.Y'.format(schema, geometry_field))
+                        columns.insert(0, '{0}.{1}.SDO_POINT.X'.format(schema, geometry_field))
+                    else:
+                        job.db_cursor.execute("SDO_CS.TRANSFORM({0}.{1}, 4326)".format(schema, geometry_field))
                 else:
-                    for x in ('y', 'x', 'astext'):
-                        columns.insert(0, '{0}.st_{1}({0}.st_transform(SHAPE, 4326))'.format(schema, x))
-            else:
-                if geo['code'] == 4326:
-                    for x in ('maxy', 'maxx', 'miny', 'minx', 'astext'):
-                        columns.insert(0, '{0}.st_{1}(SHAPE)'.format(schema, x))
+                    columns.insert(0, "sdo_geom.sdo_mbr({0}).sdo_ordinates".format(geometry_field))
+
+            else:  # ST_GEOMETRY
+                shape_type = job.db_cursor.execute("select {0}.ST_GEOMETRYTYPE({1}) from {2}".format(schema, geometry_field, tbl)).fetchone()[0]
+                geo['code'] = int(job.db_cursor.execute("select {0}.ST_SRID({1}) from {2}".format(schema, geometry_field, tbl)).fetchone()[0])
+                if 'POINT' in shape_type:
+                    is_point = True
+                    if geo['code'] == 4326:
+                        for x in ('y', 'x', 'astext'):
+                            columns.insert(0, '{0}.st_{1}({2})'.format(schema, x, geometry_field))
+                    else:
+                        for x in ('y', 'x', 'astext'):
+                            columns.insert(0, '{0}.st_{1}({0}.st_transform({2}, 4326))'.format(schema, x, geometry_field))
                 else:
-                    try:
-                        job.db_cursor.execute("select {0}.st_maxy(SDE.st_transform(SHAPE, 4326)) from {1}".format(schema, tbl))
+                    if geo['code'] == 4326:
                         for x in ('maxy', 'maxx', 'miny', 'minx', 'astext'):
-                            columns.insert(0, '{0}.st_{1}({0}.st_transform(SHAPE, 4326))'.format(schema, x))
-                    except Exception:
-                        for x in ('maxy', 'maxx', 'miny', 'minx', 'astext'):
-                            columns.insert(0, '{0}.st_{1}(SHAPE)'.format(schema, x))
+                            columns.insert(0, '{0}.st_{1}({2})'.format(schema, x, geometry_field))
+                    else:
+                        try:
+                            job.db_cursor.execute("select {0}.st_maxy(SDE.st_transform({1}, 4326)) from {2}".format(schema, geometry_field, tbl))
+                            for x in ('maxy', 'maxx', 'miny', 'minx', 'astext'):
+                                columns.insert(0, '{0}.st_{1}({0}.st_transform({2}, 4326))'.format(schema, x, geometry_field))
+                        except Exception:
+                            for x in ('maxy', 'maxx', 'miny', 'minx', 'astext'):
+                                columns.insert(0, '{0}.st_{1}({2})'.format(schema, x, geometry_field))
 
+        # Get the count of all the rows to use for reporting progress.
+        row_count = job.db_cursor.execute("select count(*) from {0}".format(tbl)).fetchall()[0][0]
+        if row_count == 0 or row_count is None:
+            continue
 
-        # Select all the rows.
+        # Get the rows.
         try:
-            rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl)).fetchall()
+            if geometry_type == 'SDO_GEOMETRY':
+                rows = job.db_cursor.execute("select {0} from {1} {2}".format(','.join(columns), tbl, schema))
+            else:
+                # Quick check to ensure ST_GEOMETRY operations are supported.
+                row = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl)).fetchone()
+                del row
+                rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl))
         except Exception:
             # This can occur for ST_GEOMETRY when spatial operators are un-available (See: http://tinyurl.com/lvvhwyl)
             columns.pop(0)
             geo['wkt'] = None
-            rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl)).fetchall()
+            rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl))
 
         # Continue if the table has zero records.
         if not rows:
@@ -165,7 +213,7 @@ def worker():
             continue
 
         # Index each row.
-        increment = job.get_increment(len(rows))
+        increment = job.get_increment(row_count)
         for i, row in enumerate(rows):
             entry = {}
             if has_shape:
@@ -184,20 +232,29 @@ def worker():
                         geo['lon'] = row[0]
                         geo['lat'] = row[1]
                     else:
-                        geo['xmin'] = row[0]
-                        geo['ymin'] = row[1]
-                        geo['xmax'] = row[2]
-                        geo['ymax'] = row[3]
+                        if geometry_type == 'SDO_GEOMETRY':
+                            if dimension == 3:
+                                geo['xmin'] = row[0][0]
+                                geo['ymin'] = row[0][1]
+                                geo['xmax'] = row[0][3]
+                                geo['ymax'] = row[0][4]
+                            elif dimension == 2:
+                                geo['xmin'] = row[0][0]
+                                geo['ymin'] = row[0][1]
+                                geo['xmax'] = row[0][2]
+                                geo['ymax'] = row[0][3]
+                        else:
+                            geo['xmin'] = row[0]
+                            geo['ymin'] = row[1]
+                            geo['xmax'] = row[2]
+                            geo['ymax'] = row[3]
 
-            mapped_cols = job.map_fields(tbl, columns, column_types)
-            mapped_cols = dict(zip(mapped_cols, row))
-
+            # Map column names to Voyager fields.
+            mapped_cols = dict(zip(job.map_fields(tbl, columns, column_types), row))
             if has_shape:
-                shape_columns = [name for name in mapped_cols.keys() if '(SHAPE)' in name]
-                for x in shape_columns:
-                    mapped_cols.pop(x)
-
+                [mapped_cols.pop(name) for name in mapped_cols.keys() if '{0}'.format(geometry_field) in name]
             mapped_cols['_discoveryID'] = job.discovery_id
+
             entry['id'] = '{0}_{1}_{2}'.format(job.location_id, tbl, i)
             entry['location'] = job.location_id
             entry['action'] = job.action_type
@@ -205,8 +262,8 @@ def worker():
             job.send_entry(entry)
             i += 1
             if (i % increment) == 0:
-                status_writer.send_percent(float(i)/len(rows),
-                                           "{0}: {1:%}".format(tbl, float(i)/len(rows)),
+                status_writer.send_percent(float(i) / row_count,
+                                           "{0}: {1:%}".format(tbl, float(i) / row_count),
                                            'oracle_worker')
 
 
