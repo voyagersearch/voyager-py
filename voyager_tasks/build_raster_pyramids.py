@@ -66,10 +66,9 @@ def execute(request):
                 # ArcGIS 10.1 bug - Pyramids are not build beyond the first level for rasters in SDE.
                 # See: https://geonet.esri.com/thread/71775
                 elif dsc.dataElement.path.lower().endswith('.sde') and '10.1' in arcgis_version:
-                    status_writer.send_status("SDE SDE SDE")
                     arcpy.BuildPyramids_management(
                         result,
-                        8,
+                        6,
                         resample_technique=resampling_options[resampling_method],
                         compression_type=compression_method,
                         compression_quality=compression_quality
