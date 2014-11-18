@@ -50,7 +50,7 @@
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#build_raster_pyramids",
   	  "params":
   	  {
-    		"resampling_metod": {
+    		"resampling_method": {
     			"display": "Resampling Method",
     			"description": "The resampling method used to build your pyramids"
     		},
