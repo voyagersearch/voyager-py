@@ -265,8 +265,12 @@ def execute(request):
                 ds = ds.split('|')[0].strip()
 
             dsc = arcpy.Describe(ds)
-            if dsc.spatialReference.name == 'Unknown':
-                status_writer.send_state(status.STAT_WARNING, _('{0} has an Unknown projection. Output may be invalid or empty.').format(dsc.name))
+            try:
+                if dsc.spatialReference.name == 'Unknown':
+                    status_writer.send_state(status.STAT_WARNING, _('{0} has an Unknown projection. Output may be invalid or empty.').format(dsc.name))
+            except AttributeError:
+                pass
+            
             # If no output coord. system, get output spatial reference from input.
             if out_coordinate_system == 0:
                 try:
