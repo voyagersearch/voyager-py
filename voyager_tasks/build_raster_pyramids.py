@@ -45,7 +45,6 @@ def execute(request):
     i = 1.
     count = len(input_items)
     status_writer.send_percent(0.0, _('Starting to process...'), 'build_raster_pyramids')
-    arcgis_version = arcpy.GetInstallInfo()['Version']
     for result in input_items:
         dsc = arcpy.Describe(result)
         if not dsc.datasetType in ('RasterDataset', 'MosaicDataset', 'RasterCatalog'):
@@ -65,14 +64,6 @@ def execute(request):
                     )
                 # ArcGIS 10.1 bug - Pyramids are not build beyond the first level for rasters in SDE.
                 # See: https://geonet.esri.com/thread/71775
-                elif dsc.dataElement.path.lower().endswith('.sde') and '10.1' in arcgis_version:
-                    arcpy.BuildPyramids_management(
-                        result,
-                        6,
-                        resample_technique=resampling_options[resampling_method],
-                        compression_type=compression_method,
-                        compression_quality=compression_quality
-                    )
                 else:
                     arcpy.BuildPyramids_management(
                         result,
