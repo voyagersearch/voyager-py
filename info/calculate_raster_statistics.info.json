@@ -35,7 +35,7 @@
     "en":
     {
       "display": "Calculate Raster Statistics",
-      "description": "Calculates statistics for a raster dataset or mosaic dataset",
+      "description": "Calculates statistics for raster datasets and mosaic datasets",
       "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#caculate_raster_statistics",
       "params":
 	  {
