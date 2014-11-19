@@ -9,7 +9,8 @@ Builds pyramids for raster datasets, raster catalogs and mosaic datasets.
   - The default resampling method is NEAREST_NEIGHBOR (the value of the closest cell is assigned to the output cell).
   - The Advanced Options can be used to change the compression method and quality. 
   - See the ArcGIS help topics below for information about resampling methods and compression methods.
-
+  - With ArcGIS 10.1, rasters in SDE will not have pyramids built beyond the first level. See this Esri GeoNet article for more details: https://geonet.esri.com/thread/71775
+  
 ###Requirements
     - ArcGIS 10.x
 
