@@ -55,6 +55,7 @@ def execute(request):
             try:
                 # Build pyramids
                 if dsc.datasetType in ('RasterCatalog', 'MosaicDataset'):
+                    status_writer.send_status(_('Building pyramids for: {0}').format(result))
                     arcpy.BuildPyramidsandStatistics_management(
                         result,
                         calculate_statistics='NONE',
@@ -71,11 +72,14 @@ def execute(request):
                         compression_type=compression_method,
                         compression_quality=compression_quality
                     )
-                status_writer.send_percent(i/count, _('Built Pyramids for: {0}').format(dsc.name), 'build_raster_pyramids')
+                status_writer.send_percent(i/count,
+                                           _('Built Pyramids for: {0}').format(dsc.name),
+                                           'build_raster_pyramids')
                 i += 1
                 processed += 1
             except arcpy.ExecuteError as ee:
-                status_writer.send_state(status.STAT_WARNING, _('Failed to clip {0}. {1}').format(result, ee))
+                status_writer.send_state(status.STAT_WARNING,
+                                         _('Failed to build pyramids for: {0}. {1}').format(result, ee))
                 skipped += 1
                 i += 1
 

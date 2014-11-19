@@ -52,15 +52,15 @@
   	  {
     		"resampling_method": {
     			"display": "Resampling Method",
-    			"description": "The resampling method used to build your pyramids"
+    			"description": "Choose a resampling method used to build your pyramids"
     		},
     		"compression_method": {
     			"display": "Compression Method",
-    			"description": "The compression method"
+    			"description": "Choose a compression method"
     		},
     		"compression_quality": {
   		    "display": "Compression Quality",
-  		    "description": "The compression quality from 0 to 100 to use when pyramids are built with the JPEG compression method"
+  		    "description": "Enter a compression quality from 0 to 100 to use when pyramids are built with the JPEG compression method"
     		}
 	    }
 	  }
