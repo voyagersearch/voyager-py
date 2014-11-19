@@ -1,0 +1,65 @@
+{
+  "name": "calculate_raster_statistics",
+  "runner": "python",
+  "categories": ["download"],
+  "group": "Managing Raster",
+  "params": [
+    {
+      "type": "Geometry",
+      "name": "processing_extent",
+      "extentParam": true,
+      "initWithResultsExtent": true
+    },
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "Integer",
+      "name": "horizontal_skip_factor",
+      "value": 1
+    },
+    {
+      "type": "Integer",
+      "name": "vertical_skip_factor",
+      "value": 1
+    },
+    {
+      "type": "String",
+      "name": "ignore_pixel_values"
+    }
+  ],
+  "display":
+  {
+    "en":
+    {
+      "display": "Calculate Raster Statistics",
+      "description": "Calculates statistics for a raster dataset or mosaic dataset",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#caculate_raster_statistics",
+      "params":
+	  {
+		"processing_extent":
+		{
+			"display": "Processing Extent",
+			"description": "Draw a geographic area where statistics are calculated, so they are not generated from the entire dataset"
+		},
+		"horizontal_skip_factor":
+		{
+		    "display": "Horizontal Skip Factor",
+		    "description": "Enter the number of horizontal pixels to skip"
+		},
+		"vertical_skip_factor":
+		{
+		    "display": "Vertical Skip Factor",
+		    "description": "Enter the number of vertical pixels to skip"
+		},
+		"ignore_pixel_values":
+		{
+		    "display": "Ignore Pixel Values",
+		    "description": "Enter the pixel values to exclude from the calculation. The default is the NoData value Multiple values can be entered using a semi-colon delimiter (i.e. 0;255)."
+		}
+	  }
+    }
+  }
+}

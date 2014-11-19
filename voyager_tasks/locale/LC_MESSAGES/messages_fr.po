@@ -77,6 +77,41 @@ msgstr "Archivé: {0}"
 msgid "Deleted: {0}"
 msgstr "Supprimé: {0}"
 
+#: build_raster_pyramids.py:53 calculate_raster_statistics.py:61
+#, python-format
+msgid "{0} is not a raster dataset type."
+msgstr "{0} est pas un type jeu de données raster."
+
+#: build_raster_pyramids.py:58
+#, python-format
+msgid "Building pyramids for: {0}"
+msgstr "Construire des pyramides pour: {0}"
+
+#: build_raster_pyramids.py:76
+#, python-format
+msgid "Built pyramids for: {0}"
+msgstr "Pyramides construites pour: {0}"
+
+#: build_raster_pyramids.py:82
+#, python-format
+msgid "Failed to build pyramids for: {0}. {1}"
+msgstr "Impossible de construire des pyramides pour: {0}. {1}"
+
+#: calculate_raster_statistics.py:61
+#, python-format
+msgid "Calculating statistics for: {0}"
+msgstr "Calcul de statistiques pour: {0}"
+
+#: calculate_raster_statistics.py:77
+#, python-format
+msgid "Calculated statistics for: {0}"
+msgstr "Statistiques calculées pour: {0}"
+
+#: calculate_raster_statistics.py:83
+#, python-format
+msgid "Failed to calculate statistics for {0}. {1}"
+msgstr "Impossible de calculer les statistiques pour: {0}. {1}"
+
 #: clip_data.py:
 #, python-format
 msgid "Clipped: {0}"
