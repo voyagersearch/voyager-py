@@ -83,6 +83,10 @@ def worker():
             statement = "select table_name, owner from sde.layers where owner = '{0}'".format(lk[1])
             [tables.remove(l) for l in job.db_cursor.execute(statement).fetchall()]
 
+    if not tables:
+        status_writer.send_state(status.STAT_FAILED, "No tables or views found.")
+        return
+
     # Begin indexing.
     for tbl in set(tables):
         geo = {}
@@ -168,7 +172,7 @@ def worker():
                 geo['code'] = int(job.db_cursor.execute("select {0}.ST_SRID({1}) from {2}".format(schema, geometry_field, tbl)).fetchone()[0])
                 if 'POINT' in shape_type:
                     is_point = True
-                    if geo['code'] == 4326:
+                    if geo['code'] == 4326 or geo['code'] == 3:
                         for x in ('y', 'x', 'astext'):
                             columns.insert(0, '{0}.st_{1}({2})'.format(schema, x, geometry_field))
                     else:
