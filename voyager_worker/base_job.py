@@ -206,7 +206,10 @@ class Job(object):
     @property
     def multiprocess(self):
         try:
-            return bool(self.job['location']['config']['multiprocessing'])
+            if self.job['location']['config']['multiprocessing'] == 'true':
+                return True
+            else:
+                return False
         except KeyError:
             return False
 
@@ -230,7 +233,10 @@ class Job(object):
     def include_wkt(self):
         """Include well-known text (wkt) to geo information."""
         try:
-            return bool(self.job['location']['config']['wkt'])
+            if self.job['location']['config']['wkt'] == 'true':
+                return True
+            else:
+                return False
         except KeyError:
             return False
 
@@ -252,7 +258,10 @@ class Job(object):
     @property
     def has_gridfs(self):
         try:
-            return bool(self.job['location']['config']['mongodb']['gridfs'])
+            if self.job['location']['config']['mongodb']['gridfs'] == 'true':
+                return True
+            else:
+                return False
         except KeyError:
             return False
 
@@ -353,7 +362,7 @@ class Job(object):
                                 mapped_field_names[i] = '{0}{1}'.format('meta_', field)
                         else:
                             mapped_field_names[i] = '{0}{1}'.format('meta_', field)
-        elif self.default_mapping():
+        elif self.default_mapping() or mapped_field_names:
             for i, field in enumerate(mapped_field_names):
                 mapped_field_names[i] = '{0}{1}'.format(self.default_mapping(field_types[field]), field)
         else:

@@ -91,6 +91,7 @@ def worker(data_path):
                     expression = constraint
             if dsc.shapeFieldName in fields:
                 fields.remove(dsc.shapeFieldName)
+                field_types.pop(dsc.shapeFieldName)
             if dsc.shapeType == 'Point':
                 with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, expression, sr) as rows:
                     for i, row in enumerate(rows):
