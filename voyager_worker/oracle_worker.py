@@ -78,7 +78,7 @@ def worker():
             pass
 
     # Remove any layers/views from the list meant to be excluded.
-    if not '*' in job.layers_to_skip:
+    if '*' not in job.layers_to_skip:
         for lk in job.layers_to_skip:
             statement = "select table_name, owner from sde.layers where owner = '{0}'".format(lk[1])
             [tables.remove(l) for l in job.db_cursor.execute(statement).fetchall()]
@@ -100,10 +100,7 @@ def worker():
         if isinstance(tbl, tuple):
             column_query = "select column_name, data_type from all_tab_cols where " \
                            "table_name = '{0}' and column_name like".format(tbl[0])
-            if not job.db_connection.username == tbl[1]:
-                tbl = "{0}.{1}".format(tbl[1], tbl[0])
-            else:
-                tbl = tbl[0]
+            tbl = "{0}.{1}".format(tbl[1], tbl[0])
         else:
             column_query = "select column_name, data_type from all_tab_cols where " \
                            "table_name = '{0}' and column_name like".format(tbl)
