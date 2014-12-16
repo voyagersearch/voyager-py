@@ -254,8 +254,14 @@ def worker():
             mapped_cols = dict(zip(job.map_fields(tbl, columns, column_types), row))
             if has_shape:
                 [mapped_cols.pop(name) for name in mapped_cols.keys() if '{0}'.format(geometry_field) in name]
+                if is_point:
+                    mapped_cols['geometry_type'] = 'Point'
+                elif 'POLYGON' in shape_type:
+                    mapped_cols['geometry_type'] = 'Polygon'
+                else:
+                    mapped_cols['geometry_type'] = 'Polyline'
             mapped_cols['_discoveryID'] = job.discovery_id
-
+            mapped_cols['title'] = tbl
             entry['id'] = '{0}_{1}_{2}'.format(job.location_id, tbl, i)
             entry['location'] = job.location_id
             entry['action'] = job.action_type

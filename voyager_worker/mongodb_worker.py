@@ -57,7 +57,7 @@ def worker():
             documents = col.find(eval(query))
         else:
             documents = col.find()
-            
+
         # Index each document -- get a suitable base 10 increment for reporting percentage.
         increment = job.get_increment(documents.count())
         for doc in documents:
@@ -105,6 +105,7 @@ def worker():
             mapped_fields = job.map_fields(col.name, fields, field_types)
             mapped_fields = dict(zip(mapped_fields, values))
             mapped_fields['_discoveryID'] = job.discovery_id
+            mapped_fields['title'] = col.name
             entry['id'] = str(doc['_id'])
             entry['location'] = job.location_id
             entry['action'] = job.action_type

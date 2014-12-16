@@ -64,6 +64,7 @@ def worker(data_path):
                     mapped_fields = job.map_fields(dsc.name, fields, field_types)
                     mapped_fields = dict(zip(mapped_fields, row))
                     mapped_fields['_discoveryID'] = job.discovery_id
+                    mapped_fields['title'] = dsc.name
                     oid_field = filter(lambda x: x in ('FID', 'OID', 'OBJECTID'), rows.fields)
                     if oid_field:
                         fld_index = rows.fields.index(oid_field[0])
@@ -104,6 +105,8 @@ def worker(data_path):
                         mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
                         mapped_fields = dict(zip(mapped_fields, row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
+                        mapped_fields['title'] = dsc.name
+                        mapped_fields['geometry_type'] = dsc.shapeType
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
@@ -123,6 +126,8 @@ def worker(data_path):
                         mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
                         mapped_fields = dict(zip(mapped_fields, row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
+                        mapped_fields['title'] = dsc.name
+                        mapped_fields['geometry_type'] = dsc.shapeType
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type

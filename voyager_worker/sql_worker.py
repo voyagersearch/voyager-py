@@ -123,16 +123,22 @@ def worker():
                     geo['lon'] = row[2]
                     geo['lat'] = row[1]
                     mapped_cols = dict(zip(mapped_cols[3:], row[3:]))
+                    mapped_cols['geometry_type'] = 'Point'
                 else:
                     geo['xmin'] = row[1]
                     geo['ymin'] = row[2]
                     geo['xmax'] = row[3]
                     geo['ymax'] = row[4]
                     mapped_cols = dict(zip(mapped_cols[5:], row[5:]))
+                    if 'Polygon' in geom_type:
+                        mapped_cols['geometry_type'] = 'Polygon'
+                    else:
+                        mapped_cols['geometry_type'] = 'Polyline'
             else:
                 mapped_cols = dict(zip(mapped_cols, row))
 
             # Create an entry to send to ZMQ for indexing.
+            mapped_cols['title'] = tbl
             entry = {}
             entry['id'] = '{0}_{1}_{2}'.format(job.location_id, tbl, i)
             entry['location'] = job.location_id
