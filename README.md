@@ -18,7 +18,8 @@ See more task documentation in [/docs](docs)
 
 ###samples folder 
 #####Sample scripts
-  - index_files.py -- This Python script posts a set of files to voyager server for indexing.    
+  - index_files.py -- This Python script demonstrates how to send a set of files to voyager server for indexing.
+  - submit_job_fme.py -- This Python script demonstrates how to run (POST) a FME Server service. 
        
 ----
 
