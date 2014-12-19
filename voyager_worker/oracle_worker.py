@@ -33,19 +33,13 @@ def global_job(args):
 
 
 def worker():
-    """Worker function to index each row in each table in the database.
-
-    Example select statements:
-    #cur.execute("select spatial_column FROM layers where table_name = 'FC_COUNTRIES'")
-    #cur.execute("select column_name from all_tab_cols where table_name = 'FC_COUNTRIES' AND column_name like 'CNTRY%'")
-
-    """
+    """Worker function to index each row in each table in the database."""
     status_writer = status.Writer()
     job.connect_to_zmq()
     job.connect_to_database()
     tables = []
 
-    # Create the list of tables to index based on the user connected to the database.
+    # Create the list of tables to index (based on the user connected to the database).
     if '*' in job.tables_to_skip:
         pass
     elif not job.tables_to_keep == ['*']:
@@ -95,6 +89,7 @@ def worker():
         is_point = False
         has_shape = False
         geometry_field = None
+        shape_type = None
 
         # Check if the table is a layer/view and set name as "owner.table".
         if isinstance(tbl, tuple):
@@ -187,6 +182,10 @@ def worker():
                         except Exception:
                             for x in ('maxy', 'maxx', 'miny', 'minx', 'astext'):
                                 columns.insert(0, '{0}.st_{1}({2})'.format(schema, x, geometry_field))
+
+        # Drop astext from columns if WKT is not requested.
+        if not job.include_wkt:
+            columns.pop(0)
 
         # Get the count of all the rows to use for reporting progress.
         row_count = job.db_cursor.execute("select count(*) from {0}".format(tbl)).fetchall()[0][0]
