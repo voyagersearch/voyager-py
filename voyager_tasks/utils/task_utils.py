@@ -16,7 +16,9 @@ import re
 import sys
 import glob
 import json
+import math
 import urllib
+import time
 import zipfile
 import status
 
@@ -35,6 +37,18 @@ class ZipFileManager(zipfile.ZipFile):
     def __exit__(self, exc_type, exc_value, trace_back):
         """Close zipfile.ZipFile"""
         self.close()
+
+
+def time_it(func):
+    """A timer decorator - use this to time a function."""
+    def timed(*args, **kwargs):
+        ts = time.time()
+        result = func(*args, **kwargs)
+        te = time.time()
+        status_writer = status.Writer()
+        status_writer.send_status('func:{} args:[{}, {}] took: {:.2f} sec'.format(func.__name__, args, kwargs, te-ts))
+        return result
+    return timed
 
 
 def create_unique_name(name, gdb):
@@ -132,6 +146,14 @@ def get_input_items(parameters):
                 sys.exit(1)
             break
     return results
+
+
+def get_increment(count):
+    """Returns a suitable base 10 increment."""
+    p = int(math.log10(count))
+    if not p:
+        p = 1
+    return int(math.pow(10, p - 1))
 
 
 def get_data_path(item):

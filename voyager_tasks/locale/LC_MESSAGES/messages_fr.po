@@ -172,6 +172,11 @@ msgstr "Vous ne pouvez pas emballer {0}: {1}"
 msgid "No results to package"
 msgstr "Pas de résultats pour emballer"
 
+#: export_features.py:123,226
+#, python-format
+msgid "{0} has no geographic information"
+msgstr "{0} a aucune information géographique"
+
 #: replace_workspace_path.py:100
 #, python-format
 msgid "Updated: {0}"

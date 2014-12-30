@@ -24,6 +24,16 @@ for module in os.listdir(os.path.dirname(__file__)):
         continue
     __all__.append(module[:-3])
 
+dll_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'arch', 'win32_x86'))
+ogr2ogr = os.path.join(dll_path, 'ogr2ogr.exe')
+if os.environ['PATH'].endswith(';'):
+    os.environ['PATH'] += dll_path
+else:
+    os.environ['PATH'] += os.pathsep + dll_path
+egg_path = os.path.join(dll_path, 'py')
+sys.path.append(egg_path)
+__all__.append('ogr')
+
 # Code for translating task messages.
 locale.setlocale(locale.LC_ALL, '')
 loc = locale.getlocale()[0].lower()[0:2]
