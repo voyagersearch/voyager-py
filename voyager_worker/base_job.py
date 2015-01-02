@@ -340,7 +340,6 @@ class Job(object):
     def map_fields(self, table_name, field_names, field_types={}):
         """Returns mapped field names. Order matters."""
         mapped_field_names = copy.copy(field_names)
-        #TODO: revisit this logic...
         if self.__field_mapping:
             for mapping in self.field_mapping:
                 if mapping['name'] == '*':
@@ -362,13 +361,14 @@ class Job(object):
                                 mapped_field_names[i] = '{0}{1}'.format('meta_', field)
                         else:
                             mapped_field_names[i] = '{0}{1}'.format('meta_', field)
-        elif self.default_mapping() or mapped_field_names:
+            return mapped_field_names
+        elif mapped_field_names:
             for i, field in enumerate(mapped_field_names):
                 mapped_field_names[i] = '{0}{1}'.format(self.default_mapping(field_types[field]), field)
+            return mapped_field_names
         else:
             return mapped_field_names
 
-        return mapped_field_names
 
     def get_table_constraint(self, table_name):
         """Get and return the constraint for a table."""
@@ -410,12 +410,11 @@ class Job(object):
     def send_entry(self, entry):
         """Sends an entry to be indexed using pyzmq."""
         self.zmq_socket.send_json(entry, cls=ObjectEncoder)
-        #self.zmq_socket.send_pyobj(entry)
 
     def search_fields(self, dataset):
         """Returns a valid list of existing fields for the search cursor."""
+        #TODO: use prefered dict comprehension method: {f.name: f.type for f in arcpy.ListFields(dataset, fld)}
         import arcpy
-        #fields = []
         fields = {}
         if not self.fields_to_keep == ['*']:
             for fld in self.fields_to_keep:
@@ -433,7 +432,9 @@ class Job(object):
     #
 
     def __get_domains(self):
-        """List of workspace domains (for Esri workspace types)."""
+        """List of workspace domains (for Esri workspace types).
+        Only supported with ArcGIS 10.1 and higher.
+        """
         if self.use_coded_value_descriptions:
             for ext in ('.gdb', '.mdb', '.sde'):
                 if ext in self.path:
