@@ -56,6 +56,9 @@ if __name__ == '__main__':
             elif job.sql_driver == 'Oracle':
                 from voyager_worker import oracle_worker
                 oracle_worker.assign_job(job.job_file)
+            elif 'MySQL' in job.sql_driver:
+                from voyager_worker import mysql_worker
+                mysql_worker.assign_job(job.job_file)
         else:
             sys.stdout.write("No worker information.")
             sys.exit(1)

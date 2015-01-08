@@ -145,6 +145,7 @@ class Job(object):
                 "String": 'fs_',
                 'int': 'fl_',
                 'int identity': 'fl_',
+                'integer': 'fl_',
                 'smallint': 'fi_',
                 'bigint': 'fl_',
                 'char': 'fs_',
@@ -311,6 +312,12 @@ class Job(object):
         elif drvr == 'SQL Server':
             import pyodbc
             sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(drvr, srvr, db, un, pw)
+            self.db_connection = pyodbc.connect(sql_server_str)
+            self.db_cursor = self.db_connection.cursor()
+        elif 'MySQL' in drvr:
+            import pyodbc
+            # Ex. "DRIVER={MySQL ODBC 5.3 ANSI Driver}; SERVER=localhost; DATABASE=test; UID=root;OPTION=3"
+            sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4};OPTION=3".format(drvr, srvr, db, un, pw)
             self.db_connection = pyodbc.connect(sql_server_str)
             self.db_cursor = self.db_connection.cursor()
         elif self.mongodb_client_info:
