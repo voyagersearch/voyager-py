@@ -51,6 +51,7 @@ def worker():
     for table in tables:
         geo = {}
         is_point = False
+        has_shape = False
         if not job.fields_to_keep == ['*']:
             columns = []
             column_types = {}
@@ -134,6 +135,7 @@ def worker():
                     else:
                         mapped_cols['geometry_type'] = 'Polyline'
             else:
+                mapped_cols = job.map_fields(table, columns, column_types)
                 mapped_cols = dict(zip(mapped_cols, row))
 
             # Create an entry to send to ZMQ for indexing.
