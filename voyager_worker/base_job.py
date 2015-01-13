@@ -292,7 +292,10 @@ class Job(object):
     @property
     def sql_schema(self):
         """Returns the database schema."""
-        return self.job['location']['config']['sql']['connection']['schema']
+        try:
+            return self.job['location']['config']['sql']['connection']['schema']
+        except KeyError:
+            return None
 
     #
     # Public methods
