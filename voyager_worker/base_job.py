@@ -300,31 +300,34 @@ class Job(object):
     def connect_to_database(self):
         """Makes an ODBC database connection."""
         #TODO: test "Driver={Microsoft ODBC for Oracle};Server=" + dbInst + ';Uid=' + schema + ';Pwd=' + passwd + ";"
-        drvr = self.sql_connection_info['connection']['driver']
-        srvr = self.sql_connection_info['connection']['server']
-        db = self.sql_connection_info['connection']['database']
-        un = self.sql_connection_info['connection']['uid']
-        pw = self.sql_connection_info['connection']['pwd']
-        if drvr == 'Oracle':
-            import cx_Oracle
-            self.db_connection = cx_Oracle.connect("{0}/{1}@{2}/{3}".format(un, pw, srvr, db))
-            self.db_cursor = self.db_connection.cursor()
-        elif drvr == 'SQL Server':
-            import pyodbc
-            sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(drvr, srvr, db, un, pw)
-            self.db_connection = pyodbc.connect(sql_server_str)
-            self.db_cursor = self.db_connection.cursor()
-        elif 'MySQL' in drvr:
-            import pyodbc
-            # Ex. "DRIVER={MySQL ODBC 5.3 ANSI Driver}; SERVER=localhost; DATABASE=test; UID=root;OPTION=3"
-            sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4};OPTION=3".format(drvr, srvr, db, un, pw)
-            self.db_connection = pyodbc.connect(sql_server_str)
-            self.db_cursor = self.db_connection.cursor()
-        elif self.mongodb_client_info:
+        if self.mongodb_client_info:
             import pymongo
             import bson
             client = pymongo.MongoClient(self.mongodb_client_info)
             self.db_connection = client[self.mongodb_database]
+        else:
+            drvr = self.sql_connection_info['connection']['driver']
+            srvr = self.sql_connection_info['connection']['server']
+            db = self.sql_connection_info['connection']['database']
+            un = self.sql_connection_info['connection']['uid']
+            pw = self.sql_connection_info['connection']['pwd']
+
+            if drvr == 'Oracle':
+                import cx_Oracle
+                self.db_connection = cx_Oracle.connect("{0}/{1}@{2}/{3}".format(un, pw, srvr, db))
+                self.db_cursor = self.db_connection.cursor()
+            elif drvr == 'SQL Server':
+                import pyodbc
+                sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(drvr, srvr, db, un, pw)
+                self.db_connection = pyodbc.connect(sql_server_str)
+                self.db_cursor = self.db_connection.cursor()
+            elif 'MySQL' in drvr:
+                import pyodbc
+                # Ex. "DRIVER={MySQL ODBC 5.3 ANSI Driver}; SERVER=localhost; DATABASE=test; UID=root;OPTION=3"
+                sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4};OPTION=3".format(drvr, srvr, db, un, pw)
+                self.db_connection = pyodbc.connect(sql_server_str)
+                self.db_cursor = self.db_connection.cursor()
+
 
     def get_increment(self, count):
         """Returns a suitable base 10 increment."""

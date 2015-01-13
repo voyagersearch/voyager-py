@@ -43,7 +43,7 @@ def worker():
             statement = "select * from sys.objects where name like"
             [tables.append(t[0]) for t in job.db_cursor.execute("{0} '{1}'".format(statement, tk)).fetchall()]
     else:
-        [tables.append(t[0]) for t in job.db_cursor.execute("select name from sysobjects where type='U'").fetchall()]
+        [tables.append(t[0]) for t in job.db_cursor.execute("select name from sys.objects where type='U'").fetchall()]
 
     for tbl in set(tables):
         geo = {}

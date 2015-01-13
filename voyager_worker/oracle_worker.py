@@ -60,13 +60,19 @@ def worker():
         pass
     elif not job.layers_to_keep[0][0] == '*':
         for lk in job.layers_to_keep:
-            statement = "select table_name, owner from sde.layers where table_name like '{0}' and owner = '{1}'".format(lk[0], lk[1])
+            if job.sql_schema:
+                statement = "select table_name, owner from {0}.layers where table_name like '{1}' and owner = '{2}'".format(job.sql_schema, lk[0], lk[1])
+            else:
+                statement = "select table_name, owner from sde.layers where table_name like '{0}' and owner = '{1}'".format(lk[0], lk[1])
             [tables.append(l) for l in job.db_cursor.execute(statement).fetchall()]
     else:
         try:
             # If there is no owner, catch the error and continue.
             owner = job.layers_to_keep[0][1]
-            statement = "select table_name, owner from sde.layers where owner = '{0}'".format(owner)
+            if job.sql_schema:
+                statement = "select table_name, owner from {0}.layers where owner = '{1}'".format(job.sql_schema, owner)
+            else:
+                statement = "select table_name, owner from sde.layers where owner = '{0}'".format(owner)
             [tables.append(l) for l in job.db_cursor.execute(statement).fetchall()]
         except IndexError:
             pass
