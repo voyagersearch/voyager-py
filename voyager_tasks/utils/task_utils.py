@@ -17,6 +17,7 @@ import sys
 import glob
 import json
 import math
+import itertools
 import urllib
 import time
 import zipfile
@@ -86,6 +87,19 @@ def get_clip_region(clip_area_wkt, out_coordinate_system=None):
             except AttributeError:
                 clip_area = clip_area.projectAs(out_sr)
     return clip_area.extent
+
+
+def grouper(iterable, n, fillvalue=None):
+    """Collect data into fixed-length chunks or blocks.
+    :param iterable: input iterable (list, etc.)
+    :param n: number of chunks/blocks
+    :param fillvalue: value for remainder values
+    :return: izip_longest object
+
+    e.g. grouper([1,2,3,4], 2, 'end') --> (1,2) (2,3) 'end'
+    """
+    args = [iter(iterable)] * n
+    return itertools.izip_longest(fillvalue=fillvalue, *args)
 
 
 def list_files(source_file, file_extensions):
