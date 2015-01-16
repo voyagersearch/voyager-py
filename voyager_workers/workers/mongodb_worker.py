@@ -15,8 +15,8 @@ import decimal
 import json
 import base_job
 import gridfs
-import status
-import worker_utils
+from utils import status
+from utils import worker_utils
 
 
 class ComplexEncoder(json.JSONEncoder):

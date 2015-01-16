@@ -17,7 +17,7 @@ import sys
 import logging
 import multiprocessing
 import arcpy
-import status
+from utils import status
 
 
 def global_job(*args):

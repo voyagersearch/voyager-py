@@ -16,3 +16,4 @@ target/
 .idea/vcs.xml
 .idea/voyager-processing.iml
 .idea/workspace.xml
+.idea/voyager-py.iml

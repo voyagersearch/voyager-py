@@ -14,7 +14,7 @@
 import decimal
 import json
 import base_job
-import status
+from utils import status
 
 
 class ComplexEncoder(json.JSONEncoder):

@@ -18,7 +18,7 @@ import json
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tasks'))
 import tasks
-import utils
+from tasks import utils
 
 
 def run_task(json_file):

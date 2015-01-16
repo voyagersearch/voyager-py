@@ -15,8 +15,8 @@ import re
 import decimal
 import json
 import base_job
-import status
-import time
+from utils import status
+
 
 class ComplexEncoder(json.JSONEncoder):
     """To handle decimal types for json encoding."""

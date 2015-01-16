@@ -260,7 +260,7 @@ def get_projection_file(factory_code):
     :rtype : str
     """
     import arcpy
-    lu_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'projection_files.json')
+    lu_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'supportfiles', 'projection_files.json')
     with open(lu_file) as fp:
         prj_lu = json.load(fp)
         arcgis_folder = arcpy.GetInstallInfo()['InstallDir']
@@ -283,7 +283,7 @@ def make_thumbnail(layer_or_mxd, output_png_file, use_data_frame=True):
     elif hasattr(layer_or_mxd, 'name'):
         layer = layer_or_mxd
         mxd = arcpy.mapping.MapDocument(
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'MapTemplate.mxd')
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'supportfiles', 'MapTemplate.mxd')
         )
         data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
         arcpy.mapping.AddLayer(data_frame, layer)
@@ -292,7 +292,7 @@ def make_thumbnail(layer_or_mxd, output_png_file, use_data_frame=True):
         data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
     elif layer_or_mxd.endswith('.lyr'):
         mxd = arcpy.mapping.MapDocument(
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'MapTemplate.mxd')
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'supportfiles', 'MapTemplate.mxd')
         )
         data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
         layer = arcpy.mapping.Layer(layer_or_mxd)
