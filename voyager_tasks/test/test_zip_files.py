@@ -5,8 +5,9 @@ import tempfile
 import shutil
 import sys
 import zipfile
+sys.path.append(os.getcwd())
 sys.path.append(os.path.dirname(os.getcwd()))
-sys.path.append(os.path.dirname(os.path.dirname(os.getcwd())))
+sys.path.append(os.path.join(os.path.dirname(os.getcwd()), 'tasks'))
 
 
 class TestZipFilesTask(unittest.TestCase):

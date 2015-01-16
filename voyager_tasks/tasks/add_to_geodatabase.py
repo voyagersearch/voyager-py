@@ -16,9 +16,9 @@ import os
 import shutil
 import tempfile
 import arcpy
-from voyager_tasks.utils import status
-from voyager_tasks.utils import task_utils
-from voyager_tasks import _
+from utils import status
+from utils import task_utils
+from tasks import _
 
 
 def is_feature_dataset(workspace):
@@ -232,7 +232,7 @@ def execute(request):
             pass
 
     try:
-        shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
+        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
         pass
 

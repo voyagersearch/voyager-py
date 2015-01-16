@@ -3,8 +3,8 @@ import sys
 import glob
 import json
 import unittest
-sys.path.append(os.path.dirname(os.path.dirname(os.getcwd())))
-import voyager_tasks
+sys.path.append(os.path.dirname(os.getcwd()))
+import tasks
 
 
 class TestInfoFiles(unittest.TestCase):
@@ -13,11 +13,11 @@ class TestInfoFiles(unittest.TestCase):
     """
     @classmethod
     def setUpClass(self):
-        self.tasks = set(voyager_tasks.__all__)
+        self.tasks = set(tasks.__all__)
         self.tasks.remove('template_task')
         self.tasks.remove('dev_pretend_py')
         self.tasks.remove('ogr')
-        self.info_dir = os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), '..', 'info'))
+        self.info_dir = os.path.abspath(os.path.join(os.getcwd(), '..', 'info'))
         self.json_files = set([os.path.basename(f).split('.')[0] for f in glob.glob(os.path.join(self.info_dir, '*.info.json'))])
         self.names = []
         self.runner = set()

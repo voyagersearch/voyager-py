@@ -18,9 +18,9 @@ import tempfile
 import xml.etree.cElementTree as eTree
 import shutil
 import arcpy
-from voyager_tasks.utils import status
-from voyager_tasks.utils import task_utils
-from voyager_tasks import _
+from utils import status
+from utils import task_utils
+from tasks import _
 
 if arcpy.GetInstallInfo()['Version'] == '10.0':
     raise ImportError('write_metadata not available with ArcGIS 10.0.')
@@ -52,7 +52,7 @@ def execute(request):
     xslt_file = os.path.join(arcpy.GetInstallInfo()['InstallDir'], 'Metadata/Stylesheets/gpTools/exact copy of.xslt')
 
     # Template metadata file.
-    template_xml = os.path.join(os.path.dirname(__file__), 'supportfiles', 'metadata_template.xml')
+    template_xml = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'metadata_template.xml')
 
     i = 1.
     updated = 0
@@ -152,7 +152,7 @@ def execute(request):
             pass
 
     try:
-        shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
+        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
         pass
 

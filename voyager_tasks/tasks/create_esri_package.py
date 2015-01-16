@@ -15,16 +15,16 @@
 import os
 import shutil
 import arcpy
-from voyager_tasks.utils import status
-from voyager_tasks.utils import task_utils
-from voyager_tasks import _
+from utils import status
+from utils import task_utils
+from tasks import _
 
 
 def execute(request):
     """Package inputs to an Esri map or layer package.
     :param request: json as a dict.
     """
-    app_folder = os.path.dirname(os.path.abspath(__file__))
+    app_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     status_writer = status.Writer()
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)

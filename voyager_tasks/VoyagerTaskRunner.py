@@ -16,8 +16,9 @@ import os
 import collections
 import json
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), 'voyager_tasks'))
-import voyager_tasks
+sys.path.append(os.path.join(os.path.dirname(__file__), 'tasks'))
+import tasks
+import utils
 
 
 def run_task(json_file):
@@ -35,7 +36,7 @@ def run_task(json_file):
 if __name__ == '__main__':
     if sys.argv[1] == '--info':
         task_info = collections.defaultdict(list)
-        for task in voyager_tasks.__all__:
+        for task in tasks.__all__:
             try:
                 # Metadata GP tools do not work in Python with ArcGIS 10.0
                 __import__(task)

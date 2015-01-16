@@ -14,9 +14,9 @@
 # limitations under the License.
 import os
 import arcpy
-from voyager_tasks.utils import status
-from voyager_tasks.utils import task_utils
-from voyager_tasks import _
+from utils import status
+from utils import task_utils
+from tasks import _
 
 def execute(request):
     """Builds raster pyramids for input raster datasets.

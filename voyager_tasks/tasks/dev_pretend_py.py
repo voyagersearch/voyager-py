@@ -1,5 +1,5 @@
 import time
-from voyager_tasks.utils import status
+from utils import status
 
 
 def execute(request=''):

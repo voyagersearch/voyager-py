@@ -14,11 +14,10 @@
 # limitations under the License.
 import os
 import collections
-import shutil
 import arcpy
-from voyager_tasks.utils import status
-from voyager_tasks.utils import task_utils
-from voyager_tasks import _
+from utils import status
+from utils import task_utils
+from tasks import _
 
 
 pixel_types = {"U1": "1_BIT",
@@ -35,18 +34,29 @@ pixel_types = {"U1": "1_BIT",
 
 
 def execute(request):
-    """Mosaics input raster datasets into a new raster dataset.
+    """Mosaics input raster datasets into a new raster dataset or mosaic dataset.
     :param request: json as a dict.
     """
     status_writer = status.Writer()
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
+    target_workspace = task_utils.get_parameter_value(parameters, 'target_workspace', 'value')
+    output_name = task_utils.get_parameter_value(parameters, 'output_dataset_name', 'value')
     out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
     # Advanced options
     output_raster_format = task_utils.get_parameter_value(parameters, 'raster_format', 'value')
     compression_method = task_utils.get_parameter_value(parameters, 'compression_method', 'value')
     compression_quality = task_utils.get_parameter_value(parameters, 'compression_quality', 'value')
     arcpy.env.compression = '{0} {1}'.format(compression_method, compression_quality)
+
+    if output_raster_format in ('FileGDB', 'MosaicDataset'):
+        if not os.path.splitext(target_workspace)[1] in ('.gdb', '.mdb', '.sde'):
+            status_writer.send_state(status.STAT_FAILED, _('Target workspace must be a geodatabase'))
+            return
+
+    task_folder = request['folder']
+    if not os.path.exists(task_folder):
+        os.makedirs(task_folder)
 
     if not output_raster_format == 'MosaicDataset':
         # Get the clip region as an extent object.
@@ -62,12 +72,10 @@ def execute(request):
             clip_area = None
 
     status_writer.send_status(_('Setting the output workspace...'))
-    out_workspace = os.path.join(request['folder'], 'temp')
-    if not os.path.exists(out_workspace):
-        os.makedirs(out_workspace)
-    if output_raster_format == 'FileGDB' or output_raster_format == 'MosaicDataset':
-        out_workspace = arcpy.CreateFileGDB_management(out_workspace, 'output.gdb').getOutput(0)
-    arcpy.env.workspace = out_workspace
+    if not os.path.exists(target_workspace):
+        status_writer.send_state(status.STAT_FAILED, _('Target workspace does not exist'))
+        return
+    arcpy.env.workspace = target_workspace
 
     pixels = []
     raster_items = []
@@ -94,9 +102,9 @@ def execute(request):
     # Get most common pixel type.
     pixel_type = pixel_types[max(set(pixels), key=pixels.count)]
     if output_raster_format in ('FileGDB', 'GRID', 'MosaicDataset'):
-        output_name = arcpy.ValidateTableName('mosaic', out_workspace)
+        output_name = arcpy.ValidateTableName(output_name, target_workspace)
     else:
-        output_name = '{0}.{1}'.format(arcpy.ValidateTableName('mosaic', out_workspace), output_raster_format.lower())
+        output_name = '{0}.{1}'.format(arcpy.ValidateTableName(output_name, target_workspace), output_raster_format.lower())
 
     if output_raster_format == 'MosaicDataset':
         try:
@@ -105,7 +113,7 @@ def execute(request):
                 out_coordinate_system = raster_items[0]
             else:
                 out_coordinate_system = None
-            mosaic_ds = arcpy.CreateMosaicDataset_management(out_workspace,
+            mosaic_ds = arcpy.CreateMosaicDataset_management(target_workspace,
                                                              output_name,
                                                              out_coordinate_system,
                                                              max(bands),
@@ -122,15 +130,15 @@ def execute(request):
             if len(bands) > 1:
                 status_writer.send_state(status.STAT_FAILED, _('Input rasters must have the same number of bands'))
                 return
-            status_writer.send_status(_('Generating {0}. Large input {1} will take longer to process.'.format('Mosaic', 'rasters')))
             if out_coordinate_system == '0':
-               out_coordinate_system = None
+                out_coordinate_system = None
+            status_writer.send_status(_('Generating {0}. Large input {1} will take longer to process.'.format('Mosaic', 'rasters')))
             if clip_area:
                 ext = '{0} {1} {2} {3}'.format(clip_area.XMin, clip_area.YMin, clip_area.XMax, clip_area.YMax)
                 tmp_mosaic = arcpy.MosaicToNewRaster_management(
                     raster_items,
-                    out_workspace,
-                    'tmpMosaic',
+                    target_workspace,
+                    'tempMosaic',
                     out_coordinate_system,
                     pixel_type,
                     number_of_bands=bands.keys()[0]
@@ -140,10 +148,12 @@ def execute(request):
                 arcpy.Delete_management(tmp_mosaic)
             else:
                 out_mosaic = arcpy.MosaicToNewRaster_management(raster_items,
-                                                                out_workspace,
+                                                                target_workspace,
                                                                 output_name,
                                                                 out_coordinate_system,
-                                                                pixel_type, number_of_bands=bands.keys()[0])
+                                                                pixel_type,
+                                                                number_of_bands=bands.keys()[0],
+                                                                mosaic_method='BLEND')
             arcpy.MakeRasterLayer_management(out_mosaic, 'mosaic_layer')
             layer_object = arcpy.mapping.Layer('mosaic_layer')
             task_utils.make_thumbnail(layer_object, os.path.join(request['folder'], '_thumb.png'))
@@ -151,12 +161,7 @@ def execute(request):
             status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
             return
 
-    if arcpy.env.workspace.endswith('.gdb'):
-        out_workspace = os.path.dirname(arcpy.env.workspace)
-    zip_file = task_utils.zip_data(out_workspace, 'output.zip')
-    shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
-
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.json'), len(raster_items), skipped)
+    task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), skipped)

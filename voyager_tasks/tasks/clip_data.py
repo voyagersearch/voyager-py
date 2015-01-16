@@ -16,9 +16,9 @@ import os
 import glob
 import shutil
 import arcpy
-from voyager_tasks.utils import task_utils
-from voyager_tasks.utils import status
-from voyager_tasks import _
+from utils import task_utils
+from utils import status
+from tasks import _
 
 
 status_writer = status.Writer()
@@ -145,7 +145,7 @@ def create_lpk(data_location, additional_files):
 def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
     """Creates a map document (.mxd) or map package (.mpk) for all the clipped datasets."""
     shutil.copyfile(
-        os.path.join(os.path.dirname(__file__), 'supportfiles', 'MapTemplate.mxd'),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'MapTemplate.mxd'),
         os.path.join(data_location, 'output.mxd')
     )
     mxd = arcpy.mapping.MapDocument(os.path.join(data_location, 'output.mxd'))
@@ -270,7 +270,7 @@ def execute(request):
                     status_writer.send_state(status.STAT_WARNING, _('{0} has an Unknown projection. Output may be invalid or empty.').format(dsc.name))
             except AttributeError:
                 pass
-            
+
             # If no output coord. system, get output spatial reference from input.
             if out_coordinate_system == 0:
                 try:

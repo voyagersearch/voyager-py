@@ -16,9 +16,9 @@ import os
 import glob
 import shutil
 import arcpy
-from voyager_tasks.utils import status
-from voyager_tasks.utils import task_utils
-from voyager_tasks import _
+from utils import status
+from utils import task_utils
+from tasks import _
 
 
 def execute(request):
@@ -180,7 +180,7 @@ def execute(request):
         status_writer.send_status("Converted: {}".format(converted))
         zip_file = task_utils.zip_data(out_workspace, 'output.zip')
         shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
-        shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
+        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
     else:
         kml_file = glob.glob(os.path.join(out_workspace, '*.kmz'))[0]
         tmp_lyr = arcpy.KMLToLayer_conversion(kml_file, out_workspace, 'kml_layer')

@@ -14,9 +14,9 @@
 # limitations under the License.
 import os
 import shutil
-from voyager_tasks.utils import status
-from voyager_tasks.utils import task_utils
-from voyager_tasks import _
+from utils import status
+from utils import task_utils
+from tasks import _
 
 
 def create_dir(src_file, target_folder):
@@ -90,7 +90,7 @@ def execute(request):
         i += 1
 
     try:
-        shutil.copy2(os.path.join(os.path.dirname(__file__), 'supportfiles', '_thumb.png'), request['folder'])
+        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
         pass
 

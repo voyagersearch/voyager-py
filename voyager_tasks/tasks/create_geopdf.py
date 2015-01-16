@@ -16,9 +16,9 @@ import os
 import datetime
 import locale
 import arcpy
-from voyager_tasks.utils import status
-from voyager_tasks.utils import task_utils
-from voyager_tasks import _
+from utils import status
+from utils import task_utils
+from tasks import _
 
 
 def dd_to_dms(dd):
@@ -71,8 +71,8 @@ def execute(request):
     if base_map == 'NONE':
         base_layer = None
     else:
-        base_layer = arcpy.mapping.Layer(os.path.join(os.path.dirname(__file__), 'supportfiles', 'basemaps', '{0}.lyr'.format(base_map)))
-    mxd_path = os.path.join(os.path.dirname(__file__), 'supportfiles', 'frame', map_template)
+        base_layer = arcpy.mapping.Layer(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'basemaps', '{0}.lyr'.format(base_map)))
+    mxd_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'frame', map_template)
     mxd = arcpy.mapping.MapDocument(mxd_path)
     data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
 

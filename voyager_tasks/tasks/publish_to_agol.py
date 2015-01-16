@@ -14,11 +14,18 @@
 # limitations under the License.
 import os
 import glob
+import json
 import shutil
+import sys
+import urllib
 import arcpy
-from voyager_tasks.utils import status
-from voyager_tasks.utils import task_utils
-from voyager_tasks import _
+try:
+    import requests
+except ImportError:
+    pass
+from utils import status
+from utils import task_utils
+from tasks import _
 
 status_writer = status.Writer()
 
@@ -27,14 +34,71 @@ class AnalyzeServiceException(Exception):
     pass
 
 
-def create_service(temp_folder, map_document, server_path, service_name,  folder_name=''):
+class PublishException(Exception):
+    pass
+
+
+class AGOLHandler(object):
+    """ArcGIS Online handler class."""
+    def __init__(self, portal_url, username, password, service_name):
+        self.username = username
+        self.password = password
+        self.service_name = service_name
+        self.portal_url = portal_url
+        self.token, self.http = self.get_token()
+
+    def get_token(self):
+        """Generates a token."""
+        query_dict = {'username': self.username,
+                      'password': self.password,
+                      'referer': self.portal_url}
+        query_string = urllib.urlencode(query_dict)
+        url = "{0}/sharing/rest/generateToken".format(self.portal_url)
+        token = json.loads(urllib.urlopen(url + "?f=json", query_string).read())
+        if "token" not in token:
+            print(token['error'])
+            sys.exit()
+        else:
+            http_prefix = "{0}/sharing/rest".format(self.portal_url)
+            return token['token'], http_prefix
+
+    def publish(self, sd_file_name, tags, description):
+        """Uploads and publishes the staging file to ArcGIS Online.
+        This method uses 3rd party module: requests.
+        """
+        update_url = '{0}/content/users/{1}/addItem'.format(self.http, self.username)
+        sd_file = {"file": open(sd_file_name, 'rb')}
+        url = update_url + "?f=json&token="+self.token + \
+            "&filename="+sd_file_name + \
+            "&type=Service Definition"\
+            "&title="+self.service_name + \
+            "&tags="+tags + \
+            "&description=" + description
+        response = requests.post(url, files=sd_file)
+        items = json.loads(response.text)
+        if "success" in items:
+            publish_url = '{0}/content/users/{1}/publish'.format(self.http, self.username)
+            query_dict = {'itemID': items['id'], 'filetype': 'serviceDefinition', 'f': 'json', 'token': self.token}
+            json_response = urllib.urlopen(publish_url, urllib.urlencode(query_dict))
+            json_output = json.loads(json_response.read())
+            word_test = ["success", "results", "services", "notSharedWith"]
+            if not any(word in json_output for word in word_test):
+                raise PublishException('Failed to publish: {0}'.format(json_output))
+        else:
+            raise requests.RequestException("sd file not uploaded. Errors: {0}.\n".format(items))
+
+        return json_output['services'][0]['serviceurl']
+
+def create_service(temp_folder, map_document, portal_url, username, password, service_name, folder_name=''):
     """Creates a map service on an ArcGIS Server machine or in an ArcGIS Online account.
 
     :param temp_folder: folder path where temporary files are created
     :param map_document: map document object
-    :param server_path: the ArcGIS server path or connection file path (.ags)
+    :param portal_url: the ArcGIS Online or Portal for ArcGIS URL
+    :param username: username for ArcGIS Online
+    :param password: password for ArcGIS Online
     :param service_name: the name of the service to be created
-    :param folder_name: the folder where the service is created
+    :param folder_name: the name of the folder where the service is created (optional)
     """
     # Create a temporary definition file.
     draft_file = '{0}.sddraft'.format(os.path.join(temp_folder, service_name))
@@ -42,7 +106,7 @@ def create_service(temp_folder, map_document, server_path, service_name,  folder
     arcpy.mapping.CreateMapSDDraft(map_document,
                                    draft_file,
                                    service_name,
-                                   'ARCGIS_SERVER',
+                                   'MY_HOSTED_SERVICES',
                                    folder_name=folder_name,
                                    copy_data_to_server=True,
                                    summary=map_document.description,
@@ -65,25 +129,23 @@ def create_service(temp_folder, map_document, server_path, service_name,  folder
         raise AnalyzeServiceException(errors)
 
     # Upload/publish the service.
-    status_writer.send_status(_('Publishing the map service to: {0}...').format(server_path))
-    result = arcpy.UploadServiceDefinition_server(stage_file, server_path, service_name)
-    status_writer.send_status(_('Successfully created: {0}').format(result.getOutput(0)))
-    return
-
+    status_writer.send_status(_('Publishing the map service to: {0}...').format(portal_url))
+    agol_handler = AGOLHandler(portal_url, username, password, service_name)
+    map_service_url = agol_handler.publish(stage_file, map_document.description, map_document.tags)
+    status_writer.send_status(_('Successfully created: {0}').format(map_service_url))
 
 def execute(request):
     """Deletes files.
     :param request: json as a dict
     """
-    app_folder = os.path.dirname(os.path.abspath(__file__))
+    app_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     parameters = request['params']
     input_items = task_utils.get_input_items(parameters)
-    server_conn = task_utils.get_parameter_value(parameters, 'server_connection_path', 'value')
+    url = task_utils.get_parameter_value(parameters, 'url', 'value')
+    username = task_utils.get_parameter_value(parameters, 'username', 'value')
+    password = task_utils.get_parameter_value(parameters, 'password', 'value')
     service_name = task_utils.get_parameter_value(parameters, 'service_name', 'value')
     folder_name = task_utils.get_parameter_value(parameters, 'folder_name', 'value')
-    if not server_conn:
-        status_writer.send_state(status.STAT_FAILED, _('A server path is required'))
-        return
 
     request_folder = os.path.join(request['folder'], 'temp')
     if not os.path.exists(request_folder):
@@ -103,12 +165,12 @@ def execute(request):
                 pkg_folder = os.path.join(request_folder, glob.glob1(request_folder, 'v*')[0])
                 mxd_file = os.path.join(pkg_folder, glob.glob1(pkg_folder, '*.mxd')[0])
                 mxd = arcpy.mapping.MapDocument(mxd_file)
-                create_service(request_folder, mxd, server_conn, service_name, folder_name)
+                create_service(request_folder, mxd, url, username, password,  service_name, folder_name)
             else:
                 data_type = arcpy.Describe(item).dataType
                 if data_type == 'MapDocument':
                     mxd = arcpy.mapping.MapDocument(item)
-                    create_service(request_folder, mxd, server_conn, service_name, folder_name)
+                    create_service(request_folder, mxd, url, username, password,  service_name, folder_name)
                 elif data_type == 'Layer':
                     if item.endswith('.lpk'):
                         status_writer.send_status(_('Extracting: {0}').format(item))
@@ -123,7 +185,7 @@ def execute(request):
                     data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
                     arcpy.mapping.AddLayer(data_frame, layer)
                     mxd.save()
-                    create_service(request_folder, mxd, server_conn, service_name, folder_name)
+                    create_service(request_folder, mxd, url, username, password,  service_name, folder_name)
                 elif data_type in ('FeatureClass', 'ShapeFile', 'RasterDataset'):
                     if data_type == 'RasterDataset':
                         arcpy.MakeRasterLayer_management(item, os.path.basename(item))
@@ -131,13 +193,21 @@ def execute(request):
                         arcpy.MakeFeatureLayer_management(item, os.path.basename(item))
                     layer = arcpy.mapping.Layer(os.path.basename(item))
                     mxd = arcpy.mapping.MapDocument(map_template)
-                    mxd.title = layer.name
+                    mxd.description = layer.name
+                    mxd.tags = layer.name
+                    mxd.save()
                     data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
                     arcpy.mapping.AddLayer(data_frame, layer)
                     mxd.save()
-                    create_service(request_folder, mxd, server_conn, service_name, folder_name)
+                    create_service(request_folder, mxd, url, username, password,  service_name, folder_name)
         except AnalyzeServiceException as ase:
             status_writer.send_state(status.STAT_FAILED, _(ase))
+            return
+        except requests.RequestException as re:
+            status_writer.send_state(status.STAT_FAILED, _(re))
+            return
+        except PublishException as pe:
+            status_writer.send_state(status.STAT_FAILED, _(pe))
             return
         except arcpy.ExecuteError as ee:
             status_writer.send_state(status.STAT_FAILED, _(ee))

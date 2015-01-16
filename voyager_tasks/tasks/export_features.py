@@ -15,10 +15,10 @@
 import os
 import sys
 import urllib2
-import voyager_tasks
-from voyager_tasks.utils import status
-from voyager_tasks.utils import task_utils
-from voyager_tasks import _
+import tasks
+from utils import status
+from utils import task_utils
+from tasks import _
 
 
 gdb = ''
