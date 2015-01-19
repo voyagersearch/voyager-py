@@ -11,7 +11,7 @@ import platform
 import glob
 import os
 
-pwd = os.path.dirname(os.path.realpath(__file__))
+pwd = os.path.dirname(os.path.split(os.path.dirname(__file__))[0]) #os.path.dirname(os.path.realpath(__file__))
 arch = platform.architecture()[0]
 system = platform.system()
 path = None
@@ -24,7 +24,8 @@ elif system == 'Linux':
     if arch == '32bit': path = 'linux_x86'
     elif arch == '64bit': path = 'linux_amd64'
 
-sys.path.append(os.path.join(pwd, "..", "arch", path, "py"))
+sys.path.append(os.path.join(pwd, "arch", path, "py"))
+pwd = os.path.join(pwd, 'py', 'extractors')
 for f in glob.glob(os.path.join(pwd, "*.zip")): sys.path.append(f)
 sys.path.append(pwd)
 
