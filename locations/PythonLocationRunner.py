@@ -28,7 +28,7 @@ if __name__ == '__main__':
             sys.exit(1)
 
         for module, worker in {'arcpy': 'esri_worker', 'cx_Oracle': 'oracle_worker',
-                       'pyodbc': 'sql_worker', 'pymongo': 'mongodb_worker', 'ogr': 'gdal_worker'}.iteritems():
+                       'pyodbc': 'sql_worker', 'pyodbc':'mysql_worker', 'pymongo': 'mongodb_worker', 'ogr': 'gdal_worker'}.iteritems():
             try:
                 __import__(module)
                 worker_info['workers'].append({'name': worker, 'available': True})
