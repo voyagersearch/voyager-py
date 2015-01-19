@@ -68,6 +68,8 @@ class Job(object):
 
         self.__layers_to_keep = []
         self.__layers_to_skip = []
+        self.__views_to_keep = []
+        self.__views_to_skip = []
         self.__tables_to_keep = []
         self.__tables_to_skip = []
         self.__field_mapping = []
@@ -75,6 +77,7 @@ class Job(object):
         self.__table_queries = []
         self.__get_table_config()
         self.__get_layer_config()
+        self.__get_view_config()
         self.__get_domains()
 
     def __del__(self):
@@ -163,13 +166,23 @@ class Job(object):
 
     @property
     def layers_to_keep(self):
-        """List of layers and views to keep."""
+        """List of layers to keep."""
         return self.__layers_to_keep
 
     @property
     def layers_to_skip(self):
-        """List of layers and views to skip."""
+        """List of layers to skip."""
         return self.__layers_to_skip
+
+    @property
+    def views_to_keep(self):
+        """List of views to keep."""
+        return self.__views_to_keep
+
+    @property
+    def views_to_skip(self):
+        """List of views to skip."""
+        return self.__views_to_skip
 
     @property
     def tables_to_keep(self):
@@ -472,6 +485,24 @@ class Job(object):
                     continue
         except KeyError:
             self.__layers_to_keep = ['*']
+
+
+    def __get_view_config(self):
+        """List of views to keep (may include wild card)."""
+        try:
+            views = self.job['location']['config']['views']
+            for view in views:
+                try:
+                    if view['action'] == 'INCLUDE':
+                        self.__views_to_keep.append((view['name'], view['owner'], view['schema']))
+                        self.__get_info(view)
+                    elif view['action'] == 'EXCLUDE':
+                        self.__views_to_skip.append((view['name'], view['owner'], view['schema']))
+                except KeyError:
+                    self.__get_info(view)
+                    continue
+        except KeyError:
+            self.__views_to_keep = ['*']
 
 
     def __get_table_config(self):

@@ -55,7 +55,7 @@ def worker():
             statement = "select table_name from user_tables where table_name like '{0}'".format(tk)
             [tables.remove(t[0]) for t in job.db_cursor.execute(statement).fetchall()]
 
-    # Create the list of layers/views to index based on Owner.
+    # Create the list of layers to index based on Owner.
     if '*' in job.layers_to_skip:
         pass
     elif not job.layers_to_keep[0][0] == '*':
@@ -77,11 +77,43 @@ def worker():
         except IndexError:
             pass
 
-    # Remove any layers/views from the list meant to be excluded.
+    # Remove any layers from the list meant to be excluded.
     if '*' not in job.layers_to_skip:
         for lk in job.layers_to_skip:
             statement = "select table_name, owner from sde.layers where owner = '{0}'".format(lk[1])
             [tables.remove(l) for l in job.db_cursor.execute(statement).fetchall()]
+
+    #TODO: check job.views_to_skip
+    if '*' in job.views_to_skip:
+        pass
+    elif not job.views_to_keep[0][0] == '*':
+        for vk in job.views_to_keep:
+            if vk[2].lower() == 'all':
+                statement = "select view_name from all_views where view_name like '{0}' and owner = '{1}'".format(vk[0], vk[1].upper())
+            else:
+                statement = "select view_name, owner from user_views where view_name like '{0}' and owner = '{1}'".format(vk[0], vk[1].upper())
+            [tables.append(v) for v in job.db_cursor.execute(statement).fetchall()]
+    else:
+        try:
+            # If there is no owner, catch the error and continue.
+            owner = job.views_to_keep[0][1]
+            if job.views_to_keep[0][2].lower() == 'all':
+                statement = "select view_name, owner from all_views where owner = '{0}'".format(owner.upper())
+            else:
+                statement = "select view_name, owner from user_views where owner = '{0}'".format(owner.upper())
+            [tables.append(v) for v in job.db_cursor.execute(statement).fetchall()]
+        except IndexError:
+            pass
+
+
+    # Remove any layers from the list meant to be excluded.
+    if '*' not in job.views_to_skip:
+        for vk in job.views_to_skip:
+            if vk[2].lower() == 'all':
+                statement = "select view_name, owner from all_views where owner = '{0}'".format(vk[1])
+            else:
+                statement = "select view_name, owner from user_views where owner = '{0}'".format(vk[1])
+            [tables.remove(v) for v in job.db_cursor.execute(statement).fetchall()]
 
     if not tables:
         status_writer.send_state(status.STAT_FAILED, "No tables or views found.")
