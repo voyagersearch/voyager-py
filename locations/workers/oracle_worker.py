@@ -83,14 +83,13 @@ def worker():
             statement = "select table_name, owner from sde.layers where owner = '{0}'".format(lk[1])
             [tables.remove(l) for l in job.db_cursor.execute(statement).fetchall()]
 
-    #TODO: check job.views_to_skip
+    # Create the list of views to index.
     if '*' in job.views_to_skip:
         pass
     elif not job.views_to_keep[0][0] == '*':
         for vk in job.views_to_keep:
             if vk[2].lower() == 'all':
                 statement = "select view_name from all_views where view_name like '{0}' and owner = '{1}'".format(vk[0], vk[1].upper())
-                raise Exception(statement)
             else:
                 statement = "select view_name from user_views where view_name like '{0}'".format(vk[0])
             [tables.append(v) for v in job.db_cursor.execute(statement).fetchall()]
@@ -106,8 +105,7 @@ def worker():
         except IndexError:
             pass
 
-
-    # Remove any layers from the list meant to be excluded.
+    # Remove any views from the list meant to be excluded.
     if '*' not in job.views_to_skip:
         for vk in job.views_to_skip:
             if vk[2].lower() == 'all':
