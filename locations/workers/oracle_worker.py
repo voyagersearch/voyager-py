@@ -90,18 +90,20 @@ def worker():
         for vk in job.views_to_keep:
             if vk[2].lower() == 'all':
                 statement = "select view_name from all_views where view_name like '{0}' and owner = '{1}'".format(vk[0], vk[1].upper())
+                [tables.append((v[0], vk[1])) for v in job.db_cursor.execute(statement).fetchall()]
             else:
                 statement = "select view_name from user_views where view_name like '{0}'".format(vk[0])
-            [tables.append(v) for v in job.db_cursor.execute(statement).fetchall()]
+                [tables.append(v[0]) for v in job.db_cursor.execute(statement).fetchall()]
     else:
         try:
             # If there is no owner, catch the error and continue.
             owner = job.views_to_keep[0][1]
             if job.views_to_keep[0][2].lower() == 'all':
                 statement = "select view_name, owner from all_views where owner = '{0}'".format(owner.upper())
+                [tables.append(v) for v in job.db_cursor.execute(statement).fetchall()]
             else:
                 statement = "select view_name from user_views"
-            [tables.append(v) for v in job.db_cursor.execute(statement).fetchall()]
+                [tables.append(v[0]) for v in job.db_cursor.execute(statement).fetchall()]
         except IndexError:
             pass
 
