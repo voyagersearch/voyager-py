@@ -13,12 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import sys
 import glob
 import json
 import shutil
-import sys
 import urllib
-import arcpy
 try:
     import requests
 except ImportError:
@@ -28,6 +27,9 @@ from utils import task_utils
 from tasks import _
 
 status_writer = status.Writer()
+status_writer.send_status(_('Initializing...'))
+import arcpy
+
 
 # Custom Exceptions
 class AnalyzeServiceException(Exception):
@@ -89,6 +91,7 @@ class AGOLHandler(object):
 
         return json_output['services'][0]['serviceurl']
 
+
 def create_service(temp_folder, map_document, portal_url, username, password, service_name, folder_name=''):
     """Creates a map service on an ArcGIS Server machine or in an ArcGIS Online account.
 
@@ -140,7 +143,10 @@ def execute(request):
     """
     app_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     parameters = request['params']
-    input_items = task_utils.get_input_items(parameters)
+    input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+    if parameters[0]['response']['numFound'] > task_utils.CHUNK_SIZE:
+        status_writer.send_state(status.STAT_FAILED, 'Reduce results to 25 or less.')
+        return
     url = task_utils.get_parameter_value(parameters, 'url', 'value')
     username = task_utils.get_parameter_value(parameters, 'username', 'value')
     password = task_utils.get_parameter_value(parameters, 'password', 'value')
@@ -150,8 +156,6 @@ def execute(request):
     request_folder = os.path.join(request['folder'], 'temp')
     if not os.path.exists(request_folder):
         os.makedirs(request_folder)
-
-    status_writer.send_status(_('Initializing...'))
 
     map_template = os.path.join(request_folder, 'output.mxd')
     shutil.copyfile(os.path.join(app_folder, 'supportfiles', 'MapTemplate.mxd'), map_template)
@@ -165,12 +169,12 @@ def execute(request):
                 pkg_folder = os.path.join(request_folder, glob.glob1(request_folder, 'v*')[0])
                 mxd_file = os.path.join(pkg_folder, glob.glob1(pkg_folder, '*.mxd')[0])
                 mxd = arcpy.mapping.MapDocument(mxd_file)
-                create_service(request_folder, mxd, url, username, password,  service_name, folder_name)
+                create_service(request_folder, mxd, url, username, password, service_name, folder_name)
             else:
                 data_type = arcpy.Describe(item).dataType
                 if data_type == 'MapDocument':
                     mxd = arcpy.mapping.MapDocument(item)
-                    create_service(request_folder, mxd, url, username, password,  service_name, folder_name)
+                    create_service(request_folder, mxd, url, username, password, service_name, folder_name)
                 elif data_type == 'Layer':
                     if item.endswith('.lpk'):
                         status_writer.send_status(_('Extracting: {0}').format(item))

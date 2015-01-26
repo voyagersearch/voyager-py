@@ -13,29 +13,78 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import sys
 import shutil
+import urllib2
 from utils import status
 from utils import task_utils
 from tasks import _
+
+
+status_writer = status.Writer()
 
 
 def execute(request):
     """Deletes files.
     :param request: json as a dict.
     """
-    status_writer = status.Writer()
-    parameters = request['params']
-    input_items = task_utils.get_input_items(parameters)
+    deleted = 0
+    skipped = 0
 
+    parameters = request['params']
     if not os.path.exists(request['folder']):
         os.makedirs(request['folder'])
 
-    i = 1.
+    num_results = parameters[0]['response']['numFound']
+    if num_results > task_utils.CHUNK_SIZE:
+        # Query the index for results in groups of 25.
+        query_index = task_utils.QueryIndex(parameters[0])
+        fl = query_index.fl
+        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+        fq = query_index.get_fq()
+        if fq:
+            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
+            query += fq
+        else:
+            groups = task_utils.grouper(list(parameters[0]['ids']), task_utils.CHUNK_SIZE, '')
+
+        status_writer.send_percent(0.0, _('Starting to process...'), 'delete_files')
+        i = 0.
+        for group in groups:
+            i += len(group) - group.count('')
+            if fq:
+                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            else:
+                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            result = delete_files(input_items)
+            deleted += result[0]
+            skipped += result[1]
+            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'delete_files')
+    else:
+        input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+        deleted, skipped = delete_files(input_items, True)
+
+    try:
+        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
+    except IOError:
+        pass
+
+    # Update state if necessary.
+    if skipped > 0:
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
+    task_utils.report(os.path.join(request['folder'], '_report.json'), deleted, skipped, 0)
+
+
+def delete_files(input_items, show_progress=False):
+    """Delete files."""
     deleted = 0
     skipped = 0
-    errors = 0
-    file_count = len(input_items)
-    status_writer.send_percent(0.0, _('Starting to process...'), 'delete_files')
+    if show_progress:
+        i = 1.
+        file_count = len(input_items)
+        status_writer.send_percent(0.0, _('Starting to process...'), 'delete_files')
     for src_file in input_items:
         try:
             if os.path.isfile(src_file) or src_file.endswith('.gdb'):
@@ -45,27 +94,25 @@ def execute(request):
                     status_writer.send_status(_(err))
                     skipped += 1
                     continue
-                status_writer.send_percent(i/file_count, _('Deleted: {0}').format(src_file), 'delete_files')
+                if show_progress:
+                    status_writer.send_percent(i / file_count, _('Deleted: {0}').format(src_file), 'delete_files')
+                    i += 1
                 deleted += 1
             else:
-                status_writer.send_percent(
-                    i/file_count,
-                    _('{0} is not a file or does no exist').format(src_file), 'delete_files')
+                if show_progress:
+                    status_writer.send_percent(i / file_count,
+                                               _('{0} is not a file or does no exist').format(src_file),
+                                               'delete_files')
+                    i += 1
+                else:
+                    status_writer.send_status(_('{0} is not a file or does no exist').format(src_file))
                 skipped += 1
         except (IOError, EnvironmentError) as err:
-            status_writer.send_percent(
-                i/file_count, _('Skipped: {0}').format(src_file), 'delete_files')
-            status_writer.send_status(_('FAIL: {0}').format(repr(err)))
-            errors += 1
+            if show_progress:
+                status_writer.send_percent(i / file_count, _('Skipped: {0}').format(src_file), repr(err))
+                i += 1
+            else:
+                status_writer.send_status(_('Skipped: {0}').format(src_file), repr(err))
+            skipped += 1
             pass
-        i += 1
-
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
-    except IOError:
-        pass
-
-    # Update state if necessary.
-    if errors > 0 or skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
-    task_utils.report(os.path.join(request['folder'], '_report.json'), deleted, skipped, errors)
+    return deleted, skipped

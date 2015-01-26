@@ -32,9 +32,9 @@ class TestMosaicToWorkspace(unittest.TestCase):
         raster1 = os.path.join(os.getcwd(), 'test-data', 'raster', 'mosaic1')
         raster2 = os.path.join(os.getcwd(), 'test-data', 'raster', 'mosaic2')
         raster3 = os.path.join(os.getcwd(), 'test-data', 'raster', 'mosaic3')
-        self.request['params'][1]['response']['docs'][0]['path'] = raster1
-        self.request['params'][1]['response']['docs'][1]['path'] = raster2
-        self.request['params'][1]['response']['docs'][2]['path'] = raster3
+        self.request['params'][0]['response']['docs'][0]['path'] = raster1
+        self.request['params'][0]['response']['docs'][1]['path'] = raster2
+        self.request['params'][0]['response']['docs'][2]['path'] = raster3
         self.request['params'][3]['value'] = 'Mosaic'
         self.request['params'][5]['value'] = 'FileGDB'
         self.request['params'][2]['value'] = self.target_ws
@@ -47,9 +47,9 @@ class TestMosaicToWorkspace(unittest.TestCase):
         raster1 = os.path.join(os.getcwd(), 'test-data', 'raster', 'mosaic1')
         raster2 = os.path.join(os.getcwd(), 'test-data', 'raster', 'mosaic2')
         raster3 = os.path.join(os.getcwd(), 'test-data', 'raster', 'mosaic3')
-        self.request['params'][1]['response']['docs'][0]['path'] = raster1
-        self.request['params'][1]['response']['docs'][1]['path'] = raster2
-        self.request['params'][1]['response']['docs'][2]['path'] = raster3
+        self.request['params'][0]['response']['docs'][0]['path'] = raster1
+        self.request['params'][0]['response']['docs'][1]['path'] = raster2
+        self.request['params'][0]['response']['docs'][2]['path'] = raster3
         self.request['params'][2]['value'] = self.temp_folder
         self.request['params'][3]['value'] = 'MosaicIMG'
         self.request['params'][5]['value'] = 'IMG'

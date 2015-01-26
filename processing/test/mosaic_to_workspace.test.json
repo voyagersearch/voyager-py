@@ -9,11 +9,6 @@
     },
     "params": [
         {
-            "name": "processing_extent",
-            "type": "Geometry",
-            "wkt": "POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))"
-        },
-        {
             "name": "input_items",
             "type": "VoyagerResults",
             "required": true,
@@ -41,6 +36,11 @@
                     }
                 ]
             }
+        },
+        {
+            "name": "processing_extent",
+            "type": "Geometry",
+            "wkt": "POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))"
         },
 		{
 			"name": "target_workspace",

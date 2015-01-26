@@ -13,33 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import datetime
-import locale
-import arcpy
 from utils import status
 from utils import task_utils
 from tasks import _
 
 
-def dd_to_dms(dd):
-    """Convert decimal degrees to degrees, minutes, seconds.
-    :param dd: decimal degrees as float
-    :rtype : tuple of degrees, minutes, seconds
-    """
-    dd = abs(dd)
-    minutes, seconds = divmod(dd*3600, 60)
-    degrees, minutes = divmod(minutes, 60)
-    seconds = float('{0:.2f}'.format(seconds))
-    return int(degrees), int(minutes), seconds
-
-
-def get_local_date():
-    """Returns formatted local date.
-    :rtype : str
-    """
-    locale.setlocale(locale.LC_TIME)
-    d = datetime.datetime.today()
-    return d.strftime('%x')
+status_writer = status.Writer()
+status_writer.send_status(_('Initializing...'))
+import arcpy
 
 
 def execute(request):
@@ -49,10 +30,13 @@ def execute(request):
     added_to_map = 0
     errors = 0
     skipped = 0
-    status_writer = status.Writer()
-    parameters = request['params']
 
-    input_items = task_utils.get_input_items(parameters)
+    parameters = request['params']
+    input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+    if parameters[0]['response']['numFound'] > task_utils.CHUNK_SIZE:
+        status_writer.send_state(status.STAT_FAILED, 'Reduce results to 25 or less.')
+        return
+
     map_template = task_utils.get_parameter_value(parameters, 'map_template', 'value')
     base_map = task_utils.get_parameter_value(parameters, 'base_map', 'value')
     map_title = task_utils.get_parameter_value(parameters, 'map_title', 'value')
@@ -125,9 +109,6 @@ def execute(request):
                     layers = arcpy.mapping.ListLayers(input_mxd, data_frame=df)
                 else:
                     layers = arcpy.mapping.ListLayers(input_mxd)
-                # for layer in layers:
-                #     arcpy.mapping.AddLayer(data_frame, layer)
-                # layer = None
 
             if layers:
                 for layer in layers:
@@ -155,7 +136,7 @@ def execute(request):
     # Update text elements in map template.
     date_element = arcpy.mapping.ListLayoutElements(mxd, 'TEXT_ELEMENT', 'date')
     if date_element:
-        date_element[0].text = 'Date: {0}'.format(get_local_date())
+        date_element[0].text = 'Date: {0}'.format(task_utils.get_local_date())
 
     title_element = arcpy.mapping.ListLayoutElements(mxd, 'TEXT_ELEMENT', 'title')
     if title_element:
@@ -172,21 +153,21 @@ def execute(request):
             for e in coord_elements:
                 new_text = e.text
                 if e.name == 'xmin':
-                    dms = dd_to_dms(data_frame.extent.XMin)
+                    dms = task_utils.dd_to_dms(data_frame.extent.XMin)
                     if data_frame.extent.XMin > 0:
                         new_text = new_text.replace('W', 'E')
                 elif e.name == 'xmax':
-                    dms = dd_to_dms(data_frame.extent.XMax)
+                    dms = task_utils.dd_to_dms(data_frame.extent.XMax)
                     if data_frame.extent.XMax > 0:
                         new_text = new_text.replace('W', 'E')
                 elif e.name == 'ymin':
-                    dms = dd_to_dms(data_frame.extent.YMin)
+                    dms = task_utils.dd_to_dms(data_frame.extent.YMin)
                     if data_frame.extent.YMin < 0:
                         new_text = new_text.replace('N', 'S')
                 elif e.name == 'ymax':
                     if data_frame.extent.YMax < 0:
                         new_text = new_text.replace('N', 'S')
-                    dms = dd_to_dms(data_frame.extent.YMax)
+                    dms = task_utils.dd_to_dms(data_frame.extent.YMax)
 
                 new_text = new_text.replace('d', str(dms[0]))
                 new_text = new_text.replace('m', str(dms[1]))

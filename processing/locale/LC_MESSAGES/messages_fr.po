@@ -40,6 +40,11 @@ msgstr "{0} résultats n'ont pas pu être traitées"
 msgid "Setting output workspace..."
 msgstr "Réglage de la sortie espace de travail ..."
 
+#: Used in multiple tasks:
+#, python-format
+msgid "Initializing..."
+msgstr "Initialisation ..."
+
 #: add_to_geodatabase.py:65,68
 #, python-format
 msgid "Created output workspace: {0}"

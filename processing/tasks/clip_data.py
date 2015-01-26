@@ -13,15 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import sys
 import glob
 import shutil
-import arcpy
+import urllib2
 from utils import task_utils
 from utils import status
 from tasks import _
 
 
 status_writer = status.Writer()
+status_writer.send_status(_('Initializing...'))
+import arcpy
+
+files_to_package = list()
 
 
 def clip_layer_file(layer_file, aoi):
@@ -78,7 +83,6 @@ def clip_mxd_layers(mxd_path, aoi, map_frame=None):
     """Clips each layer in the map document to output workspace
     and re-sources each layer and saves a copy of the mxd.
     """
-    df = map_frame
     mxd = arcpy.mapping.MapDocument(mxd_path)
     layers = arcpy.mapping.ListLayers(mxd)
     if map_frame:
@@ -210,9 +214,8 @@ def execute(request):
     clipped = 0
     errors = 0
     skipped = 0
-    fds = None
     parameters = request['params']
-    input_items = task_utils.get_input_items(parameters)
+
     # Retrieve clip geometry.
     try:
         clip_area = task_utils.get_parameter_value(parameters, 'clip_geometry', 'wkt')
@@ -223,8 +226,10 @@ def execute(request):
 
     # Retrieve the coordinate system code.
     out_coordinate_system = int(task_utils.get_parameter_value(parameters, 'output_projection', 'code'))
+
     # Retrieve the output format type.
     out_format = task_utils.get_parameter_value(parameters, 'output_format', 'value')
+
     # Retrieve the clip features and where statement.
     clip_feature_class = task_utils.get_parameter_value(parameters, 'clip_features', 'value')
     where_statement = task_utils.get_parameter_value(parameters, 'where_statement', 'value')
@@ -249,16 +254,84 @@ def execute(request):
         out_workspace = arcpy.CreateFileGDB_management(out_workspace, 'output.gdb').getOutput(0)
     arcpy.env.workspace = out_workspace
 
-    i = 1.
-    count = len(input_items)
-    files_to_package = list()
-    status_writer.send_percent(0.0, _('Starting to process...'), 'clip_data')
+    num_results = parameters[0]['response']['numFound']
+    if num_results > task_utils.CHUNK_SIZE:
+        # Query the index for results in groups of 25.
+        query_index = task_utils.QueryIndex(parameters[0])
+        fl = query_index.fl
+        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+        fq = query_index.get_fq()
+        if fq:
+            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
+            query += fq
+        else:
+            groups = task_utils.grouper(list(parameters[0]['ids']), task_utils.CHUNK_SIZE, '')
+
+        i = 0.
+        for group in groups:
+            i += len(group) - group.count('')
+            if fq:
+                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            else:
+                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            result = clip_data(input_items, out_workspace, out_coordinate_system,
+                               clip_feature_class, where_statement, gcs_sr, gcs_clip_poly, out_format)
+            clipped += result[0]
+            errors += result[1]
+            skipped += result[2]
+            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'clip_data')
+    else:
+        input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+        clipped, errors, skipped = clip_data(input_items, out_workspace, out_coordinate_system, clip_feature_class,
+                                             where_statement, gcs_sr, gcs_clip_poly, out_format, True)
+
+    if arcpy.env.workspace.endswith('.gdb'):
+        out_workspace = os.path.dirname(arcpy.env.workspace)
+    if clipped > 0:
+        try:
+            if out_format == 'MPK':
+                create_mxd_or_mpk(out_workspace, files_to_package, True)
+                shutil.move(os.path.join(out_workspace, 'output.mpk'),
+                            os.path.join(os.path.dirname(out_workspace), 'output.mpk'))
+            elif out_format == 'LPK':
+                create_lpk(out_workspace, files_to_package)
+            else:
+                create_mxd_or_mpk(out_workspace)
+                zip_file = task_utils.zip_data(out_workspace, 'output.zip')
+                shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
+        except arcpy.ExecuteError as ee:
+            status_writer.send_state(status.STAT_FAILED, _(ee))
+            sys.exit(1)
+    else:
+        status_writer.send_state(status.STAT_FAILED, _('No output created. Zero inputs were clipped.'))
+
+    # Update state if necessary.
+    if errors > 0 or skipped > 0:
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(errors + skipped))
+    task_utils.report(os.path.join(request['folder'], '_report.json'), clipped, skipped, errors)
+
+
+def clip_data(input_items, out_workspace, out_coordinate_system,
+              clip_feature_class, where_statement, gcs_sr,
+              gcs_clip_poly, out_format, show_progress=False):
+    """Clips input results."""
+    clipped = 0
+    errors = 0
+    skipped = 0
+    fds = None
+
+    if show_progress:
+        i = 1.
+        count = len(input_items)
+        status_writer.send_percent(0.0, _('Starting to process...'), 'clip_data')
+
     for ds, out_name in input_items.iteritems():
         try:
             #TODO: Add support for WFS services -- currently a bug in _server_admin needing to be fixed.
             #TODO: Use feature set to load into and then clip it:
             #TODO:>>> server = _server_admin.Catalog("http://services.arcgis.com/Zs2aNLFN00jrS4gG/ArcGIS/rest/services")
-
             # Before describe, check if the path is a MXD data frame type.
             map_frame_name = task_utils.get_data_frame_name(ds)
             if map_frame_name:
@@ -279,9 +352,12 @@ def execute(request):
                 except AttributeError:
                     out_sr = task_utils.get_spatial_reference(4326)
                     arcpy.env.outputCoordinateSystem = out_sr
+            else:
+                out_sr = task_utils.get_spatial_reference(4326)
+                arcpy.env.outputCoordinateSystem = out_sr
 
             # If a file, no need to project the clip area.
-            if not dsc.dataType in ('File', 'TextFile'):
+            if dsc.dataType not in ('File', 'TextFile'):
                 if clip_feature_class:
                     clip_poly = clip_feature_class
                     if where_statement:
@@ -378,56 +454,37 @@ def execute(request):
                         f = arcpy.Copy_management(ds, os.path.join(os.path.dirname(out_workspace), out_name))
                     else:
                         f = arcpy.Copy_management(ds, os.path.join(out_workspace, out_name))
-                    status_writer.send_percent(i/count, _('Copied file: {0}').format(dsc.name), 'clip_data')
+                    if show_progress:
+                        status_writer.send_percent(i / count, _('Copied file: {0}').format(dsc.name), 'clip_data')
+                        i += 1.
+                    status_writer.send_state(_('Copied file: {0}').format(dsc.name))
                     clipped += 1
                     if out_format in ('LPK', 'MPK'):
                         files_to_package.append(f.getOutput(0))
-                    i += 1.
                     continue
 
             # Map document
             elif dsc.dataType == 'MapDocument':
                 clip_mxd_layers(dsc.catalogPath, clip_poly, map_frame_name)
-
             else:
-                status_writer.send_percent(i/count, _('Invalid input type: {0}').format(ds), 'clip_data')
-                i += 1.
+                if show_progress:
+                    status_writer.send_percent(i / count, _('Invalid input type: {0}').format(ds), 'clip_data')
+                    i += 1.
+                status_writer.send_state(_('Invalid input type: {0}').format(ds))
                 skipped += 1
                 continue
 
-            status_writer.send_percent(i/count, _('Clipped: {0}').format(dsc.name), 'clip_data')
-            i += 1.
+            if show_progress:
+                status_writer.send_percent(i / count, _('Clipped: {0}').format(dsc.name), 'clip_data')
+                i += 1.
+            status_writer.send_status(_('Clipped: {0}').format(dsc.name))
             clipped += 1
         # Continue. Process as many as possible.
         except Exception as ex:
-            status_writer.send_percent(i/count, _('Skipped: {0}').format(os.path.basename(ds)), 'clip_data')
+            if show_progress:
+                status_writer.send_percent(i / count, _('Skipped: {0}').format(os.path.basename(ds)), 'clip_data')
             status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
             i += 1.
             errors += 1
             pass
-
-    if arcpy.env.workspace.endswith('.gdb'):
-        out_workspace = os.path.dirname(arcpy.env.workspace)
-    if clipped > 0:
-        try:
-            if out_format == 'MPK':
-                create_mxd_or_mpk(out_workspace, files_to_package, True)
-                shutil.move(os.path.join(out_workspace, 'output.mpk'),
-                            os.path.join(os.path.dirname(out_workspace), 'output.mpk'))
-            elif out_format == 'LPK':
-                create_lpk(out_workspace, files_to_package)
-            else:
-                create_mxd_or_mpk(out_workspace)
-                zip_file = task_utils.zip_data(out_workspace, 'output.zip')
-                shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
-        except arcpy.ExecuteError as ee:
-            status_writer.send_state(status.STAT_FAILED, _(ee))
-            import sys
-            sys.exit(1)
-    else:
-        status_writer.send_state(status.STAT_FAILED, _('No output created. Zero inputs were clipped.'))
-
-    # Update state if necessary.
-    if errors > 0 or skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(errors + skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.json'), clipped, skipped, errors)
+    return clipped, errors, skipped

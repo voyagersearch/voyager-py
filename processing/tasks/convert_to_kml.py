@@ -13,12 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import sys
 import glob
 import shutil
-import arcpy
+import urllib2
 from utils import status
 from utils import task_utils
 from tasks import _
+
+
+status_writer = status.Writer()
+status_writer.send_status(_('Initializing...'))
+import arcpy
 
 
 def execute(request):
@@ -29,8 +35,7 @@ def execute(request):
     skipped = 0
     errors = 0
     parameters = request['params']
-    input_items = task_utils.get_input_items(parameters)
-    count = len(input_items)
+
     out_workspace = os.path.join(request['folder'], 'temp')
     if not os.path.exists(out_workspace):
         os.makedirs(out_workspace)
@@ -50,9 +55,64 @@ def execute(request):
     except KeyError:
         pass
 
-    i = 1.
-    status_writer = status.Writer()
-    status_writer.send_percent(0.0, _('Starting to process...'), 'convert_to_kml')
+    num_results = parameters[0]['response']['numFound']
+    if num_results > task_utils.CHUNK_SIZE:
+        # Query the index for results in groups of 25.
+        query_index = task_utils.QueryIndex(parameters[0])
+        fl = query_index.fl
+        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+        fq = query_index.get_fq()
+        if fq:
+            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
+            query += fq
+        else:
+            groups = task_utils.grouper(list(parameters[0]['ids']), task_utils.CHUNK_SIZE, '')
+
+        status_writer.send_percent(0.0, _('Starting to process...'), 'convert_to_kml')
+        i = 0.
+        for group in groups:
+            i += len(group) - group.count('')
+            if fq:
+                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            else:
+                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            result = convert_to_kml(input_items, out_workspace, extent)
+            converted += result[0]
+            errors += result[1]
+            skipped += result[2]
+            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'convert_to_kml')
+    else:
+        input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+        converted, errors, skipped = convert_to_kml(input_items, out_workspace, extent, True)
+
+    # Zip up kmz files if more than one.
+    if converted > 1:
+        status_writer.send_status("Converted: {}".format(converted))
+        zip_file = task_utils.zip_data(out_workspace, 'output.zip')
+        shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
+        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
+    else:
+        kml_file = glob.glob(os.path.join(out_workspace, '*.kmz'))[0]
+        tmp_lyr = arcpy.KMLToLayer_conversion(kml_file, out_workspace, 'kml_layer')
+        task_utils.make_thumbnail(tmp_lyr.getOutput(0), os.path.join(request['folder'], '_thumb.png'))
+        shutil.move(kml_file, os.path.join(request['folder'], os.path.basename(kml_file)))
+
+    # Update state if necessary.
+    if skipped > 0 or errors > 0:
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(errors + skipped))
+    task_utils.report(os.path.join(request['folder'], '_report.json'), converted, skipped, errors)
+
+
+def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
+    converted = 0
+    errors = 0
+    skipped = 0
+    if show_progress:
+        count = len(input_items)
+        i = 1.
+        status_writer.send_percent(0.0, _('Starting to process...'), 'convert_to_kml')
     arcpy.env.overwriteOutput = True
     for ds, out_name in input_items.iteritems():
         try:
@@ -162,32 +222,22 @@ def execute(request):
                 converted += 1
 
             else:
-                status_writer.send_percent(i/count, _('Invalid input type: {0}').format(dsc.name), 'convert_to_kml')
+                if show_progress:
+                    status_writer.send_percent(i / count, _('Invalid input type: {0}').format(dsc.name), 'convert_to_kml')
+                    i += 1
                 skipped += 1
                 continue
-
-            status_writer.send_percent(i/count, _('Converted: {0}').format(ds), 'convert_to_kml')
-            i += 1.
+            if show_progress:
+                status_writer.send_percent(i / count, _('Converted: {0}').format(ds), 'convert_to_kml')
+                i += 1
+            else:
+                status_writer.send_status(_('Converted: {0}').format(ds))
         except Exception as ex:
-            status_writer.send_percent(i/count, _('Skipped: {0}').format(ds), 'convert_to_kml')
-            status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
-            i += 1
+            if show_progress:
+                status_writer.send_percent(i / count, _('Skipped: {0}').format(ds), 'convert_to_kml')
+                i += 1
+            status_writer.send_status(_('WARNING: {0}').format(repr(ex)))
             errors += 1
             pass
 
-    # Zip up kmz files if more than one.
-    if converted > 1:
-        status_writer.send_status("Converted: {}".format(converted))
-        zip_file = task_utils.zip_data(out_workspace, 'output.zip')
-        shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
-        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
-    else:
-        kml_file = glob.glob(os.path.join(out_workspace, '*.kmz'))[0]
-        tmp_lyr = arcpy.KMLToLayer_conversion(kml_file, out_workspace, 'kml_layer')
-        task_utils.make_thumbnail(tmp_lyr.getOutput(0), os.path.join(request['folder'], '_thumb.png'))
-        shutil.move(kml_file, os.path.join(request['folder'], os.path.basename(kml_file)))
-
-    # Update state if necessary.
-    if skipped > 0 or errors > 0:
-        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(errors + skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.json'), converted, skipped, errors)
+    return converted, errors, skipped

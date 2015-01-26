@@ -13,11 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import sys
 import collections
-import arcpy
+import urllib2
 from utils import status
 from utils import task_utils
 from tasks import _
+
+
+status_writer = status.Writer()
+status_writer.send_status(_('Initializing...'))
+import arcpy
 
 
 pixel_types = {"U1": "1_BIT",
@@ -31,6 +37,29 @@ pixel_types = {"U1": "1_BIT",
                "S32": "32_BIT_SIGNED",
                "F32": "32_BIT_FLOAT",
                "F64": "64_BIT"}
+pixels = []
+raster_items = []
+bands = collections.defaultdict(int)
+skipped = 0
+
+
+def get_items(input_items):
+    global skipped
+    skipped = 0
+    for item in input_items:
+        # Number of bands for each item should be the same.
+        dsc = arcpy.Describe(item)
+        if dsc.dataType == 'RasterDataset':
+            raster_items.append(item)
+            if hasattr(dsc, 'pixeltype'):
+                pixels.append(dsc.pixeltype)
+            elif dsc.bandcount > 1:
+                pixels.append(arcpy.Describe(os.path.join(dsc.catalogPath, 'Band_1')).pixeltype)
+            bands[dsc.bandcount] = 1
+        else:
+            status_writer.send_status(_('Invalid input type: {0}').format(item))
+            skipped += 1
+    return raster_items, pixels
 
 
 def execute(request):
@@ -39,7 +68,6 @@ def execute(request):
     """
     status_writer = status.Writer()
     parameters = request['params']
-    input_items = task_utils.get_input_items(parameters)
     target_workspace = task_utils.get_parameter_value(parameters, 'target_workspace', 'value')
     output_name = task_utils.get_parameter_value(parameters, 'output_dataset_name', 'value')
     out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
@@ -77,23 +105,32 @@ def execute(request):
         return
     arcpy.env.workspace = target_workspace
 
-    pixels = []
-    raster_items = []
-    bands = collections.defaultdict(int)
-    skipped = 0
-    for item in input_items:
-        # Number of bands for each item should be the same.
-        dsc = arcpy.Describe(item)
-        if dsc.dataType == 'RasterDataset':
-            raster_items.append(item)
-            if hasattr(dsc, 'pixeltype'):
-                pixels.append(dsc.pixeltype)
-            elif dsc.bandcount > 1:
-                pixels.append(arcpy.Describe(os.path.join(dsc.catalogPath, 'Band_1')).pixeltype)
-            bands[dsc.bandcount] = 1
+    status_writer.send_status(_('Starting to process...'))
+    num_results = parameters[0]['response']['numFound']
+
+    if num_results > task_utils.CHUNK_SIZE:
+        # Query the index for results in groups of 25.
+        query_index = task_utils.QueryIndex(parameters[0])
+        fl = query_index.fl
+        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+        fq = query_index.get_fq()
+        if fq:
+            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
+            query += fq
         else:
-            status_writer.send_status(_('Invalid input type: {0}').format(item))
-            skipped += 1
+            groups = task_utils.grouper(list(parameters[0]['ids']), task_utils.CHUNK_SIZE, '')
+
+        for group in groups:
+            if fq:
+                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            else:
+                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            raster_items, pixels = get_items(input_items)
+    else:
+        input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+        raster_items, pixels = get_items(input_items)
 
     if not raster_items:
         status_writer.send_state(status.STAT_FAILED, _('Invalid input types'))

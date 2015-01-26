@@ -13,11 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import sys
 import shutil
-import arcpy
+import urllib2
 from utils import status
 from utils import task_utils
 from tasks import _
+
+
+status_writer = status.Writer()
+status_writer.send_status(_('Initializing...'))
+import arcpy
 
 
 def execute(request):
@@ -26,9 +32,7 @@ def execute(request):
     """
     updated = 0
     skipped = 0
-    status_writer = status.Writer()
     parameters = request['params']
-    input_items = task_utils.get_input_items(parameters)
     backup = task_utils.get_parameter_value(parameters, 'create_backup', 'value')
     old_workspace = task_utils.get_parameter_value(parameters, 'old_workspace_path', 'value').lower()
     new_workspace = task_utils.get_parameter_value(parameters, 'new_workspace_path', 'value')
@@ -40,9 +44,55 @@ def execute(request):
         status_writer.send_state(status.STAT_FAILED, _('{0} does not exist').format(new_workspace))
         return
 
-    i = 1.
-    count = len(input_items)
-    status_writer.send_percent(0.0, _('Starting to process...'), 'replace_workspace_path')
+    num_results = parameters[0]['response']['numFound']
+    if num_results > task_utils.CHUNK_SIZE:
+        # Query the index for results in groups of 25.
+        query_index = task_utils.QueryIndex(parameters[0])
+        fl = query_index.fl
+        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+        fq = query_index.get_fq()
+        if fq:
+            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
+            query += fq
+        else:
+            groups = task_utils.grouper(list(parameters[0]['ids']), task_utils.CHUNK_SIZE, '')
+
+        status_writer.send_percent(0.0, _('Starting to process...'), 'replace_workspace_path')
+        i = 0.
+        for group in groups:
+            i += len(group) - group.count('')
+            if fq:
+                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            else:
+                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            result = replace_workspace_path(input_items, old_workspace, new_workspace, backup)
+            updated += result[0]
+            skipped += result[1]
+            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'replace_workspace_path')
+    else:
+        input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+        updated, skipped = replace_workspace_path(input_items, old_workspace, new_workspace, backup, True)
+
+    try:
+        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
+    except IOError:
+        pass
+    # Update state if necessary.
+    if skipped > 0:
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
+    task_utils.report(os.path.join(request['folder'], '_report.json'), updated, skipped)
+
+
+def replace_workspace_path(input_items, old_workspace, new_workspace, backup, show_progress=False):
+    """Replace workspace path."""
+    updated = 0
+    skipped = 0
+    if show_progress:
+        i = 1.
+        count = len(input_items)
+
     for item in input_items:
         layers = None
         table_views = None
@@ -71,12 +121,12 @@ def execute(request):
             for layer in layers:
                 try:
                     layer.findAndReplaceWorkspacePath(old_workspace, new_workspace, validate=False)
-                    if item.endswith('.lyr'):
-                        layer.save()
                 except ValueError:
                     status_writer.send_status(_('Invalid workspace'))
                     skipped += 1
                     pass
+            if item.endswith('.lyr'):
+                layer_from_file.save()
 
         if table_views:
             for table_view in table_views:
@@ -88,16 +138,10 @@ def execute(request):
                     pass
         if mxd:
             mxd.save()
-        status_writer.send_percent(i/count, _('Updated: {0}').format(item), 'replace_workspace_path')
-        i += 1.
+        if show_progress:
+            status_writer.send_percent(i / count, _('Updated: {0}').format(item), 'replace_workspace_path')
+            i += 1.
+        else:
+            status_writer.send_status(_('Updated: {0}').format(item))
         updated += 1
-
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
-    except IOError:
-        pass
-
-    # Update state if necessary.
-    if skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.json'), updated, skipped)
+    return updated, skipped

@@ -13,18 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import arcpy
+import sys
+import urllib2
 from utils import status
 from utils import task_utils
 from tasks import _
+
+
+status_writer = status.Writer()
+status_writer.send_status(_('Initializing...'))
+import arcpy
+
 
 def execute(request):
     """Builds raster pyramids for input raster datasets.
     :param request: json as a dict.
     """
-    status_writer = status.Writer()
+    processed = 0
+    skipped = 0
     parameters = request['params']
-    input_items = task_utils.get_input_items(parameters)
 
     # Get the extent for for which to use to calculate statistics.
     extent = ''
@@ -50,41 +57,85 @@ def execute(request):
     if not os.path.exists(task_folder):
         os.makedirs(task_folder)
 
+    num_results = parameters[0]['response']['numFound']
+    if num_results > task_utils.CHUNK_SIZE:
+        # Query the index for results in groups of 25.
+        query_index = task_utils.QueryIndex(parameters[0])
+        fl = query_index.fl
+        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+        fq = query_index.get_fq()
+        if fq:
+            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
+            query += fq
+        else:
+            groups = task_utils.grouper(list(parameters[0]['ids']), task_utils.CHUNK_SIZE, '')
+
+        status_writer.send_percent(0.0, _('Starting to process...'), 'calculate_raster_statistics')
+        i = 0.
+        for group in groups:
+            i += len(group) - group.count('')
+            if fq:
+                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            else:
+                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            result = calculate_raster_statistics(input_items, extent,
+                                                 horizontal_skip_factor, vertical_skip_factor, ignore_pixel_values)
+            processed += result[0]
+            skipped += result[1]
+            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'calculate_raster_statistics')
+    else:
+        input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+        processed, skipped = calculate_raster_statistics(input_items, extent, horizontal_skip_factor,
+                                                         vertical_skip_factor, ignore_pixel_values, True)
+
+    # Update state if necessary.
+    if skipped > 0:
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
+    task_utils.report(os.path.join(request['folder'], '_report.md'), processed, skipped)
+
+
+def calculate_raster_statistics(input_items, extent, horizontal_skip_factor,
+                                vertical_skip_factor, ignore_pixel_values, show_progress=False):
+    """Calculates raster statistics."""
     processed = 0
     skipped = 0
-    i = 1.
-    count = len(input_items)
-    status_writer.send_percent(0.0, _('Starting to process...'), 'calculate_raster_statistics')
+    if show_progress:
+        i = 1.
+        count = len(input_items)
+        status_writer.send_percent(0.0, _('Starting to process...'), 'calculate_raster_statistics')
+
     for result in input_items:
         dsc = arcpy.Describe(result)
         if not dsc.datasetType in ('RasterDataset', 'MosaicDataset'):
             status_writer.send_state(status.STAT_WARNING, _('{0} is not a valid raster type.').format(result))
             skipped += 1
-            i += 1
+            if show_progress:
+                i += 1
         else:
             try:
                 # Calculate Statistics
                 if result.endswith('.lyr'):
                     result = dsc.dataElement.catalogPath
-                status_writer.send_status(_('Calculating statistics for: {0}').format(result))
                 arcpy.CalculateStatistics_management(result,
                                                      horizontal_skip_factor,
                                                      vertical_skip_factor,
                                                      ignore_pixel_values,
                                                      'SKIP_EXISTING',
                                                      extent)
-                status_writer.send_percent(i/count,
-                                           _('Calculated statistics for: {0}').format(dsc.name),
-                                           'calculate_raster_statistics')
-                i += 1
+                if show_progress:
+                    status_writer.send_percent(i/count,
+                                               _('Calculated statistics for: {0}').format(result),
+                                               'calculate_raster_statistics')
+                    i += 1
+                else:
+                    status_writer.send_status(_('Calculated statistics for: {0}').format(result))
                 processed += 1
             except arcpy.ExecuteError as ee:
                 status_writer.send_state(status.STAT_WARNING,
                                          _('Failed to calculate statistics for: {0}. {1}').format(result, ee))
                 skipped += 1
-                i += 1
-
-    # Update state if necessary.
-    if skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.md'), processed, skipped)
+                if show_progress:
+                    i += 1
+    return processed, skipped

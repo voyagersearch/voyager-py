@@ -13,11 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import sys
 import shutil
-import arcpy
+import urllib2
 from utils import status
 from utils import task_utils
 from tasks import _
+
+
+status_writer = status.Writer()
+status_writer.send_status(_('Initializing...'))
+import arcpy
 
 
 def get_workspace_type(workspace_path):
@@ -39,9 +45,7 @@ def execute(request):
     """
     updated = 0
     skipped = 0
-    status_writer = status.Writer()
     parameters = request['params']
-    input_items = task_utils.get_input_items(parameters)
     backup = task_utils.get_parameter_value(parameters, 'create_backup', 'value')
     old_data_source = task_utils.get_parameter_value(parameters, 'old_data_source', 'value').lower()
     new_data_source = task_utils.get_parameter_value(parameters, 'new_data_source', 'value')
@@ -55,30 +59,77 @@ def execute(request):
 
     new_dataset = os.path.basename(new_data_source)
     dsc = arcpy.Describe(os.path.dirname(new_data_source))
+    wks_type = 'NONE'
     if dsc.dataType == 'FeatureDataset':
         new_workspace = dsc.path
-        workspace_type = get_workspace_type(new_workspace)
+        wks_type = get_workspace_type(new_workspace)
     elif dsc.dataType == 'Workspace':
         new_workspace = os.path.dirname(new_data_source)
-        workspace_type = get_workspace_type(new_workspace)
+        wks_type = get_workspace_type(new_workspace)
     elif dsc.dataType == 'Folder':
         new_workspace = dsc.catalogPath
         if new_dataset.endswith('.shp'):
-            workspace_type = 'SHAPEFILE_WORKSPACE'
+            wks_type = 'SHAPEFILE_WORKSPACE'
             new_dataset = new_dataset.rsplit('.shp')[0]
         else:
             if arcpy.Describe(new_data_source).dataType == 'RasterDataset':
-                workspace_type = 'RASTER_WORKSPACE'
+                wks_type = 'RASTER_WORKSPACE'
     elif dsc.dataType == 'CadDrawingDataset':
         new_workspace = dsc.path
-        workspace_type = 'CAD_WORKSPACE'
+        wks_type = 'CAD_WORKSPACE'
     else:
         new_workspace = os.path.dirname(new_data_source)
-        workspace_type = 'NONE'
 
-    i = 1.
-    count = len(input_items)
-    status_writer.send_percent(0.0, _('Starting to process...'), 'replace_data_source')
+    num_results = parameters[0]['response']['numFound']
+    if num_results > task_utils.CHUNK_SIZE:
+        # Query the index for results in groups of 25.
+        query_index = task_utils.QueryIndex(parameters[0])
+        fl = query_index.fl
+        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+        fq = query_index.get_fq()
+        if fq:
+            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
+            query += fq
+        else:
+            groups = task_utils.grouper(list(parameters[0]['ids']), task_utils.CHUNK_SIZE, '')
+
+        status_writer.send_percent(0.0, _('Starting to process...'), 'replace_data_source')
+        i = 0.
+        for group in groups:
+            i += len(group) - group.count('')
+            if fq:
+                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            else:
+                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            result = replace_data_source(input_items, old_data_source, new_workspace, new_dataset, wks_type, backup)
+            updated += result[0]
+            skipped += result[1]
+            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'replace_data_source')
+    else:
+        input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+        updated, skipped = replace_data_source(input_items, old_data_source, new_workspace, new_dataset, wks_type, backup, True)
+
+    try:
+        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
+    except IOError:
+        pass
+    # Update state if necessary.
+    if skipped > 0:
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
+    task_utils.report(os.path.join(request['folder'], '_report.json'), updated, skipped)
+
+
+def replace_data_source(input_items, old_data_source, new_workspace,
+                        new_dataset, workspace_type, backup, show_progress=False):
+    """Replaces data sources."""
+    updated = 0
+    skipped = 0
+    if show_progress:
+        i = 1.
+        count = len(input_items)
+
     for item in input_items:
         layers = None
         table_views = None
@@ -140,16 +191,10 @@ def execute(request):
                     pass
         if mxd:
             mxd.save()
-        status_writer.send_percent(i/count, _('Updated: {0}').format(item), 'replace_data_source')
-        i += 1.
+        if show_progress:
+            status_writer.send_percent(i / count, _('Updated: {0}').format(item), 'replace_data_source')
+            i += 1.
+        else:
+            status_writer.send_status(_('Updated: {0}').format(item))
         updated += 1
-
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
-    except IOError:
-        pass
-
-    # Update state if necessary.
-    if skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.json'), updated, skipped)
+    return updated, skipped

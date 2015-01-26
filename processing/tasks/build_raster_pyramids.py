@@ -13,18 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import arcpy
+import sys
+import urllib2
 from utils import status
 from utils import task_utils
 from tasks import _
+
+
+status_writer = status.Writer()
+status_writer.send_status(_('Initializing...'))
+import arcpy
+
+resampling_options = {'NEAREST_NEIGHBOR': 'NEAREST',
+                      'BILINEAR_INTERPOLATION': 'BILINEAR',
+                      'CUBIC_CONVOLUTION': 'CUBIC'}
+
 
 def execute(request):
     """Builds raster pyramids for input raster datasets.
     :param request: json as a dict.
     """
-    status_writer = status.Writer()
+    processed = 0
+    skipped = 0
     parameters = request['params']
-    input_items = task_utils.get_input_items(parameters)
     resampling_method = task_utils.get_parameter_value(parameters, 'resampling_method', 'value')
 
     # Advanced options
@@ -36,21 +47,59 @@ def execute(request):
     if not os.path.exists(task_folder):
         os.makedirs(task_folder)
 
+    num_results = parameters[0]['response']['numFound']
+    if num_results > task_utils.CHUNK_SIZE:
+        # Query the index for results in groups of 25.
+        query_index = task_utils.QueryIndex(parameters[0])
+        fl = query_index.fl
+        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+        fq = query_index.get_fq()
+        if fq:
+            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
+            query += fq
+        else:
+            groups = task_utils.grouper(list(parameters[0]['ids']), task_utils.CHUNK_SIZE, '')
+
+        status_writer.send_percent(0.0, _('Starting to process...'), 'build_raster_pyramids')
+        i = 0.
+        for group in groups:
+            i += len(group) - group.count('')
+            if fq:
+                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            else:
+                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            result = build_pyramids(input_items, compression_method, compression_quality, resampling_method)
+            processed += result[0]
+            skipped += result[1]
+            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'build_raster_pyramids')
+    else:
+        input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+        processed, skipped = build_pyramids(input_items, compression_method, compression_quality, resampling_method, True)
+
+    # Update state if necessary.
+    if skipped > 0:
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
+    task_utils.report(os.path.join(request['folder'], '_report.md'), processed, skipped)
+
+
+def build_pyramids(input_items, compression_method, compression_quality, resampling_method, show_progress=False):
+    """Build raster pyramids."""
     processed = 0
     skipped = 0
-    resampling_options = {'NEAREST_NEIGHBOR': 'NEAREST',
-                          'BILINEAR_INTERPOLATION': 'BILINEAR',
-                          'CUBIC_CONVOLUTION': 'CUBIC'}
+    if show_progress:
+        i = 1.
+        count = len(input_items)
+        status_writer.send_percent(0.0, _('Starting to process...'), 'build_raster_pyramids')
 
-    i = 1.
-    count = len(input_items)
-    status_writer.send_percent(0.0, _('Starting to process...'), 'build_raster_pyramids')
     for result in input_items:
         dsc = arcpy.Describe(result)
         if not dsc.datasetType in ('RasterDataset', 'MosaicDataset', 'RasterCatalog'):
             status_writer.send_state(status.STAT_WARNING, _('{0} is not a raster dataset type.').format(result))
             skipped += 1
-            i += 1
+            if show_progress:
+                i += 1
         else:
             try:
                 # Build pyramids
@@ -72,18 +121,20 @@ def execute(request):
                         compression_type=compression_method,
                         compression_quality=compression_quality
                     )
-                status_writer.send_percent(i/count,
-                                           _('Built Pyramids for: {0}').format(dsc.name),
-                                           'build_raster_pyramids')
-                i += 1
+                if show_progress:
+                    status_writer.send_percent(i / count,
+                                               _('Built Pyramids for: {0}').format(dsc.name),
+                                               'build_raster_pyramids')
+                    i += 1
+                else:
+                    status_writer.send_status(_('Built Pyramids for: {0}').format(dsc.name))
                 processed += 1
             except arcpy.ExecuteError as ee:
                 status_writer.send_state(status.STAT_WARNING,
                                          _('Failed to build pyramids for: {0}. {1}').format(result, ee))
                 skipped += 1
-                i += 1
+                if show_progress:
+                    i += 1
+        continue
 
-    # Update state if necessary.
-    if skipped > 0:
-        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.md'), processed, skipped)
+    return processed, skipped

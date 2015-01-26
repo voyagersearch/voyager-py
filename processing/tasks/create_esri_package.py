@@ -13,45 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import sys
 import shutil
-import arcpy
+import urllib2
 from utils import status
 from utils import task_utils
 from tasks import _
 
 
-def execute(request):
-    """Package inputs to an Esri map or layer package.
-    :param request: json as a dict.
-    """
-    app_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    status_writer = status.Writer()
-    parameters = request['params']
-    input_items = task_utils.get_input_items(parameters)
-    out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
-    if not int(out_coordinate_system) == 0:
-        arcpy.env.outputCoordinateSystem = task_utils.get_spatial_reference(out_coordinate_system)
-    out_format = task_utils.get_parameter_value(parameters, 'output_format', 'value')
-    summary = task_utils.get_parameter_value(parameters, 'summary')
-    tags = task_utils.get_parameter_value(parameters, 'tags')
+status_writer = status.Writer()
+status_writer.send_status(_('Initializing...'))
+import arcpy
 
-    # Get the clip region as an extent object.
-    try:
-        clip_area = None
-        clip_area_wkt = task_utils.get_parameter_value(parameters, 'processing_extent', 'wkt')
-        if not int(out_coordinate_system) == 0:
-            clip_area = task_utils.get_clip_region(clip_area_wkt, out_coordinate_system)
-    except KeyError:
-        clip_area = None
+layers = []
+files = []
+errors = 0
+skipped = 0
 
-    out_workspace = os.path.join(request['folder'], 'temp')
-    if not os.path.exists(out_workspace):
-        os.makedirs(out_workspace)
 
-    errors = 0
-    skipped = 0
-    layers = []
-    files = []
+def get_items(input_items, out_workspace, clip_area, clip_area_wkt, out_coordinate_system):
+    """Returns the list of items to package."""
+    global files
+    global layers
+    global errors
+    global  skipped
     for item in input_items:
         try:
             if not int(out_coordinate_system) == 0 and clip_area is None:
@@ -114,7 +99,62 @@ def execute(request):
             errors += 1
             pass
 
-    if errors == len(input_items):
+
+def execute(request):
+    """Package inputs to an Esri map or layer package.
+    :param request: json as a dict.
+    """
+    app_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    parameters = request['params']
+
+    out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
+    if not int(out_coordinate_system) == 0:
+        arcpy.env.outputCoordinateSystem = task_utils.get_spatial_reference(out_coordinate_system)
+    out_format = task_utils.get_parameter_value(parameters, 'output_format', 'value')
+    summary = task_utils.get_parameter_value(parameters, 'summary')
+    tags = task_utils.get_parameter_value(parameters, 'tags')
+
+    # Get the clip region as an extent object.
+    clip_area_wkt = None
+    try:
+        clip_area = None
+        clip_area_wkt = task_utils.get_parameter_value(parameters, 'processing_extent', 'wkt')
+        if not int(out_coordinate_system) == 0:
+            clip_area = task_utils.get_clip_region(clip_area_wkt, out_coordinate_system)
+    except KeyError:
+        clip_area = None
+
+    out_workspace = os.path.join(request['folder'], 'temp')
+    if not os.path.exists(out_workspace):
+        os.makedirs(out_workspace)
+
+    num_results = parameters[0]['response']['numFound']
+    if num_results > task_utils.CHUNK_SIZE:
+        # Query the index for results in groups of 25.
+        query_index = task_utils.QueryIndex(parameters[0])
+        fl = query_index.fl
+        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+        fq = query_index.get_fq()
+        if fq:
+            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
+            query += fq
+        else:
+            groups = task_utils.grouper(list(parameters[0]['ids']), task_utils.CHUNK_SIZE, '')
+
+        status_writer.send_status(_('Starting to process...'))
+        for group in groups:
+            if fq:
+                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            else:
+                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            get_items(input_items, out_workspace, clip_area, clip_area_wkt, out_coordinate_system)
+    else:
+        input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+        get_items(input_items, out_workspace, clip_area, clip_area_wkt, out_coordinate_system)
+
+    if errors == num_results:
         status_writer.send_state(status.STAT_FAILED, _('No results to package'))
         return
 

@@ -14,16 +14,22 @@
 # limitations under the License.
 import os
 import re
+import sys
 import tempfile
+import urllib2
 import xml.etree.cElementTree as eTree
 import shutil
-import arcpy
 from utils import status
 from utils import task_utils
 from tasks import _
 
 if arcpy.GetInstallInfo()['Version'] == '10.0':
     raise ImportError('write_metadata not available with ArcGIS 10.0.')
+
+status_writer = status.Writer()
+status_writer.send_status(_('Initializing...'))
+import arcpy
+
 
 def execute(request):
     """Writes existing metadata for summary, description and tags.
@@ -32,19 +38,18 @@ def execute(request):
 
     :param request: json as a dict.
     """
+    updated = 0
+    errors = 0
+    skipped = 0
     parameters = request['params']
-    input_items = task_utils.get_input_items(parameters)
     summary = task_utils.get_parameter_value(parameters, 'summary', 'value')
     description = task_utils.get_parameter_value(parameters, 'description', 'value')
     tags = task_utils.get_parameter_value(parameters, 'tags', 'value')
     # Handle commas, spaces, and/or new line separators.
     tags = [tag for tag in re.split(' |,|\n', tags) if not tag == '']
-    #try:
     overwrite = task_utils.get_parameter_value(parameters, 'overwrite', 'value')
-    #except KeyError:
     if not overwrite:
         overwrite = False
-
     if not os.path.exists(request['folder']):
         os.makedirs(request['folder'])
 
@@ -54,13 +59,58 @@ def execute(request):
     # Template metadata file.
     template_xml = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'metadata_template.xml')
 
-    i = 1.
+    num_results = parameters[0]['response']['numFound']
+    if num_results > task_utils.CHUNK_SIZE:
+        # Query the index for results in groups of 25.
+        query_index = task_utils.QueryIndex(parameters[0])
+        fl = query_index.fl
+        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+        fq = query_index.get_fq()
+        if fq:
+            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
+            query += fq
+        else:
+            groups = task_utils.grouper(list(parameters[0]['ids']), task_utils.CHUNK_SIZE, '')
+
+        status_writer.send_percent(0.0, _('Starting to process...'), 'write_metadata')
+        i = 0.
+        for group in groups:
+            i += len(group) - group.count('')
+            if fq:
+                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            else:
+                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            result = write_metadata(input_items, template_xml, xslt_file, summary, description, tags, overwrite)
+            updated += result[0]
+            errors += result[1]
+            skipped += result[2]
+            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'write_metadata')
+    else:
+        input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+        updated, errors, skipped = write_metadata(input_items, template_xml, xslt_file,
+                                                    summary, description, tags, overwrite, True)
+
+    try:
+        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
+    except IOError:
+        pass
+    # Update state if necessary.
+    if skipped > 0 or errors > 0:
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
+    task_utils.report(os.path.join(request['folder'], '_report.json'), updated, skipped, errors)
+
+
+def write_metadata(input_items, template_xml, xslt_file, summary, description, tags, overwrite, show_progress=False):
+    """Writes metadata."""
     updated = 0
     errors = 0
     skipped = 0
-    item_count = len(input_items)
-    status_writer = status.Writer()
-    status_writer.send_percent(0.0, _('Starting to process...'), 'write_metadata')
+    if show_progress:
+        item_count = len(input_items)
+        i = 1.
+
     for item in input_items:
         try:
             # Temporary XML file
@@ -139,24 +189,25 @@ def execute(request):
                 tree.write(temp_xml)
                 # Import the XML file to the item; existing metadata is replaced.
                 arcpy.MetadataImporter_conversion(temp_xml, item)
-                status_writer.send_percent(i/item_count, _('Metadata updated for: {0}').format(item), 'write_metadata')
+                if show_progress:
+                    status_writer.send_percent(i / item_count, _('Metadata updated for: {0}').format(item), 'write_metadata')
+                    i += 1
+                else:
+                    status_writer.send_status(_('Metadata updated for: {0}').format(item))
                 updated += 1
             else:
-                status_writer.send_percent(i/item_count, _('No metadata changes for: {0}').format(item), 'write_metadata')
+                if show_progress:
+                    status_writer.send_percent(i / item_count, _('No metadata changes for: {0}').format(item), 'write_metadata')
+                    i += 1
+                else:
+                    status_writer.send_status(_('No metadata changes for: {0}').format(item))
                 skipped += 1
-            i += 1
         except Exception as ex:
-            status_writer.send_percent(i/item_count, _('Skipped: {0}').format(item), 'write_metadata')
+            if show_progress:
+                status_writer.send_percent(i / item_count, _('Skipped: {0}').format(item), 'write_metadata')
+                i += 1
             status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
             errors += 1
             pass
 
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
-    except IOError:
-        pass
-
-    # Update state if necessary.
-    if skipped > 0 or errors > 0:
-        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
-    task_utils.report(os.path.join(request['folder'], '_report.json'), updated, skipped, errors)
+    return updated, errors, skipped

@@ -15,12 +15,14 @@
 import os
 import glob
 import shutil
-import arcpy
 from utils import status
 from utils import task_utils
 from tasks import _
 
 status_writer = status.Writer()
+status_writer.send_status(_('Initializing...'))
+import arcpy
+
 
 # Custom Exceptions
 class AnalyzeServiceException(Exception):
@@ -77,7 +79,10 @@ def execute(request):
     """
     app_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     parameters = request['params']
-    input_items = task_utils.get_input_items(parameters)
+    input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+    if parameters[0]['response']['numFound'] > task_utils.CHUNK_SIZE:
+        status_writer.send_state(status.STAT_FAILED, 'Reduce results to 25 or less.')
+        return
     server_conn = task_utils.get_parameter_value(parameters, 'server_connection_path', 'value')
     service_name = task_utils.get_parameter_value(parameters, 'service_name', 'value')
     folder_name = task_utils.get_parameter_value(parameters, 'folder_name', 'value')
@@ -88,8 +93,6 @@ def execute(request):
     request_folder = os.path.join(request['folder'], 'temp')
     if not os.path.exists(request_folder):
         os.makedirs(request_folder)
-
-    status_writer.send_status(_('Initializing...'))
 
     map_template = os.path.join(request_folder, 'output.mxd')
     shutil.copyfile(os.path.join(app_folder, 'supportfiles', 'MapTemplate.mxd'), map_template)

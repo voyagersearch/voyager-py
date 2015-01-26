@@ -17,11 +17,16 @@ import sys
 import glob
 import json
 import math
+import locale
+import datetime
 import itertools
 import urllib
 import time
 import zipfile
 import status
+
+# Constants
+CHUNK_SIZE = 25
 
 
 class ZipFileManager(zipfile.ZipFile):
@@ -40,6 +45,33 @@ class ZipFileManager(zipfile.ZipFile):
         self.close()
 
 
+class QueryIndex(object):
+    def __init__(self, items):
+        self._items = items
+        self._fq = ''
+
+    @property
+    def fl(self):
+        return '&fl=id,name:[name],format,path:[absolute],[thumbURL],[lyrFile],[lyrURL],[downloadURL],[lyrURL]'
+
+    def get_fq(self):
+        """Return the query request string if the results are from a
+         voyager list or a bbox.
+         """
+        if 'query' in self._items:
+            if 'voyager.list' in self._items['query']:
+                self._fq = "&voyager.list={0}".format(self._items['query']['voyager.list'])
+            if 'fq' in self._items['query']:
+                if isinstance(self._items['query']['fq'], list):
+                    self._fq += '&fq={0}'.format('&fq='.join(self._items['query']['fq']).replace('\\', ''))
+                    self._fq = self._fq.replace(' ', '%20')
+                else:
+                    # Replace spaces with %20 & remove \\ to avoid HTTP Error 400.
+                    self._fq += '&fq={0}'.format(self._items['query']['fq'].replace("\\", ""))
+                    self._fq = self._fq.replace(' ', '%20')
+        return self._fq
+
+
 def time_it(func):
     """A timer decorator - use this to time a function."""
     def timed(*args, **kwargs):
@@ -54,7 +86,6 @@ def time_it(func):
 
 def create_unique_name(name, gdb):
     """Creates and returns a valid and unique name for the geodatabase.
-
     :param name: name to be validated
     :param gdb: workspace path
     :rtype : str
@@ -63,6 +94,27 @@ def create_unique_name(name, gdb):
     valid_name = arcpy.ValidateTableName(name, gdb)
     unique_name = arcpy.CreateUniqueName(valid_name, gdb)
     return unique_name
+
+
+def dd_to_dms(dd):
+    """Convert decimal degrees to degrees, minutes, seconds.
+    :param dd: decimal degrees as float
+    :rtype : tuple of degrees, minutes, seconds
+    """
+    dd = abs(dd)
+    minutes, seconds = divmod(dd*3600, 60)
+    degrees, minutes = divmod(minutes, 60)
+    seconds = float('{0:.2f}'.format(seconds))
+    return int(degrees), int(minutes), seconds
+
+
+def get_local_date():
+    """Returns formatted local date.
+    :rtype : str
+    """
+    locale.setlocale(locale.LC_TIME)
+    d = datetime.datetime.today()
+    return d.strftime('%x')
 
 
 def get_clip_region(clip_area_wkt, out_coordinate_system=None):
@@ -86,10 +138,12 @@ def get_clip_region(clip_area_wkt, out_coordinate_system=None):
                 clip_area = clip_area.projectAs(out_sr, geo_transformation)
             except AttributeError:
                 clip_area = clip_area.projectAs(out_sr)
+            except IndexError:
+                clip_area = clip_area.projectAs(out_sr)
     return clip_area.extent
 
 
-def grouper(iterable, n, fillvalue=None):
+def grouper(iterable, n, fill_value=None):
     """Collect data into fixed-length chunks or blocks.
     :param iterable: input iterable (list, etc.)
     :param n: number of chunks/blocks
@@ -99,7 +153,7 @@ def grouper(iterable, n, fillvalue=None):
     e.g. grouper([1,2,3,4], 2, 'end') --> (1,2) (2,3) 'end'
     """
     args = [iter(iterable)] * n
-    return itertools.izip_longest(fillvalue=fillvalue, *args)
+    return itertools.izip_longest(fillvalue=fill_value, *args)
 
 
 def list_files(source_file, file_extensions):
@@ -140,25 +194,19 @@ def get_input_items(parameters):
     :param: parameters: parameter list
     :rtype: dict
     """
+    #status_writer = status.Writer()
     results = {}
-    for item in parameters:
-        if item['name'] == 'input_items':
-            docs = item['response']['docs']
+    docs = parameters
+    try:
+        for i in docs:
             try:
-                for i in docs:
-                    try:
-                        results[get_data_path(i)] = i['name']
-                    except KeyError:
-                        results[get_data_path(i)] = ''
-                    except IOError:
-                        continue
+                results[get_data_path(i)] = i['name']
+            except KeyError:
+                results[get_data_path(i)] = ''
             except IOError:
-                pass
-            if not results:
-                status_writer = status.Writer()
-                status_writer.send_state(status.STAT_FAILED, 'All results are invalid or do not exist.')
-                sys.exit(1)
-            break
+                continue
+    except IOError:
+        pass
     return results
 
 
@@ -178,7 +226,7 @@ def get_data_path(item):
     """
     try:
         # If input is a Geodatabase feature class.
-        if [ any(ext) for ext in ('.sde', '.gdb', '.mdb') if ext in item['path'] ]:
+        if [any(ext) for ext in ('.sde', '.gdb', '.mdb') if ext in item['path']]:
             import arcpy
             if arcpy.Exists(item['path']):
                 return item['path']

@@ -326,7 +326,6 @@ def execute(request):
                         export_to_shapefiles(jobs, task_folder)
                     else:
                         export_to_geodatabase(jobs, task_folder)
-                #if (cnt % increment) == 0:
                 status_writer.send_percent(float(i) / num_results,
                                            '{0}: {1:%}'.format("exported", float(i) / num_results), 'export_features')
         else:

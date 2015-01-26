@@ -42,6 +42,11 @@ msgstr ""
 msgid "Setting output workspace..."
 msgstr ""
 
+#: Used in multiple tasks:
+#, python-format
+msgid "Initializing..."
+msgstr ""
+
 #: add_to_geodatabase.py:65,68
 #, python-format
 msgid "Created output workspace: {0}"
