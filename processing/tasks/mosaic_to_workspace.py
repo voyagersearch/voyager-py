@@ -37,14 +37,12 @@ pixel_types = {"U1": "1_BIT",
                "S32": "32_BIT_SIGNED",
                "F32": "32_BIT_FLOAT",
                "F64": "64_BIT"}
-pixels = []
-raster_items = []
-bands = collections.defaultdict(int)
-skipped = 0
 
 
 def get_items(input_items):
-    global skipped
+    pixels = []
+    raster_items = []
+    bands = collections.defaultdict(int)
     skipped = 0
     for item in input_items:
         # Number of bands for each item should be the same.
@@ -59,7 +57,7 @@ def get_items(input_items):
         else:
             status_writer.send_status(_('Invalid input type: {0}').format(item))
             skipped += 1
-    return raster_items, pixels
+    return raster_items, pixels, bands, skipped
 
 
 def execute(request):
@@ -86,6 +84,7 @@ def execute(request):
     if not os.path.exists(task_folder):
         os.makedirs(task_folder)
 
+    clip_area = None
     if not output_raster_format == 'MosaicDataset':
         # Get the clip region as an extent object.
         try:
@@ -97,7 +96,7 @@ def execute(request):
             else:
                 clip_area = task_utils.get_clip_region(clip_area_wkt)
         except KeyError:
-            clip_area = None
+            pass
 
     status_writer.send_status(_('Setting the output workspace...'))
     if not os.path.exists(target_workspace):
@@ -127,10 +126,10 @@ def execute(request):
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
             input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
-            raster_items, pixels = get_items(input_items)
+            raster_items, pixels, bands, skipped = get_items(input_items)
     else:
         input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
-        raster_items, pixels = get_items(input_items)
+        raster_items, pixels, bands, skipped = get_items(input_items)
 
     if not raster_items:
         status_writer.send_state(status.STAT_FAILED, _('Invalid input types'))
