@@ -1,3 +1,4 @@
+
 # (C) Copyright 2014 Voyager Search
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import decimal
+import itertools
 import json
-import base_job
 from utils import status
+
+
+status_writer = status.Writer()
 
 
 class ComplexEncoder(json.JSONEncoder):
@@ -26,102 +30,136 @@ class ComplexEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def global_job(args):
-    """Create a global job object for multiprocessing. (NOT YET SUPPORTED HERE)"""
-    global job
-    job = args
+def get_layers():
+    """Return the list of layers to index (based on Owner)."""
+    layers = []
+    layers_to_keep = job.layers_to_keep()
+    layers_to_skip = job.layers_to_skip()
+
+    if layers_to_skip and '*' in layers_to_skip[0]:
+        return layers
+
+    if layers_to_keep:
+        if not layers_to_keep[0][0] == '*':
+            for lk in layers_to_keep:
+                if job.sql_schema:
+                    statement = "select table_name, owner from {0}.layers where table_name like '{1}' and owner = '{2}'".format(job.sql_schema, lk[0], lk[1].upper())
+                else:
+                    statement = "select table_name, owner from sde.layers where table_name like '{0}' and owner = '{1}'".format(lk[0], lk[1].upper())
+                [layers.append(l) for l in job.db_cursor.execute(statement).fetchall()]
+        else:
+            try:
+                # If there is no owner, catch the error and continue.
+                owner = layers_to_keep[0][1]
+                if job.sql_schema:
+                    statement = "select table_name, owner from {0}.layers where owner = '{1}'".format(job.sql_schema, owner.upper())
+                else:
+                    statement = "select table_name, owner from sde.layers where owner = '{0}'".format(owner.upper())
+                [layers.append(l) for l in job.db_cursor.execute(statement).fetchall()]
+            except IndexError:
+                pass
+
+    # Remove any layers from the list meant to be excluded.
+    if layers_to_skip and '*' not in layers_to_skip[0]:
+            for lk in layers_to_skip:
+                statement = "select table_name, owner from sde.layers where table_name like '{0}' and owner = '{1}'".format(lk[0], lk[1])
+                [layers.remove(l) for l in job.db_cursor.execute(statement).fetchall()]
+
+    return layers
 
 
-def worker():
-    """Worker function to index each row in each table in the database."""
-    status_writer = status.Writer()
-    job.connect_to_zmq()
-    job.connect_to_database()
+def get_tables():
+    """Return the list of tables to index (based on the user connected to the database)."""
     tables = []
+    tables_to_skip = job.tables_to_skip()
+    tables_to_keep = job.tables_to_keep()
 
-    # Create the list of tables to index (based on the user connected to the database).
-    if '*' in job.tables_to_skip:
-        pass
-    elif not job.tables_to_keep == ['*']:
-        for tk in job.tables_to_keep:
+    # There are no tables to index.
+    if '*' in tables_to_skip:
+        return tables
+
+    if not tables_to_keep[0] == '*':
+        for tk in tables_to_keep:
             statement = "select table_name from user_tables where table_name like '{0}'".format(tk)
             [tables.append(t[0]) for t in job.db_cursor.execute(statement).fetchall()]
     else:
         [tables.append(t[0]) for t in job.db_cursor.execute("select table_name from user_tables").fetchall()]
 
     # Remove any tables from the list meant to be excluded.
-    if job.tables_to_skip:
-        for tk in job.tables_to_skip:
+    if tables_to_skip:
+        for tk in tables_to_skip:
             statement = "select table_name from user_tables where table_name like '{0}'".format(tk)
             [tables.remove(t[0]) for t in job.db_cursor.execute(statement).fetchall()]
 
-    # Create the list of layers to index based on Owner.
-    if '*' in job.layers_to_skip:
-        pass
-    elif not job.layers_to_keep[0][0] == '*':
-        for lk in job.layers_to_keep:
-            if job.sql_schema:
-                statement = "select table_name, owner from {0}.layers where table_name like '{1}' and owner = '{2}'".format(job.sql_schema, lk[0], lk[1].upper())
-            else:
-                statement = "select table_name, owner from sde.layers where table_name like '{0}' and owner = '{1}'".format(lk[0], lk[1].upper())
-            [tables.append(l) for l in job.db_cursor.execute(statement).fetchall()]
-    else:
-        try:
-            # If there is no owner, catch the error and continue.
-            owner = job.layers_to_keep[0][1]
-            if job.sql_schema:
-                statement = "select table_name, owner from {0}.layers where owner = '{1}'".format(job.sql_schema, owner.upper())
-            else:
-                statement = "select table_name, owner from sde.layers where owner = '{0}'".format(owner.upper())
-            [tables.append(l) for l in job.db_cursor.execute(statement).fetchall()]
-        except IndexError:
-            pass
+    return tables
 
-    # Remove any layers from the list meant to be excluded.
-    if '*' not in job.layers_to_skip:
-        for lk in job.layers_to_skip:
-            statement = "select table_name, owner from sde.layers where owner = '{0}'".format(lk[1])
-            [tables.remove(l) for l in job.db_cursor.execute(statement).fetchall()]
 
-    # Create the list of views to index.
-    if '*' in job.views_to_skip:
+def get_views():
+    """Return the list of views to index."""
+    views = []
+    views_to_keep = job.views_to_keep()
+    views_to_skip = job.views_to_skip()
+
+    if views_to_skip and '*' in views_to_skip[0]:
         pass
-    elif not job.views_to_keep[0][0] == '*':
-        for vk in job.views_to_keep:
-            if vk[2].lower() == 'all':
-                statement = "select view_name from all_views where view_name like '{0}' and owner = '{1}'".format(vk[0], vk[1].upper())
-                [tables.append((v[0], vk[1])) for v in job.db_cursor.execute(statement).fetchall()]
-            else:
-                statement = "select view_name from user_views where view_name like '{0}'".format(vk[0])
-                [tables.append(v[0]) for v in job.db_cursor.execute(statement).fetchall()]
-    else:
-        try:
-            # If there is no owner, catch the error and continue.
-            owner = job.views_to_keep[0][1]
-            if job.views_to_keep[0][2].lower() == 'all':
-                statement = "select view_name, owner from all_views where owner = '{0}'".format(owner.upper())
-                [tables.append(v) for v in job.db_cursor.execute(statement).fetchall()]
-            else:
-                statement = "select view_name from user_views"
-                [tables.append(v[0]) for v in job.db_cursor.execute(statement).fetchall()]
-        except IndexError:
-            pass
+
+    if views_to_keep:
+        if not views_to_keep[0][0] == '*':
+            for vk in views_to_keep:
+                if vk[2].lower() == 'all':
+                    statement = "select view_name from all_views where view_name like '{0}' and owner = '{1}'".format(vk[0], vk[1].upper())
+                    [views.append((v[0], vk[1])) for v in job.db_cursor.execute(statement).fetchall()]
+                else:
+                    statement = "select view_name from user_views where view_name like '{0}'".format(vk[0])
+                    [views.append(v[0]) for v in job.db_cursor.execute(statement).fetchall()]
+        else:
+            try:
+                # If there is no owner, catch the error and continue.
+                owner = views_to_keep[0][1]
+                if views_to_keep[0][2].lower() == 'all':
+                    statement = "select view_name, owner from all_views where owner = '{0}'".format(owner.upper())
+                    [views.append(v) for v in job.db_cursor.execute(statement).fetchall()]
+                else:
+                    statement = "select view_name from user_views"
+                    [views.append(v[0]) for v in job.db_cursor.execute(statement).fetchall()]
+            except IndexError:
+                pass
 
     # Remove any views from the list meant to be excluded.
-    if '*' not in job.views_to_skip:
-        for vk in job.views_to_skip:
-            if vk[2].lower() == 'all':
-                statement = "select view_name, owner from all_views where owner = '{0}'".format(vk[1])
-            else:
-                statement = "select view_name, owner from user_views where owner = '{0}'".format(vk[1])
-            [tables.remove(v) for v in job.db_cursor.execute(statement).fetchall()]
+    if views_to_skip and '*' not in views_to_skip[0]:
+        try:
+            for vk in views_to_skip:
+                if vk[2].lower() == 'all':
+                    statement = "select view_name, owner from all_views where view_name like '{0}' and owner = '{1}'".format(vk[0], vk[1])
+                    [views.remove((v[0], vk[1])) for v in job.db_cursor.execute(statement).fetchall()]
+                else:
+                    statement = "select view_name from user_views where view_name like '{0}'".format(vk[0])
+                    [views.remove(v[0]) for v in job.db_cursor.execute(statement).fetchall()]
+        except ValueError:
+            status_writer.send_state(status.STAT_FAILED, "Schema must be the same for all view configuration.")
+            return
 
-    if not tables:
+    return views
+
+
+def run_job(oracle_job):
+    """Worker function to index each row in each table in the database."""
+    global job
+    job = oracle_job
+    job.connect_to_zmq()
+    job.connect_to_database()
+
+    tables = get_tables()
+    layers = get_layers()
+    views = get_views()
+    all_tables = tables + layers + views
+
+    if not all_tables:
         status_writer.send_state(status.STAT_FAILED, "No tables or views found.")
         return
 
     # Begin indexing.
-    for tbl in set(tables):
+    for tbl in set(all_tables):
         geo = {}
         columns = []
         column_types = {}
@@ -223,14 +261,16 @@ def worker():
                                 columns.insert(0, '{0}.st_{1}({2})'.format(schema, x, geometry_field))
 
         # Drop astext from columns if WKT is not requested.
-        if not job.include_wkt:
+        include_wkt = job.include_wkt
+        if not include_wkt and not geometry_type == 'SDO_GEOMETRY':
             columns.pop(0)
 
         # Get the count of all the rows to use for reporting progress.
         row_count = job.db_cursor.execute("select count(*) from {0}".format(tbl)).fetchall()[0][0]
         if row_count == 0 or row_count is None:
             continue
-
+        else:
+            row_count = float(row_count)
         # Get the rows.
         try:
             if geometry_type == 'SDO_GEOMETRY':
@@ -252,11 +292,31 @@ def worker():
             continue
 
         # Index each row.
+        mapped_fields = job.map_fields(tbl, columns, column_types)
         increment = job.get_increment(row_count)
-        for i, row in enumerate(rows):
-            entry = {}
-            if has_shape:
-                if job.include_wkt:
+        location_id = job.location_id
+        action_type = job.action_type
+        discovery_id = job.discovery_id
+        entry = {}
+        if not has_shape:
+            for i, row in enumerate(rows):
+                # Map column names to Voyager fields.
+                mapped_cols = dict(itertools.izip(mapped_fields, row))
+                if has_shape:
+                    [mapped_cols.pop(name) for name in geom_fields]
+                mapped_cols['_discoveryID'] = discovery_id
+                #mapped_cols['title'] = tbl
+                entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
+                entry['location'] = location_id
+                entry['action'] = action_type
+                entry['entry'] = {'fields': mapped_cols}
+                job.send_entry(entry)
+                if (i % increment) == 0:
+                    status_writer.send_percent(i / row_count, "{0}: {1:%}".format(tbl, i / row_count), 'oracle_worker')
+        else:
+            geom_fields = [name for name in mapped_fields if '{0}'.format(geometry_field) in name]
+            for i, row in enumerate(rows):
+                if include_wkt:
                     geo['wkt'] = row[0]
                     if is_point:
                         geo['lon'] = row[1]
@@ -288,32 +348,21 @@ def worker():
                             geo['xmax'] = row[2]
                             geo['ymax'] = row[3]
 
-            # Map column names to Voyager fields.
-            mapped_cols = dict(zip(job.map_fields(tbl, columns, column_types), row))
-            if has_shape:
-                [mapped_cols.pop(name) for name in mapped_cols.keys() if '{0}'.format(geometry_field) in name]
-                if is_point:
-                    mapped_cols['geometry_type'] = 'Point'
-                elif 'POLYGON' in shape_type:
-                    mapped_cols['geometry_type'] = 'Polygon'
-                else:
-                    mapped_cols['geometry_type'] = 'Polyline'
-            mapped_cols['_discoveryID'] = job.discovery_id
-            mapped_cols['title'] = tbl
-            entry['id'] = '{0}_{1}_{2}'.format(job.location_id, tbl, i)
-            entry['location'] = job.location_id
-            entry['action'] = job.action_type
-            entry['entry'] = {'geo': geo, 'fields': mapped_cols}
-            job.send_entry(entry)
-            i += 1
-            if (i % increment) == 0:
-                status_writer.send_percent(float(i) / row_count,
-                                           "{0}: {1:%}".format(tbl, float(i) / row_count),
-                                           'oracle_worker')
-
-
-def assign_job(job_info):
-    """Connects to ZMQ, connects to the database, and assigns the job."""
-    job = base_job.Job(job_info)
-    global_job(job)
-    worker()
+                # Map column names to Voyager fields.
+                mapped_cols = dict(itertools.izip(mapped_fields, row))
+                [mapped_cols.pop(name) for name in geom_fields]
+                #     if is_point:
+                #         mapped_cols['geometry_type'] = 'Point'
+                #     elif 'POLYGON' in shape_type:
+                #         mapped_cols['geometry_type'] = 'Polygon'
+                #     else:
+                #         mapped_cols['geometry_type'] = 'Polyline'
+                mapped_cols['_discoveryID'] = discovery_id
+                #mapped_cols['title'] = tbl
+                entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
+                entry['location'] = location_id
+                entry['action'] = action_type
+                entry['entry'] = {'geo': geo, 'fields': mapped_cols}
+                job.send_entry(entry)
+                if (i % increment) == 0:
+                    status_writer.send_percent(i / row_count, "{0}: {1:%}".format(tbl, i / row_count), 'oracle_worker')

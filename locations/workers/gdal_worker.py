@@ -73,7 +73,7 @@ def worker():
                 job.send_entry(entry)
 
 
-def assign_job(job_info):
+def run_job(job_info):
     """Connects to ZMQ, opens the datasource, and assigns the job."""
     job = base_job.Job(job_info)
     global_job(job)

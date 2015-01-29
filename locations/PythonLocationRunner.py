@@ -42,24 +42,24 @@ if __name__ == '__main__':
         job = base_job.Job(sys.argv[1])
         if job.path:
             from workers import esri_worker
-            esri_worker.assign_work(job)
+            esri_worker.run_job(job)
         elif job.url:
             from workers import gdal_worker
-            gdal_worker.assign_job(job.job_file)
+            gdal_worker.run_job(job.job_file)
         elif job.mongodb_client_info:
             from workers import mongodb_worker
-            mongodb_worker.assign_job(job.job_file)
+            mongodb_worker.run_job(job)
         elif job.sql_connection_info:
             if job.sql_driver == 'SQL Server':
                 from workers import sql_worker
-                sql_worker.assign_job(job.job_file)
+                sql_worker.run_job(job)
             elif job.sql_driver == 'Oracle':
                 from workers import oracle_worker
-                oracle_worker.assign_job(job.job_file)
+                oracle_worker.run_job(job)
             elif 'MySQL' in job.sql_driver:
                 from workers import mysql_worker
-                mysql_worker.assign_job(job.job_file)
+                mysql_worker.run_job(job)
         else:
-            sys.stdout.write("No worker information.")
+            sys.stdout.write("No job information.")
             sys.exit(1)
     sys.exit(0)

@@ -13,8 +13,9 @@
 # limitations under the License.
 import decimal
 import json
-import base_job
 from utils import status
+
+status_writer = status.Writer()
 
 
 class ComplexEncoder(json.JSONEncoder):
@@ -26,20 +27,16 @@ class ComplexEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def global_job(args):
-    """Create a global job object for multiprocessing."""
-    global job
-    job = args
-
-
-def worker():
+def run_job(sql_job):
     """Worker function to index each row in each table in the database."""
-    status_writer = status.Writer()
+    global job
+    job = sql_job
     job.connect_to_zmq()
     job.connect_to_database()
     tables = []
-    if not job.tables_to_keep == ['*']:
-        for tk in job.tables_to_keep:
+    tables_to_keep = job.tables_to_keep()
+    if not tables_to_keep == ['*']:
+        for tk in tables_to_keep:
             statement = "select * from sys.objects where name like"
             [tables.append(t[0]) for t in job.db_cursor.execute("{0} '{1}'".format(statement, tk)).fetchall()]
     else:
@@ -81,6 +78,7 @@ def worker():
                 [columns.remove(c[0]) for c in job.execute_query(qry).fetchall()]
 
         # Check for a geometry column and pull out X,Y for points and extent coordinates for other geometry types.
+        geom_type = ''
         for c in job.db_cursor.columns(table=tbl).fetchall():
             if c.type_name == 'geometry':
                 has_shape = True
@@ -103,57 +101,52 @@ def worker():
 
         # Query the table for the rows.
         if not expression:
-            job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl))
+            row_count = float(job.db_cursor.execute("select Count(*) from {0}".format(tbl)).fetchone()[0])
+            rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl))
         else:
-            job.db_cursor.execute("select {0} from {1} where {2}".format(','.join(columns), tbl, expression))
+            row_count = float(job.db_cursor.execute("select Count(*) from {0} where {1}".format(tbl, expression)).fetchone()[0])
+            rows = job.db_cursor.execute("select {0} from {1} where {2}".format(','.join(columns), tbl, expression))
 
         # Index each row in the table.
-        rows = job.db_cursor.fetchall()
-        increment = job.get_increment(len(rows))
-        for i, row in enumerate(rows):
-            if job.field_mapping:
-                mapped_cols = job.map_fields(tbl, columns, column_types)
-            else:
-                mapped_cols = columns
+        entry = {}
+        action_type = job.action_type
+        discovery_id = job.discovery_id
+        location_id = job.location_id
+        if job.field_mapping:
+            mapped_fields = job.map_fields(tbl, columns, column_types)
+        else:
+            mapped_fields = columns
 
+        increment = job.get_increment(row_count)
+        for i, row in enumerate(rows):
             if has_shape:
                 if job.include_wkt:
                     geo['wkt'] = row[0]
                 if is_point:
                     geo['lon'] = row[2]
                     geo['lat'] = row[1]
-                    mapped_cols = dict(zip(mapped_cols[3:], row[3:]))
+                    mapped_cols = dict(zip(mapped_fields[3:], row[3:]))
                     mapped_cols['geometry_type'] = 'Point'
                 else:
                     geo['xmin'] = row[1]
                     geo['ymin'] = row[2]
                     geo['xmax'] = row[3]
                     geo['ymax'] = row[4]
-                    mapped_cols = dict(zip(mapped_cols[5:], row[5:]))
+                    mapped_cols = dict(zip(mapped_fields[5:], row[5:]))
                     if 'Polygon' in geom_type:
                         mapped_cols['geometry_type'] = 'Polygon'
                     else:
                         mapped_cols['geometry_type'] = 'Polyline'
             else:
-                mapped_cols = dict(zip(mapped_cols, row))
+                mapped_cols = dict(zip(mapped_fields, row))
 
             # Create an entry to send to ZMQ for indexing.
             mapped_cols['title'] = tbl
-            entry = {}
-            entry['id'] = '{0}_{1}_{2}'.format(job.location_id, tbl, i)
-            entry['location'] = job.location_id
-            entry['action'] = job.action_type
+            entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
+            entry['location'] = location_id
+            entry['action'] = action_type
             entry['entry'] = {'geo': geo, 'fields': mapped_cols}
-            entry['entry']['fields']['_discoveryID'] = job.discovery_id
+            entry['entry']['fields']['_discoveryID'] = discovery_id
             job.send_entry(entry)
             if (i % increment) == 0:
-                status_writer.send_percent(float(i)/len(rows),
-                                           '{0}: {1:%}'.format(tbl, float(i)/len(rows)),
-                                           'sql_server')
-
-
-def assign_job(job_info):
-    """Connects to ZMQ, connects to the database, and assigns the job."""
-    job = base_job.Job(job_info)
-    global_job(job)
-    worker()
+                status_writer.send_percent(i / row_count, '{0}: {1:%}'.format(tbl, i / row_count), 'sql_server')

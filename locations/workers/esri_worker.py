@@ -57,11 +57,12 @@ def worker(data_path):
                     expression = query
                 else:
                     expression = constraint
+            mapped_fields = job.map_fields(dsc.name, fields, field_types)
             with arcpy.da.SearchCursor(data_path, fields, expression) as rows:
                 for i, row in enumerate(rows, 1):
                     if job.domains:
                         row = update_row(dsc.fields, rows, list(row))
-                    mapped_fields = job.map_fields(dsc.name, fields, field_types)
+                    #mapped_fields = job.map_fields(dsc.name, fields, field_types)
                     mapped_fields = dict(zip(mapped_fields, row))
                     mapped_fields['_discoveryID'] = job.discovery_id
                     mapped_fields['title'] = dsc.name
@@ -95,6 +96,7 @@ def worker(data_path):
                 field_types.pop(dsc.shapeFieldName)
             if dsc.shapeType == 'Point':
                 with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, expression, sr) as rows:
+                    mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
                     for i, row in enumerate(rows):
                         if job.domains:
                             row = update_row(dsc.fields, rows, list(row))
@@ -102,7 +104,7 @@ def worker(data_path):
                         geo['lat'] = row[0].firstPoint.Y #row[0][1]
                         if job.include_wkt:
                             geo['wkt'] = row[0].WKT
-                        mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
+                        #mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
                         mapped_fields = dict(zip(mapped_fields, row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['title'] = dsc.name
@@ -114,6 +116,7 @@ def worker(data_path):
                         job.send_entry(entry)
             else:
                 with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, expression, sr) as rows:
+                    mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
                     for i, row in enumerate(rows):
                         if job.domains:
                             row = update_row(dsc.fields, rows, list(row))
@@ -123,7 +126,7 @@ def worker(data_path):
                         geo['ymax'] = row[0].extent.YMax
                         if job.include_wkt:
                             geo['wkt'] = row[0].WKT
-                        mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
+                        #mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
                         mapped_fields = dict(zip(mapped_fields, row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['title'] = dsc.name
@@ -135,7 +138,7 @@ def worker(data_path):
                         job.send_entry(entry)
 
 
-def assign_work(esri_job):
+def run_job(esri_job):
     """Determines the data type and each dataset is sent to the worker to be processed."""
     status_writer = status.Writer()
     status_writer.send_percent(0.0, "Initializing... 0.0%", 'esri_worker')
@@ -153,8 +156,10 @@ def assign_work(esri_job):
         arcpy.env.workspace = job.path
         feature_datasets = arcpy.ListDatasets('*', 'Feature')
         tables = []
+        tables_to_keep = job.tables_to_keep()
+        tables_to_skip = job.tables_to_skip()
         if job.tables_to_keep:
-            for t in job.tables_to_keep:
+            for t in tables_to_keep:
                 [tables.append(os.path.join(job.path, tbl)) for tbl in arcpy.ListTables(t)]
                 [tables.append(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(t)]
                 for fds in feature_datasets:
@@ -165,8 +170,8 @@ def assign_work(esri_job):
             for fds in feature_datasets:
                 [tables.append(os.path.join(job.path, fds, fc)) for fc in arcpy.ListFeatureClasses(feature_dataset=fds)]
 
-        if job.tables_to_skip:
-            for t in job.tables_to_keep:
+        if tables_to_skip:
+            for t in tables_to_keep:
                 [tables.remove(os.path.join(job.path, tbl)) for tbl in arcpy.ListTables(t)]
                 [tables.remove(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(t)]
                 for fds in feature_datasets:
@@ -174,16 +179,18 @@ def assign_work(esri_job):
 
     # A geodatabase feature dataset, SDC data, or CAD dataset.
     elif dsc.dataType == 'FeatureDataset' or dsc.dataType == 'CadDrawingDataset':
+        tables_to_keep = job.tables_to_keep()
+        tables_to_skip = job.tables_to_skip()
         arcpy.env.workspace = job.path
-        if job.tables_to_keep:
+        if tables_to_keep:
             tables = []
-            for tbl in job.tables_to_keep:
+            for tbl in tables_to_keep:
                 [tables.append(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(tbl)]
                 tables = list(set(tables))
         else:
             tables = [os.path.join(job.path, fc) for fc in arcpy.ListFeatureClasses()]
-        if job.tables_to_skip:
-            for tbl in job.tables_to_skip:
+        if tables_to_skip:
+            for tbl in tables_to_skip:
                 [tables.remove(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(tbl) if fc in tables]
 
     # Not a recognized data type.
@@ -197,7 +204,7 @@ def assign_work(esri_job):
         logger.setLevel(logging.INFO)
         pool = multiprocessing.Pool(initializer=global_job, initargs=(job,))
         for i, _ in enumerate(pool.imap_unordered(worker, tables), 1):
-            status_writer.send_percent(i/len(tables), "{0:%}".format(i/len(tables)), 'esri_worker')
+            status_writer.send_percent(i / len(tables), "{0:%}".format(i / len(tables)), 'esri_worker')
         # Synchronize the main process with the job processes to ensure proper cleanup.
         pool.close()
         pool.join()
@@ -205,5 +212,5 @@ def assign_work(esri_job):
         for i, tbl in enumerate(tables, 1):
             global_job(job)
             worker(tbl)
-            status_writer.send_percent(i/len(tables), "{0} {1:%}".format(tbl, i/len(tables)), 'esri_worker')
+            status_writer.send_percent(i / len(tables), "{0} {1:%}".format(tbl, i / len(tables)), 'esri_worker')
     return

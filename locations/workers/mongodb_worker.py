@@ -18,6 +18,8 @@ import gridfs
 from utils import status
 from utils import worker_utils
 
+status_writer = status.Writer()
+
 
 class ComplexEncoder(json.JSONEncoder):
     """To handle decimal types for json encoding."""
@@ -28,29 +30,24 @@ class ComplexEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def global_job(args):
-    """Create a global job object for multiprocessing."""
-    global job
-    job = args
-
-
-def worker():
+def run_job(mongodb_job):
     """Worker function to index each document in each collection in the database."""
+    global job
+    job = mongodb_job
     job.connect_to_zmq()
     job.connect_to_database()
-    if job.tables_to_keep == ['*']:
+    tables_to_keep = job.tables_to_keep()
+    if tables_to_keep == ['*']:
         collection_names = [col for col in job.db_connection.collection_names() if not col.find('system.') > -1]
     else:
-        collection_names = job.tables_to_keep
+        collection_names = tables_to_keep
 
-    status_writer = status.Writer()
     grid_fs = None
     for collection_name in collection_names:
         if job.has_gridfs:
             if collection_name.find('.files') > 0:
                 grid_fs = gridfs.GridFS(job.db_connection, collection_name.split('.')[0])
 
-        i = 0
         col = job.db_connection[collection_name]
         query = job.get_table_query(col)
         if query:
@@ -60,7 +57,7 @@ def worker():
 
         # Index each document -- get a suitable base 10 increment for reporting percentage.
         increment = job.get_increment(documents.count())
-        for doc in documents:
+        for i, doc in enumerate(documents):
             fields = doc.keys()
             field_types = dict((k, type(v)) for k, v in doc.iteritems())
             if grid_fs:
@@ -111,14 +108,7 @@ def worker():
             entry['action'] = job.action_type
             entry['entry'] = {'geo': geo, 'fields': mapped_fields}
             job.send_entry(entry)
-            i += 1
             if (i % increment) == 0:
-                status_writer.send_percent(float(i)/documents.count(),
+                status_writer.send_percent(float(i) / documents.count(),
                                            '{0}: {1:%}'.format(collection_name, float(i)/documents.count()),
                                            'MongoDB')
-
-
-def assign_job(job_info):
-    job = base_job.Job(job_info)
-    global_job(job)
-    worker()

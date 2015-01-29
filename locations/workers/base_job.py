@@ -66,18 +66,9 @@ class Job(object):
         self.db_query = None
         self.zmq_socket = None
 
-        self.__layers_to_keep = []
-        self.__layers_to_skip = []
-        self.__views_to_keep = []
-        self.__views_to_skip = []
-        self.__tables_to_keep = []
-        self.__tables_to_skip = []
         self.__field_mapping = []
         self.__table_constraints = []
         self.__table_queries = []
-        self.__get_table_config()
-        self.__get_layer_config()
-        self.__get_view_config()
         self.__get_domains()
 
     def __del__(self):
@@ -163,36 +154,6 @@ class Job(object):
                 'text': 'fs_',
                 'ntext': 'fs_',
                 'decimal': 'ff_'}
-
-    @property
-    def layers_to_keep(self):
-        """List of layers to keep."""
-        return self.__layers_to_keep
-
-    @property
-    def layers_to_skip(self):
-        """List of layers to skip."""
-        return self.__layers_to_skip
-
-    @property
-    def views_to_keep(self):
-        """List of views to keep."""
-        return self.__views_to_keep
-
-    @property
-    def views_to_skip(self):
-        """List of views to skip."""
-        return self.__views_to_skip
-
-    @property
-    def tables_to_keep(self):
-        """List of tables to keep (may include wild card)."""
-        return self.__tables_to_keep
-
-    @property
-    def tables_to_skip(self):
-        """List of tables to skip (may include a wild card)."""
-        return self.__tables_to_skip
 
     @property
     def table_constraints(self):
@@ -344,7 +305,105 @@ class Job(object):
                 self.db_connection = pyodbc.connect(sql_server_str)
                 self.db_cursor = self.db_connection.cursor()
 
+    def layers_to_keep(self):
+        """List of layers to keep."""
+        layers_to_keep = set()
+        try:
+            layers = self.job['location']['config']['layers']
+            for layer in layers:
+                try:
+                    if layer['action'] == 'INCLUDE':
+                        layers_to_keep.add((layer['name'], layer['owner']))
+                        self.__get_info(layer)
+                except KeyError:
+                    self.__get_info(layer)
+                    continue
+        except KeyError:
+            pass
+        return list(layers_to_keep)
 
+    def layers_to_skip(self):
+        """List of layers to skip."""
+        layers_to_skip = set()
+        try:
+            layers = self.job['location']['config']['layers']
+            for layer in layers:
+                try:
+                    if layer['action'] == 'EXCLUDE':
+                        layers_to_skip.add((layer['name'], layer['owner']))
+                except KeyError:
+                    continue
+        except KeyError:
+            pass
+        return list(layers_to_skip)
+
+    def views_to_keep(self):
+        """List of views to keep."""
+        views_to_keep = set()
+        try:
+            views = self.job['location']['config']['views']
+            for view in views:
+                try:
+                    if view['action'] == 'INCLUDE':
+                        views_to_keep.add((view['name'], view['owner'], view['schema']))
+                        self.__get_info(view)
+                except KeyError:
+                    self.__get_info(view)
+                    continue
+        except KeyError:
+            pass
+        return list(views_to_keep)
+
+    def views_to_skip(self):
+        """List of views to skip."""
+        views_to_skip = set()
+        try:
+            views = self.job['location']['config']['views']
+            for view in views:
+                try:
+                    if view['action'] == 'EXCLUDE':
+                        views_to_skip.add((view['name'], view['owner'], view['schema']))
+                except KeyError:
+                    continue
+        except KeyError:
+            pass
+        return list(views_to_skip)
+
+    def tables_to_keep(self):
+        """List of tables to keep (may include wild card)."""
+        tables_to_keep = set()
+        try:
+            tables = self.job['location']['config']['tables']
+            for table in tables:
+                try:
+                    if table['action'] == 'INCLUDE':
+                        tables_to_keep.add(table['name'])
+                        self.__get_info(table)
+                except KeyError:
+                    # There is no action, but map fields.
+                    self.__get_info(table)
+                    continue
+        except KeyError:
+            pass
+        return list(tables_to_keep)
+
+    def tables_to_skip(self):
+        """List of tables to skip (may include a wild card)."""
+        tables_to_skip = set()
+        try:
+            tables = self.job['location']['config']['tables']
+            for table in tables:
+                try:
+                    if table['action'] == 'EXCLUDE':
+                        tables_to_skip.add(table['name'])
+                except KeyError:
+                    # There is no action, but continue.
+                    continue
+        except KeyError:
+            pass
+        return list(tables_to_skip)
+
+    @staticmethod
     def get_increment(self, count):
         """Returns a suitable base 10 increment."""
         p = int(math.log10(count))
@@ -468,59 +527,6 @@ class Job(object):
                     workspace = '{0}{1}'.format(self.path.split(ext)[0], ext)
                     self.domains = {d.name: d.codedValues for d in arcpy.da.ListDomains(workspace)}
                     break
-
-    def __get_layer_config(self):
-        """List of layers and view to keep (may include wild card)."""
-        try:
-            layers = self.job['location']['config']['layers']
-            for layer in layers:
-                try:
-                    if layer['action'] == 'INCLUDE':
-                        self.__layers_to_keep.append((layer['name'], layer['owner']))
-                        self.__get_info(layer)
-                    elif layer['action'] == 'EXCLUDE':
-                        self.__layers_to_skip.append(layer['name'])
-                except KeyError:
-                    self.__get_info(layer)
-                    continue
-        except KeyError:
-            self.__layers_to_keep = ['*']
-
-
-    def __get_view_config(self):
-        """List of views to keep (may include wild card)."""
-        try:
-            views = self.job['location']['config']['views']
-            for view in views:
-                try:
-                    if view['action'] == 'INCLUDE':
-                        self.__views_to_keep.append((view['name'], view['owner'], view['schema']))
-                        self.__get_info(view)
-                    elif view['action'] == 'EXCLUDE':
-                        self.__views_to_skip.append((view['name'], view['owner'], view['schema']))
-                except KeyError:
-                    self.__get_info(view)
-                    continue
-        except KeyError:
-            self.__views_to_keep = ['*']
-
-
-    def __get_table_config(self):
-        """List of tables to keep (may include wild card)."""
-        try:
-            tables = self.job['location']['config']['tables']
-            for table in tables:
-                try:
-                    if table['action'] == 'INCLUDE':
-                        self.__tables_to_keep.append(table['name'])
-                        self.__get_info(table)
-                    elif table['action'] == 'EXCLUDE':
-                        self.__tables_to_skip.append(table['name'])
-                except KeyError:
-                    self.__get_info(table)
-                    continue
-        except KeyError:
-            self.__tables_to_keep = ['*']
 
     def __get_info(self, table):
         """Gets info such as field mapping, queries, and constraints."""
