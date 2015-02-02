@@ -6,7 +6,6 @@ Package selected search results into a single compressed file (.mpk or .lpk).
   - Inputs must have a spatial reference.
   - A processing extent can be specified to limit the geographic area being packaged.
   - If no processing extent is specified, the full extent of inputs is used.
-  - The projection is used to project the output results. The default is WGS84.
   - The package file can be downloaded and opened directly in ArcMap.
   - The output data for layer and map packages is a file geodatabase.
   - Non-spatial files such as text files, PDF, and Office documents will be included in the package.
