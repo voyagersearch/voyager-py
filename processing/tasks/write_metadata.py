@@ -23,13 +23,11 @@ from utils import status
 from utils import task_utils
 from tasks import _
 
-if arcpy.GetInstallInfo()['Version'] == '10.0':
-    raise ImportError('write_metadata not available with ArcGIS 10.0.')
-
 status_writer = status.Writer()
-status_writer.send_status(_('Initializing...'))
 import arcpy
 
+if arcpy.GetInstallInfo()['Version'] == '10.0':
+    raise ImportError('write_metadata not available with ArcGIS 10.0.')
 
 def execute(request):
     """Writes existing metadata for summary, description and tags.
@@ -144,7 +142,7 @@ def write_metadata(input_items, template_xml, xslt_file, summary, description, t
                     changes += 1
                 else:
                     for element in summary_element:
-                        if overwrite or element.text is None:
+                        if summary and (overwrite or element.text is None):
                             element.text = summary
                             changes += 1
 
@@ -156,7 +154,7 @@ def write_metadata(input_items, template_xml, xslt_file, summary, description, t
                     changes += 1
                 else:
                     for element in description_element:
-                        if overwrite or element.text is None:
+                        if description and (overwrite or element.text is None):
                             element.text = description
                             changes += 1
 
@@ -169,20 +167,22 @@ def write_metadata(input_items, template_xml, xslt_file, summary, description, t
                         new_tag.text = tag
                         changes += 1
                 elif not overwrite:
+                    # Still add any new tags.
                     for search_element in search_keys:
-                        keyword_elements = search_element.findall('.//keyword')
-                        if not keyword_elements:
+                        #keyword_elements = search_element.findall('.//keyword')
+                        if tags:
                             for tag in tags:
                                 new_tag = eTree.SubElement(search_keys[0], "keyword")
                                 new_tag.text = tag
                                 changes += 1
                 else:
-                    for search_element in search_keys:
-                        [search_element.remove(e) for e in search_element.findall('.//keyword')]
-                        for tag in tags:
-                            new_tag = eTree.SubElement(search_element, "keyword")
-                            new_tag.text = tag
-                            changes += 1
+                    if tags:
+                        for search_element in search_keys:
+                            [search_element.remove(e) for e in search_element.findall('.//keyword')]
+                            for tag in tags:
+                                new_tag = eTree.SubElement(search_element, "keyword")
+                                new_tag.text = tag
+                                changes += 1
 
             if changes > 0:
                 # Save modifications to the temporary XML file.

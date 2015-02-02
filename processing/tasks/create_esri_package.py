@@ -22,28 +22,17 @@ from tasks import _
 
 
 status_writer = status.Writer()
-status_writer.send_status(_('Initializing...'))
 import arcpy
 
-layers = []
-files = []
-errors = 0
-skipped = 0
 
-
-def get_items(input_items, out_workspace, clip_area, clip_area_wkt, out_coordinate_system):
+def get_items(input_items, out_workspace):
     """Returns the list of items to package."""
-    global files
-    global layers
-    global errors
-    global  skipped
+    layers = []
+    files = []
+    errors = 0
+    skipped = 0
     for item in input_items:
         try:
-            if not int(out_coordinate_system) == 0 and clip_area is None:
-                try:
-                    task_utils.get_clip_region(clip_area_wkt)
-                except Exception:
-                    pass
             if item.endswith('.lyr'):
                 layers.append(arcpy.mapping.Layer(item))
             else:
@@ -98,31 +87,31 @@ def get_items(input_items, out_workspace, clip_area, clip_area_wkt, out_coordina
             status_writer.send_status(_('Cannot package: {0}: {1}').format(item, repr(ex)))
             errors += 1
             pass
+    return layers, files, errors, skipped
 
 
 def execute(request):
     """Package inputs to an Esri map or layer package.
     :param request: json as a dict.
     """
+    errors = 0
+    skipped = 0
+    layers = []
+    files = []
+
     app_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     parameters = request['params']
-
-    out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
-    if not int(out_coordinate_system) == 0:
-        arcpy.env.outputCoordinateSystem = task_utils.get_spatial_reference(out_coordinate_system)
     out_format = task_utils.get_parameter_value(parameters, 'output_format', 'value')
     summary = task_utils.get_parameter_value(parameters, 'summary')
     tags = task_utils.get_parameter_value(parameters, 'tags')
 
     # Get the clip region as an extent object.
-    clip_area_wkt = None
+    clip_area = None
     try:
-        clip_area = None
         clip_area_wkt = task_utils.get_parameter_value(parameters, 'processing_extent', 'wkt')
-        if not int(out_coordinate_system) == 0:
-            clip_area = task_utils.get_clip_region(clip_area_wkt, out_coordinate_system)
-    except KeyError:
-        clip_area = None
+        clip_area = task_utils.get_clip_region(clip_area_wkt)
+    except (KeyError, ValueError):
+        pass
 
     out_workspace = os.path.join(request['folder'], 'temp')
     if not os.path.exists(out_workspace):
@@ -149,10 +138,10 @@ def execute(request):
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
             input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
-            get_items(input_items, out_workspace, clip_area, clip_area_wkt, out_coordinate_system)
+            layers, files, errors, skipped = get_items(input_items, out_workspace)
     else:
         input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
-        get_items(input_items, out_workspace, clip_area, clip_area_wkt, out_coordinate_system)
+        layers, files, errors, skipped = get_items(input_items, out_workspace)
 
     if errors == num_results:
         status_writer.send_state(status.STAT_FAILED, _('No results to package'))

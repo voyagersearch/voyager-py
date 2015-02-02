@@ -22,7 +22,6 @@ from tasks import _
 
 
 status_writer = status.Writer()
-status_writer.send_status(_('Initializing...'))
 import arcpy
 
 

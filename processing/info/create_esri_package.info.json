@@ -16,10 +16,6 @@
       "initWithResultsExtent": true
     },
     {
-      "type": "Projection",
-      "name": "output_projection"
-    },
-    {
       "type": "StringChoice",
       "name": "output_format",
       "value": "MPK",

@@ -43,7 +43,7 @@ if __name__ == '__main__':
                 task_info['tasks'].append({'name': task, 'available': True})
             except ImportError as ie:
                 if 'arcpy' in ie:
-                     task_info['tasks'].append({'name': task, 'available': False, 'warning': '{0}. Requires ArcGIS'.format(str(ie))})
+                    task_info['tasks'].append({'name': task, 'available': False, 'warning': '{0}. Requires ArcGIS'.format(str(ie))})
                 else:
                     task_info['tasks'].append({'name': task, 'available': False, 'warning': str(ie)})
             except RuntimeError as re:
