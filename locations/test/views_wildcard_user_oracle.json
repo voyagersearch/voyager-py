@@ -6,7 +6,7 @@
 		"results":"tcp://127.0.0.1:8903",
 		"host":"http://localhost:8888/"
 		},
-		"location": { 
+		"location": {
 			"id":"VIEWS_WILDCARD_user",
 			"name":"VIEWS_WILDCARD_user",
 			"type":"python",
@@ -19,7 +19,7 @@
 					"name": "*",
 					"action": "EXCLUDE"
 				}],
-				"layers": [	
+				"layers": [
 				{
 					"name": "*",
 					"action": "EXCLUDE",
@@ -31,7 +31,7 @@
 					"action": "INCLUDE",
 					"owner": "GDB1",
 					"schema": "user"
-				},				
+				},
 				{
 					"name": "*",
 					"map": {"GFID": "id"}
@@ -40,11 +40,11 @@
 				"sql": {
 					"connection": {
 						"driver": "Oracle",
-						"server": "voyagerdemo.com:1524",
-						"database": "NGA",
-						"schema": "GDB1",
-						"uid": "gdb1",
-						"pwd": "gdb1"
+						"server": "",
+						"database": "",
+						"schema": "",
+						"uid": "",
+						"pwd": ""
 					}
 				}
 			}
