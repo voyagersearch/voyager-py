@@ -30,7 +30,7 @@ class ComplexEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def get_layers():
+def get_layers(job):
     """Return the list of layers to index (based on Owner)."""
     layers = []
     layers_to_keep = job.layers_to_keep()
@@ -62,13 +62,16 @@ def get_layers():
     # Remove any layers from the list meant to be excluded.
     if layers_to_skip and '*' not in layers_to_skip[0]:
             for lk in layers_to_skip:
-                statement = "select table_name, owner from sde.layers where table_name like '{0}' and owner = '{1}'".format(lk[0], lk[1])
+                if job.sql_schema:
+                    statement = "select table_name, owner from {0}.layers where table_name like '{1}' and owner = '{2}'".format(job.sql_schema, lk[0], lk[1])
+                else:
+                    statement = "select table_name, owner from sde.layers where table_name like '{0}' and owner = '{1}'".format(lk[0], lk[1])
                 [layers.remove(l) for l in job.db_cursor.execute(statement).fetchall()]
 
     return layers
 
 
-def get_tables():
+def get_tables(job):
     """Return the list of tables to index (based on the user connected to the database)."""
     tables = []
     tables_to_skip = job.tables_to_skip()
@@ -94,7 +97,7 @@ def get_tables():
     return tables
 
 
-def get_views():
+def get_views(job):
     """Return the list of views to index."""
     views = []
     views_to_keep = job.views_to_keep()
@@ -144,7 +147,6 @@ def get_views():
 
 def run_job(oracle_job):
     """Worker function to index each row in each table in the database."""
-    global job
     job = oracle_job
     job.connect_to_zmq()
     job.connect_to_database()

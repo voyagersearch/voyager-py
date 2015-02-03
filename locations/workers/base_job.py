@@ -403,7 +403,6 @@ class Job(object):
             pass
         return list(tables_to_skip)
 
-    @staticmethod
     def get_increment(self, count):
         """Returns a suitable base 10 increment."""
         p = int(math.log10(count))
