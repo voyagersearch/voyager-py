@@ -361,7 +361,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system,
                     clip_poly = clip_feature_class
                     if where_statement:
                         clip_poly = arcpy.MakeFeatureLayer_management(clip_poly, 'clip_polygons', where_statement)
-
+                    extent = arcpy.Describe(clip_poly).extent
                 else:
                     if not out_sr.name == gcs_sr.name:
                         try:
@@ -376,7 +376,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system,
                             clip_poly = gcs_clip_poly
                     else:
                         clip_poly = gcs_clip_poly
-                        extent = clip_poly.extent
+                    extent = clip_poly.extent
             # Feature class
             if dsc.dataType == 'FeatureClass':
                 if out_name == '':
