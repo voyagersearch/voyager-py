@@ -1,0 +1,51 @@
+{
+	"id":"OracleSDO",
+	"connection": {
+		"indexer":"tcp://127.0.0.1:8900",
+		"chat":"tcp://127.0.0.1:8904",
+		"results":"tcp://127.0.0.1:8903",
+		"host":"http://localhost:8888/"
+		},
+		"location": {
+			"id":"OracleSDO",
+			"name":"OracleSDO",
+			"type":"python",
+			"config": {
+				"fields": {
+					"include": ["*"]
+				},
+				"tables": [
+				{
+					"name": "*",
+					"action": "INCLUDE"
+				},
+				{
+					"name": "*",
+					"map": {"GFID": "id"}
+				}],
+				"layers": [
+				{
+					"name": "*",
+					"action": "EXCLUDE",
+					"owner": "GDB1"
+				}],
+				"views": [
+				{
+					"name": "*",
+					"action": "EXCLUDE",
+					"owner": "GDB1",
+					"schema": "all"
+				}
+				],
+				"sql": {
+					"connection": {
+						"driver": "Oracle",
+						"server": "",
+						"database": "",
+						"uid": "",
+						"pwd": ""
+					}
+				}
+			}
+		}
+}
