@@ -32,7 +32,7 @@ class ComplexEncoder(json.JSONEncoder):
 
 def get_collections(job):
     """Return the list of collections to index."""
-    collections = []
+    collection_names = []
     collections_to_skip = job.tables_to_skip()
     collections_to_keep = job.tables_to_keep()
 
