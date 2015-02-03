@@ -1,0 +1,58 @@
+{
+	"id":"VIEWS_EXCLUDE_INCLUDE",
+	"connection": {
+		"indexer":"tcp://127.0.0.1:8900",
+		"chat":"tcp://127.0.0.1:8904",
+		"results":"tcp://127.0.0.1:8903",
+		"host":"http://localhost:8888/"
+		},
+		"location": {
+			"id":"VIEWS_EXCLUDE_INCLUDE",
+			"name":"VIEWS_EXCLUDE_INCLUDE",
+			"type":"python",
+			"config": {
+				"fields": {
+					"include": ["*"]
+				},
+				"tables": [
+				{
+					"name": "*",
+					"action": "EXCLUDE"
+				}],
+				"layers": [
+				{
+					"name": "*",
+					"action": "EXCLUDE",
+					"owner": "GDB1"
+				}],
+				"views": [
+				{
+					"name": "R%",
+					"action": "INCLUDE",
+					"owner": "GDB1",
+					"schema": "user"
+				},
+				{
+					"name": "RUNWAY_L_EVW",
+					"action": "EXCLUDE",
+					"owner": "GDB1",
+					"schema": "user"
+				},
+				{
+					"name": "*",
+					"map": {"GFID": "id"}
+				}
+				],
+				"sql": {
+					"connection": {
+						"driver": "Oracle",
+						"server": "",
+						"database": "",
+						"schema": "",
+						"uid": "",
+						"pwd": ""
+					}
+				}
+			}
+		}
+}
