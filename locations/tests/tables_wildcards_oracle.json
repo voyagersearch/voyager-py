@@ -1,0 +1,43 @@
+{
+	"id":"Tables_WildCards",
+	"connection": {
+		"indexer":"tcp://127.0.0.1:8900",
+		"chat":"tcp://127.0.0.1:8904",
+		"results":"tcp://127.0.0.1:8903",
+		"host":"http://localhost:8888/"
+		},
+		"location": {
+			"id":"Tables_WildCards",
+			"name":"RUNWAYS",
+			"type":"python",
+			"config": {
+				"fields": {
+					"include": ["*"]
+				},
+				"tables": [
+				{
+					"name": "RUNWAY%",
+					"action": "INCLUDE"
+				},
+                {
+					"name": "RUNWAYP",
+					"action": "EXCLUDE"
+				},
+				{
+					"name": "*",
+					"map": {"NAME": "name"},
+					"query": ""
+				}],
+				"sql": {
+					"connection": {
+						"driver": "Oracle",
+						"server": "voyagerdemo.com",
+						"database": "voyager",
+						"uid": "MGCPSDE",
+						"schema": "GIFD",
+						"pwd": "MGCPSDE"
+					}
+				}
+			}
+	}
+}

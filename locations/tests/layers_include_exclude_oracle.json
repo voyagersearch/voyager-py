@@ -1,0 +1,49 @@
+{
+	"id":"LAYERS_INCLUDE_EXCLUDE",
+	"connection": {
+		"indexer":"tcp://127.0.0.1:8900",
+		"chat":"tcp://127.0.0.1:8904",
+		"results":"tcp://127.0.0.1:8903",
+		"host":"http://localhost:8888/"
+		},
+		"location": { 
+			"id":"LAYERS_INCLUDE_EXCLUDE",
+			"name":"LAYERS_INCLUDE_EXCLUDE",
+			"type":"python",
+			"config": {
+				"fields": {
+					"include": ["*"]
+				},
+				"tables": [
+				{
+					"name": "*",
+					"action": "EXCLUDE"
+				}],
+				"layers": [	
+				{
+					"name": "R%",
+					"action": "INCLUDE",
+					"owner": "GDB1"
+				},
+				{
+					"name": "ROAD_L",
+					"action": "EXCLUDE",
+					"owner": "GDB1"
+				},
+				{
+					"name": "*",
+					"map": {"GFID": "id"}
+				}],
+				"sql": {
+					"connection": {
+						"driver": "Oracle",
+						"server": "voyagerdemo.com:1524",
+						"database": "NGA",
+						"schema": "GDB1",
+						"uid": "gdb1",
+						"pwd": "gdb1"
+					}
+				}
+			}
+		}
+}

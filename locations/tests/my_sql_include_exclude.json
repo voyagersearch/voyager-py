@@ -1,0 +1,41 @@
+{
+	"id":"MySQL_ONE",
+	"connection": {
+		"indexer":"tcp://127.0.0.1:8900",
+		"chat":"tcp://127.0.0.1:8904",
+		"results":"tcp://127.0.0.1:8903",
+		"host":"http://localhost:8888/"
+	},
+	"location":{
+		"id":"MySQL_ONE",
+		"name":"MySQL_ONE",
+		"type":"TABLES",
+		"config": {
+			"fields": { 
+				"include":["*"]
+			},
+			"tables":[
+				{
+					"name":"*",
+					"action":"INCLUDE"
+				},
+				{
+					"name": "books",
+					"action": "EXCLUDE"
+				},
+				{
+					"name":"*",
+					"map":{"NAME":"name"}
+			}],
+			"sql": {
+				"connection":{
+					"driver":"MySQL ODBC 5.3 ANSI Driver",
+					"server":"localhost",
+					"database":"test",
+					"uid":"root",
+					"pwd":""
+				}
+			}
+		}
+	}
+}

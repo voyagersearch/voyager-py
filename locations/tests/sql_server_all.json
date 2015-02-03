@@ -1,0 +1,37 @@
+{
+	"id":"SQLServer_ALL",
+	"connection": {
+		"indexer":"tcp://127.0.0.1:8900",
+		"chat":"tcp://127.0.0.1:8904",
+		"results":"tcp://127.0.0.1:8903",
+		"host":"http://localhost:8888/"
+	},
+	"location":{
+		"id":"SQLServer_ALL",
+		"name":"SQLServer-VOYAGERTEST",
+		"type":"TABLES",
+		"config": {
+			"fields": { 
+				"include":["*"]
+			},
+			"tables":[
+				{
+					"name":"*",
+					"action":"INCLUDE"
+				},
+				{
+					"name":"*",
+					"map":{"NAME":"name"}
+			}],
+			"sql": {
+				"connection":{
+					"driver":"SQL Server",
+					"server":"VOYAGER-JASON",
+					"database":"VOYAGERTEST",
+					"uid":"",
+					"pwd":""
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,39 @@
+{
+	"id":"Tables_ALL",
+	"connection": {
+		"indexer":"tcp://127.0.0.1:8900",
+		"chat":"tcp://127.0.0.1:8904",
+		"results":"tcp://127.0.0.1:8903",
+		"host":"http://localhost:8888/"
+		},
+		"location": {
+			"id":"Tables_ALL",
+			"name":"Tables_ALL",
+			"type":"python",
+			"config": {
+				"fields": {
+					"include": ["*"]
+				},
+				"tables": [
+				{
+					"name": "*",
+					"action": "INCLUDE"
+				},
+				{
+					"name": "*",
+					"map": {"CNTRY_NAME": "name"},
+					"query": ""
+				}],
+				"sql": {
+					"connection": {
+						"driver": "Oracle",
+						"server": "voyagerdemo.com",
+						"database": "voyager",
+						"uid": "MGCPSDE",
+						"schema": "GIFD",
+						"pwd": "MGCPSDE"
+					}
+				}
+			}
+	}
+}
