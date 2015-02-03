@@ -30,17 +30,29 @@ class ComplexEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
+def get_collections(job):
+    """Return the list of collections to index."""
+    collections = []
+    collections_to_skip = job.tables_to_skip()
+    collections_to_keep = job.tables_to_keep()
+
+    if collections_to_keep == ['*']:
+        collection_names = [col for col in job.db_connection.collection_names() if not col.find('system.') > -1]
+    else:
+        collection_names = collections_to_keep
+
+    if collections_to_skip:
+        for cs in collections_to_skip:
+            [collection_names.remove(col) for col in job.db_connection.collection_names() if not col.find('system') > -1 and col == cs]
+
+    return collection_names
+
 def run_job(mongodb_job):
     """Worker function to index each document in each collection in the database."""
-    global job
     job = mongodb_job
     job.connect_to_zmq()
     job.connect_to_database()
-    tables_to_keep = job.tables_to_keep()
-    if tables_to_keep == ['*']:
-        collection_names = [col for col in job.db_connection.collection_names() if not col.find('system.') > -1]
-    else:
-        collection_names = tables_to_keep
+    collection_names = get_collections(job)
 
     grid_fs = None
     for collection_name in collection_names:

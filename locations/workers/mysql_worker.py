@@ -28,13 +28,10 @@ class ComplexEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def run_job(mysql_job):
-    """Worker function to index each row in each table in the MySQL database."""
-    global job
-    job = mysql_job
-    job.connect_to_zmq()
-    job.connect_to_database()
+def get_tables(job):
+    """Return the list of tables to index (based on the user connected to the database)."""
     tables = []
+    tables_to_skip = job.tables_to_skip()
     tables_to_keep = job.tables_to_keep()
 
     if not tables_to_keep == ['*']:
@@ -44,6 +41,20 @@ def run_job(mysql_job):
     else:
         qry = "select table_name from information_schema.tables where table_schema='{0}'".format(job.sql_connection_info['connection']['database'])
         [tables.append(t[0]) for t in job.db_cursor.execute(qry).fetchall()]
+
+    if tables_to_skip:
+        for ts in tables_to_skip:
+            statement = "select table_name from information_schema.tables where table_name like"
+            [tables.remove(t[0]) for t in job.db_cursor.execute("{0} '{1}'".format(statement, ts)).fetchall()]
+    return tables
+
+
+def run_job(mysql_job):
+    """Worker function to index each row in each table in the MySQL database."""
+    job = mysql_job
+    job.connect_to_zmq()
+    job.connect_to_database()
+    tables = get_tables(job)
 
     for table in tables:
         geo = {}
