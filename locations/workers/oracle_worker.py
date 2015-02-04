@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import decimal
-import itertools
+from itertools import izip
 import json
 from utils import status
 
@@ -302,69 +302,70 @@ def run_job(oracle_job):
         entry = {}
         if not has_shape:
             for i, row in enumerate(rows):
-                # Map column names to Voyager fields.
-                mapped_cols = dict(itertools.izip(mapped_fields, row))
-                if has_shape:
-                    [mapped_cols.pop(name) for name in geom_fields]
-                mapped_cols['_discoveryID'] = discovery_id
-                #mapped_cols['title'] = tbl
-                entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
-                entry['location'] = location_id
-                entry['action'] = action_type
-                entry['entry'] = {'fields': mapped_cols}
-                job.send_entry(entry)
-                if (i % increment) == 0:
-                    status_writer.send_percent(i / row_count, "{0}: {1:%}".format(tbl, i / row_count), 'oracle_worker')
+                try:
+                    # Map column names to Voyager fields.
+                    mapped_cols = dict(izip(mapped_fields, row))
+                    if has_shape:
+                        [mapped_cols.pop(name) for name in geom_fields]
+                    mapped_cols['_discoveryID'] = discovery_id
+                    entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
+                    entry['location'] = location_id
+                    entry['action'] = action_type
+                    entry['entry'] = {'fields': mapped_cols}
+                    job.send_entry(entry)
+                    if (i % increment) == 0:
+                        status_writer.send_percent(i / row_count, "{0}: {1:%}".format(tbl, i / row_count), 'oracle_worker')
+                except Exception as ex:
+                    status_writer.send_status(ex)
+                    continue
         else:
             geom_fields = [name for name in mapped_fields if '{0}'.format(geometry_field) in name]
             for i, row in enumerate(rows):
-                if include_wkt:
-                    geo['wkt'] = row[0]
-                    if is_point:
-                        geo['lon'] = row[1]
-                        geo['lat'] = row[2]
-                    else:
-                        geo['xmin'] = row[1]
-                        geo['ymin'] = row[2]
-                        geo['xmax'] = row[3]
-                        geo['ymax'] = row[4]
-                else:
-                    if is_point:
-                        geo['lon'] = row[0]
-                        geo['lat'] = row[1]
-                    else:
-                        if geometry_type == 'SDO_GEOMETRY':
-                            if dimension == 3:
-                                geo['xmin'] = row[0][0]
-                                geo['ymin'] = row[0][1]
-                                geo['xmax'] = row[0][3]
-                                geo['ymax'] = row[0][4]
-                            elif dimension == 2:
-                                geo['xmin'] = row[0][0]
-                                geo['ymin'] = row[0][1]
-                                geo['xmax'] = row[0][2]
-                                geo['ymax'] = row[0][3]
+                try:
+                    if include_wkt:
+                        geo['wkt'] = row[0]
+                        if is_point:
+                            geo['lon'] = row[1]
+                            geo['lat'] = row[2]
                         else:
-                            geo['xmin'] = row[0]
-                            geo['ymin'] = row[1]
-                            geo['xmax'] = row[2]
-                            geo['ymax'] = row[3]
+                            geo['xmin'] = row[1]
+                            geo['ymin'] = row[2]
+                            geo['xmax'] = row[3]
+                            geo['ymax'] = row[4]
+                    else:
+                        if is_point:
+                            geo['lon'] = row[0]
+                            geo['lat'] = row[1]
+                        else:
+                            if geometry_type == 'SDO_GEOMETRY':
+                                if dimension == 3:
+                                    geo['xmin'] = row[0][0]
+                                    geo['ymin'] = row[0][1]
+                                    geo['xmax'] = row[0][3]
+                                    geo['ymax'] = row[0][4]
+                                elif dimension == 2:
+                                    geo['xmin'] = row[0][0]
+                                    geo['ymin'] = row[0][1]
+                                    geo['xmax'] = row[0][2]
+                                    geo['ymax'] = row[0][3]
+                            else:
+                                geo['xmin'] = row[0]
+                                geo['ymin'] = row[1]
+                                geo['xmax'] = row[2]
+                                geo['ymax'] = row[3]
 
-                # Map column names to Voyager fields.
-                mapped_cols = dict(itertools.izip(mapped_fields, row))
-                [mapped_cols.pop(name) for name in geom_fields]
-                #     if is_point:
-                #         mapped_cols['geometry_type'] = 'Point'
-                #     elif 'POLYGON' in shape_type:
-                #         mapped_cols['geometry_type'] = 'Polygon'
-                #     else:
-                #         mapped_cols['geometry_type'] = 'Polyline'
-                mapped_cols['_discoveryID'] = discovery_id
-                #mapped_cols['title'] = tbl
-                entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
-                entry['location'] = location_id
-                entry['action'] = action_type
-                entry['entry'] = {'geo': geo, 'fields': mapped_cols}
-                job.send_entry(entry)
-                if (i % increment) == 0:
-                    status_writer.send_percent(i / row_count, "{0}: {1:%}".format(tbl, i / row_count), 'oracle_worker')
+                    # Map column names to Voyager fields.
+                    mapped_cols = dict(izip(mapped_fields, row))
+                    [mapped_cols.pop(name) for name in geom_fields]
+                    mapped_cols['_discoveryID'] = discovery_id
+                    entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
+                    entry['location'] = location_id
+                    entry['action'] = action_type
+                    entry['entry'] = {'geo': geo, 'fields': mapped_cols}
+                    job.send_entry(entry)
+                    if (i % increment) == 0:
+                        status_writer.send_percent(i / row_count, "{0}: {1:%}".format(tbl, i / row_count), 'oracle_worker')
+
+                except Exception as ex:
+                    status_writer.send_status(ex)
+                    continue
