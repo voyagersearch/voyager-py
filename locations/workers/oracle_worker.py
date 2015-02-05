@@ -40,7 +40,7 @@ def get_layers(job):
         return layers
 
     if layers_to_keep:
-        if not layers_to_keep[0][0] == '*':
+        if '*' not in layers_to_keep[0]:
             for lk in layers_to_keep:
                 if job.sql_schema:
                     statement = "select table_name, owner from {0}.layers where table_name like '{1}' and owner = '{2}'".format(job.sql_schema, lk[0], lk[1].upper())
@@ -151,9 +151,9 @@ def run_job(oracle_job):
     job.connect_to_zmq()
     job.connect_to_database()
 
-    tables = get_tables()
-    layers = get_layers()
-    views = get_views()
+    tables = get_tables(job)
+    layers = get_layers(job)
+    views = get_views(job)
     all_tables = tables + layers + views
 
     if not all_tables:
