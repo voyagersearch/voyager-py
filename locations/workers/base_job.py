@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+os.environ["NLS_LANG"] = ".AL32UTF8"
 import json
 import datetime
 import copy
@@ -127,6 +129,8 @@ class Job(object):
                 'UNICODE': 'fs_',
                 unicode: 'fs_',
                 long: 'fl_',
+                int: 'fl_',
+                float: 'fu_',
                 datetime.datetime: 'fd_',
                 bson.objectid.ObjectId: 'fl_',
                 "Date": "fd_",
