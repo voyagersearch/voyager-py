@@ -14,6 +14,7 @@
 # limitations under the License.
 import os
 import sys
+import shutil
 import urllib2
 import tasks
 from utils import status
@@ -89,11 +90,12 @@ def create_shapefile(path, layer_name, fields, shape_type, epsg_code):
         epsg_code = 4326
     srs = ogr.osr.SpatialReference()
     srs.ImportFromEPSG(epsg_code)
-    layer = shape_file.CreateLayer(layer_name, srs, shape_type)
+    layer = shape_file.CreateLayer(str(layer_name), srs, shape_type)
 
     real_names = {}
     i = 0
     for name, val in fields.iteritems():
+        name = str(name)
         try:
             field_type = ogr_field_types[name.split('_')[0]]
             if field_type == 0:
@@ -166,6 +168,8 @@ def export_to_shapefiles(jobs, output_folder):
         if 'title' in job:
             title = job['title']
             job.pop('title')
+        else:
+            title = job['name']
 
         # Each unique location is a new shapefile or feature class.
         if location not in locations:
@@ -203,7 +207,10 @@ def export_to_shapefiles(jobs, output_folder):
         geom = ogr.CreateGeometryFromWkt(wkt)
         feature = ogr.Feature(layer_def)
         feature.SetGeometry(geom)
+        if '[thumbURL]' in field_names:
+            field_names.pop('[thumbURL]')
         for field, value in field_names.iteritems():
+            field, value = str(field), str(value)
             i = feature.GetFieldIndex(field)
             feature.SetField(i, value)
         layer.CreateFeature(feature)
@@ -270,6 +277,7 @@ def export_to_geodatabase(jobs, output_workspace):
         # Create a feature class for each new title.
         elif title not in titles:
             titles.add(title)
+            title = arcpy.ValidateTableName(title, gdb)
             fc = arcpy.CreateFeatureclass_management(gdb, title, geometry_type, spatial_reference=srs_code)
             layer = arcpy.MakeFeatureLayer_management(fc, title)
             field_names = add_fields(layer, job)
@@ -286,6 +294,8 @@ def export_to_geodatabase(jobs, output_workspace):
                 elif k in names:
                     field_names[k] = v
 
+        if '[thumbURL]' in field_names:
+            field_names.pop('[thumbURL]')
         with arcpy.da.InsertCursor(layer, ['SHAPE@WKT'] + field_names.keys()) as icur:
             icur.insertRow([feature] + field_names.values())
 
@@ -297,10 +307,15 @@ def execute(request):
     chunk_size = 25
     out_format = task_utils.get_parameter_value(request['params'], 'output_format', 'value')
 
-    # Create a task folder if it does not exist.
-    task_folder = request['folder']
+    # Create the temporary workspace if clip_feature_class:
+    task_folder = os.path.join(request['folder'], 'temp')
     if not os.path.exists(task_folder):
         os.makedirs(task_folder)
+
+    # # Create a task folder if it does not exist.
+    # task_folder = request['folder']
+    # if not os.path.exists(task_folder):
+    #     os.makedirs(task_folder)
 
     num_results, response_index = task_utils.get_result_count(request['params'])
     if num_results > chunk_size:
@@ -358,4 +373,6 @@ def execute(request):
             export_to_geodatabase(jobs, task_folder)
 
     # Zip up outputs.
-    task_utils.zip_data(task_folder, 'output.zip')
+    zip_file = task_utils.zip_data(task_folder, 'output.zip')
+    shutil.move(zip_file, os.path.join(os.path.dirname(task_folder), os.path.basename(zip_file)))
+    #task_utils.zip_data(task_folder, 'output.zip')
