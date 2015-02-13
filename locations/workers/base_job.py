@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-os.environ["NLS_LANG"] = ".AL32UTF8"
 import json
 import datetime
 import copy
@@ -25,7 +24,6 @@ import zmq
 class ObjectEncoder(json.JSONEncoder):
     """Support non-native Python types for JSON serialization."""
     def default(self, obj):
-        import cx_Oracle
         text_chars = ''.join(map(chr, [7, 8, 9, 10, 12, 13, 27] + range(0x20, 0x100)))
         is_binary_string = lambda bytes: bool(bytes.translate(None, text_chars))
 
@@ -47,13 +45,19 @@ class ObjectEncoder(json.JSONEncoder):
                 return str(obj)
             else:
                 return None
-        elif isinstance(obj, cx_Oracle.LOB):
-            if not is_binary_string(cx_Oracle.LOB.read(obj, 1024)):
+
+        try:
+            os.environ["NLS_LANG"] = ".AL32UTF8"
+            import cx_Oracle
+            if isinstance(obj, cx_Oracle.LOB):
+                if not is_binary_string(cx_Oracle.LOB.read(obj, 1024)):
+                    return str(obj)
+                else:
+                    return None
+            elif isinstance(obj, cx_Oracle.CLOB):
                 return str(obj)
-            else:
-                return None
-        elif isinstance(obj, cx_Oracle.CLOB):
-            return str(obj)
+        except ImportError as ie:
+            return obj
 
 
 class Job(object):
@@ -61,6 +65,7 @@ class Job(object):
         self.job_file = job_file
         self.job = json.load(open(job_file, 'r'))
 
+        self.drvr = None
         self.domains = {}  # For Geodatabase coded value domains
         self._sql_queries = []
         self.db_connection = None
@@ -112,52 +117,60 @@ class Job(object):
 
     @property
     def field_types(self):
-        import cx_Oracle
-        import bson
-        return {cx_Oracle.STRING: 'fs_',
-                'STRING': 'fs_',
-                cx_Oracle.FIXED_CHAR: 'fs_',
-                'FIXED_CHAR': 'fs_',
-                'NVARCHAR2': 'fs_',
-                cx_Oracle.NUMBER: 'ff_',
-                'NUMBER': 'ff_',
-                cx_Oracle.DATETIME: 'fd_',
-                'DATETIME': 'fd_',
-                cx_Oracle.TIMESTAMP: 'fd_',
-                'TIMESTAMP': 'fd_',
-                cx_Oracle.UNICODE: 'fs_',
-                'UNICODE': 'fs_',
-                unicode: 'fs_',
-                long: 'fl_',
-                int: 'fl_',
-                float: 'fu_',
-                datetime.datetime: 'fd_',
-                bson.objectid.ObjectId: 'fl_',
-                "Date": "fd_",
-                "Double": "fu_",
-                "Guid": "meta_",
-                "Integer": "fl_",
-                "OID": "fl_",
-                "Single": "ff_",
-                "SmallInteger": "fi_",
-                "String": 'fs_',
-                'int': 'fl_',
-                'int identity': 'fl_',
-                'integer': 'fl_',
-                'smallint': 'fi_',
-                'bigint': 'fl_',
-                'char': 'fs_',
-                'nchar': 'fs_',
-                'nvarchar': 'fs_',
-                'varchar': 'fs_',
-                'numeric': 'fu_',
-                'date': 'fd_',
-                'smalldatetime': 'fd_',
-                'bit': 'fb_',
-                'float': 'ff_',
-                'text': 'fs_',
-                'ntext': 'fs_',
-                'decimal': 'ff_'}
+        if self.drvr == 'Oracle':
+            import cx_Oracle
+            return {cx_Oracle.STRING: 'fs_',
+                    'STRING': 'fs_',
+                    cx_Oracle.FIXED_CHAR: 'fs_',
+                    'FIXED_CHAR': 'fs_',
+                    'NVARCHAR2': 'fs_',
+                    cx_Oracle.NUMBER: 'ff_',
+                    'NUMBER': 'ff_',
+                    cx_Oracle.DATETIME: 'fd_',
+                    'DATETIME': 'fd_',
+                    cx_Oracle.TIMESTAMP: 'fd_',
+                    'TIMESTAMP': 'fd_',
+                    cx_Oracle.UNICODE: 'fs_'}
+        else:
+            import bson
+            return {'STRING': 'fs_',
+                    'UNICODE': 'fs_',
+                    'FIXED_CHAR': 'fs_',
+                    'NVARCHAR2': 'fs_',
+                    'NUMBER': 'ff_',
+                    'DATETIME': 'fd_',
+                    'TIMESTAMP': 'fd_',
+                    unicode: 'fs_',
+                    long: 'fl_',
+                    int: 'fl_',
+                    float: 'fu_',
+                    datetime.datetime: 'fd_',
+                    bson.objectid.ObjectId: 'fl_',
+                    "Date": "fd_",
+                    "Double": "fu_",
+                    "Guid": "meta_",
+                    "Integer": "fl_",
+                    "OID": "fl_",
+                    "Single": "ff_",
+                    "SmallInteger": "fi_",
+                    "String": 'fs_',
+                    'int': 'fl_',
+                    'int identity': 'fl_',
+                    'integer': 'fl_',
+                    'smallint': 'fi_',
+                    'bigint': 'fl_',
+                    'char': 'fs_',
+                    'nchar': 'fs_',
+                    'nvarchar': 'fs_',
+                    'varchar': 'fs_',
+                    'numeric': 'fu_',
+                    'date': 'fd_',
+                    'smalldatetime': 'fd_',
+                    'bit': 'fb_',
+                    'float': 'ff_',
+                    'text': 'fs_',
+                    'ntext': 'fs_',
+                    'decimal': 'ff_'}
 
     @property
     def table_constraints(self):
@@ -287,25 +300,25 @@ class Job(object):
             client = pymongo.MongoClient(self.mongodb_client_info)
             self.db_connection = client[self.mongodb_database]
         else:
-            drvr = self.sql_connection_info['connection']['driver']
+            self.drvr = self.sql_connection_info['connection']['driver']
             srvr = self.sql_connection_info['connection']['server']
             db = self.sql_connection_info['connection']['database']
             un = self.sql_connection_info['connection']['uid']
             pw = self.sql_connection_info['connection']['pwd']
 
-            if drvr == 'Oracle':
+            if self.drvr == 'Oracle':
                 import cx_Oracle
                 self.db_connection = cx_Oracle.connect("{0}/{1}@{2}/{3}".format(un, pw, srvr, db))
                 self.db_cursor = self.db_connection.cursor()
-            elif drvr == 'SQL Server':
+            elif self.drvr == 'SQL Server':
                 import pyodbc
-                sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(drvr, srvr, db, un, pw)
+                sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(self.drvr, srvr, db, un, pw)
                 self.db_connection = pyodbc.connect(sql_server_str)
                 self.db_cursor = self.db_connection.cursor()
-            elif 'MySQL' in drvr:
+            elif 'MySQL' in self.drvr:
                 import pyodbc
                 # Ex. "DRIVER={MySQL ODBC 5.3 ANSI Driver}; SERVER=localhost; DATABASE=test; UID=root;OPTION=3"
-                sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4};OPTION=3".format(drvr, srvr, db, un, pw)
+                sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4};OPTION=3".format(self.drvr, srvr, db, un, pw)
                 self.db_connection = pyodbc.connect(sql_server_str)
                 self.db_cursor = self.db_connection.cursor()
 
