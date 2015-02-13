@@ -230,6 +230,7 @@ def worker(data_path, esri_service=False):
                     entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), row[fld_index])
                     entry['location'] = job.location_id
                     entry['action'] = job.action_type
+                    entry['title'] = dsc.name
                     entry['entry'] = {'fields': mapped_fields}
                     job.send_entry(entry)
                     if (i % increment) == 0:
@@ -272,6 +273,7 @@ def worker(data_path, esri_service=False):
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
+                        entry['title'] = dsc.name
                         entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                         job.send_entry(entry)
                         if (i % increment) == 0:
@@ -297,6 +299,7 @@ def worker(data_path, esri_service=False):
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
+                        entry['title'] = dsc.name
                         entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                         job.send_entry(entry)
                         if (i % increment) == 0:

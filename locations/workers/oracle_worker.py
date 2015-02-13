@@ -311,6 +311,7 @@ def run_job(oracle_job):
                     entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
                     entry['location'] = location_id
                     entry['action'] = action_type
+                    entry['title'] = tbl
                     entry['entry'] = {'fields': mapped_cols}
                     job.send_entry(entry)
                     if (i % increment) == 0:
@@ -361,6 +362,7 @@ def run_job(oracle_job):
                     entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
                     entry['location'] = location_id
                     entry['action'] = action_type
+                    entry['title'] = tbl
                     entry['entry'] = {'geo': geo, 'fields': mapped_cols}
                     job.send_entry(entry)
                     if (i % increment) == 0:
