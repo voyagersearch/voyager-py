@@ -31,8 +31,9 @@ def execute(request):
     skipped = 0
 
     parameters = request['params']
-    input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
-    if parameters[0]['response']['numFound'] > task_utils.CHUNK_SIZE:
+    num_results, response_index = task_utils.get_result_count(parameters)
+    input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
+    if num_results > task_utils.CHUNK_SIZE:
         status_writer.send_state(status.STAT_FAILED, 'Reduce results to 25 or less.')
         return
 
