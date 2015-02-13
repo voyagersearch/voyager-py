@@ -148,15 +148,18 @@ def index_service(url):
                 mapped_attributes[field_type + k] = mapped_fields.pop(k)
 
         row_count = len(ql.features)
+        increment = job.get_increment(row_count)
         if layer.type == 'Table':
             for i, row in enumerate(ql.features):
                 entry['id'] = '{0}_{1}_{2}'.format(job.location_id, layer.name, i)
                 entry['location'] = job.location_id
                 entry['action'] = job.action_type
                 mapped_fields = dict(zip(mapped_attributes.keys(), row['attributes'].values()))
+                entry['title'] = layer.name
                 entry['entry'] = {'fields': mapped_fields}
                 job.send_entry(entry)
-                status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer.name, i / row_count), 'esri_worker')
+                if (i % increment) == 0:
+                    status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer.name, i / row_count), 'esri_worker')
         else:
             if isinstance(ql.features[0]['geometry'], arcrest.geometry.Point):
                 for i, feature in enumerate(ql.features):
@@ -166,10 +169,12 @@ def index_service(url):
                     entry['id'] = '{0}_{1}_{2}'.format(job.location_id, layer.name, i)
                     entry['location'] = job.location_id
                     entry['action'] = job.action_type
+                    entry['title'] = layer.name
                     mapped_fields = dict(zip(mapped_attributes.keys(), feature['attributes'].values()))
                     entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                     job.send_entry(entry)
-                    status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer.name, i / row_count), 'esri_worker')
+                    if (i % increment) == 0:
+                        status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer.name, i / row_count), 'esri_worker')
             else:
                 for i, feature in enumerate(ql.features):
                     try:
@@ -181,10 +186,12 @@ def index_service(url):
                     entry['id'] = '{0}_{1}_{2}'.format(job.location_id, layer.name, i)
                     entry['location'] = job.location_id
                     entry['action'] = job.action_type
+                    entry['title'] = layer.name
                     mapped_fields = dict(zip(mapped_attributes.keys(), feature['attributes'].values()))
                     entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                     job.send_entry(entry)
-                    status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer.name, i / row_count), 'esri_worker')
+                    if (i % increment) == 0:
+                        status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer.name, i / row_count), 'esri_worker')
 
 
 def worker(data_path, esri_service=False):
