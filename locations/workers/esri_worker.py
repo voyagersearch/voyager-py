@@ -209,12 +209,17 @@ def worker(data_path, esri_service=False):
                     expression = query
                 else:
                     expression = constraint
-            mapped_fields = job.map_fields(dsc.name, fields, field_types)
+            row_count = float(arcpy.GetCount_management(data_path).getOutput(0))
             with arcpy.da.SearchCursor(data_path, fields, expression) as rows:
+                mapped_fields = job.map_fields(dsc.name, fields, field_types)
+                ordered_fields = OrderedDict()
+                for f in mapped_fields:
+                    ordered_fields[f] = None
+                increment = job.get_increment(row_count)
                 for i, row in enumerate(rows, 1):
                     if job.domains:
                         row = update_row(dsc.fields, rows, list(row))
-                    mapped_fields = dict(zip(mapped_fields, row))
+                    mapped_fields = dict(zip(ordered_fields.keys(), row))
                     mapped_fields['_discoveryID'] = job.discovery_id
                     mapped_fields['title'] = dsc.name
                     oid_field = filter(lambda x: x in ('FID', 'OID', 'OBJECTID'), rows.fields)
@@ -227,6 +232,8 @@ def worker(data_path, esri_service=False):
                     entry['action'] = job.action_type
                     entry['entry'] = {'fields': mapped_fields}
                     job.send_entry(entry)
+                    if (i % increment) == 0:
+                        status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
         else:
             sr = arcpy.SpatialReference(4326)
             geo['spatialReference'] = dsc.spatialReference.name
@@ -245,28 +252,37 @@ def worker(data_path, esri_service=False):
             if dsc.shapeFieldName in fields:
                 fields.remove(dsc.shapeFieldName)
                 field_types.pop(dsc.shapeFieldName)
+            row_count = float(arcpy.GetCount_management(data_path).getOutput(0))
             if dsc.shapeType == 'Point':
                 with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, expression, sr) as rows:
                     mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
+                    ordered_fields = OrderedDict()
+                    for f in mapped_fields:
+                        ordered_fields[f] = None
+                    increment = job.get_increment(row_count)
                     for i, row in enumerate(rows):
                         if job.domains:
                             row = update_row(dsc.fields, rows, list(row))
-                        geo['lon'] = row[0].firstPoint.X #row[0][0]
-                        geo['lat'] = row[0].firstPoint.Y #row[0][1]
+                        geo['lon'] = row[0].firstPoint.X
+                        geo['lat'] = row[0].firstPoint.Y
                         if job.include_wkt:
                             geo['wkt'] = row[0].WKT
-                        mapped_fields = dict(zip(mapped_fields, row[1:]))
+                        mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
-                        mapped_fields['title'] = dsc.name
-                        mapped_fields['geometry_type'] = dsc.shapeType
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
                         entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                         job.send_entry(entry)
+                        if (i % increment) == 0:
+                            status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
             else:
                 with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, expression, sr) as rows:
+                    increment = job.get_increment(row_count)
                     mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
+                    ordered_fields = OrderedDict()
+                    for f in mapped_fields:
+                        ordered_fields[f] = None
                     for i, row in enumerate(rows):
                         if job.domains:
                             row = update_row(dsc.fields, rows, list(row))
@@ -276,15 +292,15 @@ def worker(data_path, esri_service=False):
                         geo['ymax'] = row[0].extent.YMax
                         if job.include_wkt:
                             geo['wkt'] = row[0].WKT
-                        mapped_fields = dict(zip(mapped_fields, row[1:]))
+                        mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
-                        mapped_fields['title'] = dsc.name
-                        mapped_fields['geometry_type'] = dsc.shapeType
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
                         entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                         job.send_entry(entry)
+                        if (i % increment) == 0:
+                            status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
 
 
 def run_job(esri_job):
@@ -302,6 +318,7 @@ def run_job(esri_job):
     # A single feature class or table.
     if dsc.dataType in ('DbaseTable', 'FeatureClass', 'Shapefile', 'Table'):
         global_job(job, int(arcpy.GetCount_management(job.path).getOutput(0)))
+        job.tables_to_keep()  # This will populate field mapping.
         worker(job.path)
         return
 
