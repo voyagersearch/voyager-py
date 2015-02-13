@@ -26,7 +26,7 @@ import zipfile
 import status
 
 # Constants
-CHUNK_SIZE = 20
+CHUNK_SIZE = 25
 
 
 class ZipFileManager(zipfile.ZipFile):
