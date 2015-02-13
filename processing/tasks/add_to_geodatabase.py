@@ -88,10 +88,10 @@ def execute(request):
     status_writer.send_status(_('Setting the output workspace...'))
     arcpy.env.workspace = out_gdb
 
-    num_results = parameters[0]['response']['numFound']
+    num_results, response_index = task_utils.get_result_count(parameters)
     if num_results > task_utils.CHUNK_SIZE:
         # Query the index for results in groups of 25.
-        query_index = task_utils.QueryIndex(parameters[0])
+        query_index = task_utils.QueryIndex(parameters[response_index])
         fl = query_index.fl
         query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
         fq = query_index.get_fq()
@@ -99,7 +99,7 @@ def execute(request):
             groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
             query += fq
         else:
-            groups = task_utils.grouper(list(parameters[0]['ids']), task_utils.CHUNK_SIZE, '')
+            groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
 
         i = 0.
         for group in groups:
@@ -116,7 +116,7 @@ def execute(request):
             skipped += result[2]
             status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'add_to_geodatabase')
     else:
-        input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
         added, errors, skipped = add_to_geodatabase(input_items, out_gdb, is_fds, True)
 
     # Copy the default thumbnail and create a report in the task folder..

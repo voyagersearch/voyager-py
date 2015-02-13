@@ -56,10 +56,10 @@ def execute(request):
     if not os.path.exists(task_folder):
         os.makedirs(task_folder)
 
-    num_results = parameters[0]['response']['numFound']
+    num_results, response_index = task_utils.get_result_count(parameters)
     if num_results > task_utils.CHUNK_SIZE:
         # Query the index for results in groups of 25.
-        query_index = task_utils.QueryIndex(parameters[0])
+        query_index = task_utils.QueryIndex(parameters[response_index])
         fl = query_index.fl
         query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
         fq = query_index.get_fq()
@@ -67,7 +67,7 @@ def execute(request):
             groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
             query += fq
         else:
-            groups = task_utils.grouper(list(parameters[0]['ids']), task_utils.CHUNK_SIZE, '')
+            groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
 
         status_writer.send_percent(0.0, _('Starting to process...'), 'calculate_raster_statistics')
         i = 0.
@@ -85,7 +85,7 @@ def execute(request):
             skipped += result[1]
             status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'calculate_raster_statistics')
     else:
-        input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
         processed, skipped = calculate_raster_statistics(input_items, extent, horizontal_skip_factor,
                                                          vertical_skip_factor, ignore_pixel_values, True)
 
@@ -107,7 +107,7 @@ def calculate_raster_statistics(input_items, extent, horizontal_skip_factor,
 
     for result in input_items:
         dsc = arcpy.Describe(result)
-        if not dsc.datasetType in ('RasterDataset', 'MosaicDataset'):
+        if dsc.datasetType not in ('RasterDataset', 'MosaicDataset'):
             status_writer.send_state(status.STAT_WARNING, _('{0} is not a valid raster type.').format(result))
             skipped += 1
             if show_progress:
@@ -124,7 +124,7 @@ def calculate_raster_statistics(input_items, extent, horizontal_skip_factor,
                                                      'SKIP_EXISTING',
                                                      extent)
                 if show_progress:
-                    status_writer.send_percent(i/count,
+                    status_writer.send_percent(i / count,
                                                _('Calculated statistics for: {0}').format(result),
                                                'calculate_raster_statistics')
                     i += 1

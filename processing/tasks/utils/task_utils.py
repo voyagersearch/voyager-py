@@ -26,7 +26,7 @@ import zipfile
 import status
 
 # Constants
-CHUNK_SIZE = 25
+CHUNK_SIZE = 20
 
 
 class ZipFileManager(zipfile.ZipFile):
@@ -142,6 +142,15 @@ def get_clip_region(clip_area_wkt, out_coordinate_system=None):
                 clip_area = clip_area.projectAs(out_sr)
     return clip_area.extent
 
+
+def get_result_count(parameters):
+    """Returns the number of results and the reponse index."""
+    count, i = 0, 0
+    for i, parameter in enumerate(parameters):
+        if 'response' in parameter:
+            count = parameter['response']['numFound']
+            break
+    return count, i
 
 def grouper(iterable, n, fill_value=None):
     """Collect data into fixed-length chunks or blocks.

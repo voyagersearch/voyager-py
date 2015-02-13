@@ -42,10 +42,10 @@ def execute(request):
     if not os.path.exists(request['folder']):
         os.makedirs(request['folder'])
 
-    num_results = parameters[0]['response']['numFound']
+    num_results, response_index = task_utils.get_result_count(parameters)
     if num_results > task_utils.CHUNK_SIZE:
         # Query the index for results in groups of 25.
-        query_index = task_utils.QueryIndex(parameters[0])
+        query_index = task_utils.QueryIndex(parameters[response_index])
         fl = query_index.fl
         query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
         fq = query_index.get_fq()
@@ -53,7 +53,7 @@ def execute(request):
             groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
             query += fq
         else:
-            groups = task_utils.grouper(list(parameters[0]['ids']), task_utils.CHUNK_SIZE, '')
+            groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
 
         status_writer.send_percent(0.0, _('Starting to process...'), 'copy_files')
         i = 0.
@@ -71,7 +71,7 @@ def execute(request):
             skipped += result[2]
             status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'copy_files')
     else:
-        input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
         converted, errors, skipped = copy_files(input_items, target_folder, flatten_results, target_dirs, True)
 
     try:

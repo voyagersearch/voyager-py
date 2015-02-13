@@ -104,11 +104,11 @@ def execute(request):
     arcpy.env.workspace = target_workspace
 
     status_writer.send_status(_('Starting to process...'))
-    num_results = parameters[0]['response']['numFound']
+    num_results, response_index = task_utils.get_result_count(parameters)
 
     if num_results > task_utils.CHUNK_SIZE:
         # Query the index for results in groups of 25.
-        query_index = task_utils.QueryIndex(parameters[0])
+        query_index = task_utils.QueryIndex(parameters[response_index])
         fl = query_index.fl
         query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
         fq = query_index.get_fq()
@@ -116,7 +116,7 @@ def execute(request):
             groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
             query += fq
         else:
-            groups = task_utils.grouper(list(parameters[0]['ids']), task_utils.CHUNK_SIZE, '')
+            groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
 
         for group in groups:
             if fq:
@@ -127,7 +127,7 @@ def execute(request):
             input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
             raster_items, pixels, bands, skipped = get_items(input_items)
     else:
-        input_items = task_utils.get_input_items(parameters[0]['response']['docs'])
+        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
         raster_items, pixels, bands, skipped = get_items(input_items)
 
     if not raster_items:

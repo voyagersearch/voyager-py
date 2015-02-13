@@ -302,12 +302,15 @@ def execute(request):
     if not os.path.exists(task_folder):
         os.makedirs(task_folder)
 
-    num_results = request['params'][0]['response']['numFound']
+    num_results, response_index = task_utils.get_result_count(request['params'])
     if num_results > chunk_size:
         query = '{0}{1}'.format(sys.argv[2].split('=')[1], '/select?&wt=json&fl=id,location,name,title,fs_*,fl_*,fi_*,ff_*,fu_*,fd*_,meta_*,pointDD,bbox,srs_code')
-        if 'query' in request['params'][0]:
+        if 'query' in request['params'][response_index]:
             # Voyager Search Traditional UI
-            request_qry = request['params'][0]['query']
+            for p in request['params']:
+                if 'query' in p:
+                    request_qry = p['query']
+                    break
             if 'voyager.list' in request_qry:
                 query += '&{0}'.format(request_qry['voyager.list'])
             if 'fq' in request_qry:
@@ -330,7 +333,11 @@ def execute(request):
                                            '{0}: {1:%}'.format("exported", float(i) / num_results), 'export_features')
         else:
             # Voyager Search Portal/Cart UI
-            ids = request['params'][0]['ids']
+            ids = []
+            for p in request['params']:
+                if 'ids' in p:
+                    ids = p['ids']
+                    break
             groups = task_utils.grouper(list(ids), chunk_size, '')
             i = 0
             for group in groups:
@@ -344,7 +351,7 @@ def execute(request):
                 status_writer.send_percent(float(i) / num_results,
                                            '{0}: {1:%}'.format("exported", float(i) / num_results), 'export_features')
     else:
-        jobs = request['params'][0]['response']['docs']
+        jobs = request['params'][response_index]['response']['docs']
         if out_format == 'SHP':
             export_to_shapefiles(jobs, task_folder)
         else:
