@@ -306,7 +306,10 @@ def export_to_geodatabase(jobs, output_workspace):
 
         # Insert geometry and fields (row).
         with arcpy.da.InsertCursor(layer, ['SHAPE@WKT'] + field_names.keys()) as icur:
-            icur.insertRow([feature] + field_names.values())
+            try:
+                icur.insertRow([feature] + field_names.values())
+            except Exception:
+                pass
 
 
 def execute(request):
