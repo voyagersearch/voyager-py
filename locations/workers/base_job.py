@@ -170,7 +170,12 @@ class Job(object):
                     'float': 'ff_',
                     'text': 'fs_',
                     'ntext': 'fs_',
-                    'decimal': 'ff_'}
+                    'decimal': 'ff_',
+                    'esriFieldTypeOID': 'fl_',
+                    'esriFieldTypeDate': 'fd_',
+                    'esriFieldTypeDouble': 'fu_',
+                    'esriFieldTypeString': 'fs_',
+                    'esriFieldTypeInteger': 'fl_'}
 
     @property
     def table_constraints(self):

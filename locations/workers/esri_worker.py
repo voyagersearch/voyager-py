@@ -14,10 +14,12 @@
 from __future__ import division
 import os
 import sys
+import datetime
 from collections import OrderedDict
 import logging
 import multiprocessing
 import arcpy
+import _server_admin as arcrest
 from utils import status
 
 
@@ -27,40 +29,11 @@ status_writer = status.Writer()
 class NullGeometry(Exception):
     pass
 
+
 def global_job(*args):
     """Create a global job object."""
     global job
     job = args[0]
-
-
-def update_row(fields, rows, row):
-    """Updates the coded values in a row with the coded value descriptions."""
-    field_domains = {f.name: f.domain for f in fields if f.domain}
-    fields_values = zip(rows.fields, row)
-    for j, x in enumerate(fields_values):
-        if x[0] in field_domains:
-            domain_name = field_domains[x[0]]
-            row[j] = job.domains[domain_name][x[1]]
-    return row
-
-
-def query_layer(layer, spatial_rel='esriSpatialRelIntersects', where='1=1',
-                out_fields='*', out_sr=4326, return_geometry=True):
-    """Returns a GPFeatureRecordSetLayer from a feature service layer or
-    a GPRecordSet form a feature service table.
-    """
-    import _server_admin as arcrest
-    qry_layer = None
-    if layer.type == 'Feature Layer':
-        query = {'spatialRel': spatial_rel, 'where': where,
-                 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr}
-        out = layer._get_subfolder('./query', arcrest.JsonResult, query)
-        qry_layer = arcrest.gptypes.GPFeatureRecordSetLayer.fromJson(out._json_struct)
-    else:
-        query = {'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry}
-        out = layer._get_subfolder('./query', arcrest.JsonResult, query)
-        qry_layer = arcrest.gptypes.GPRecordSet.fromJson(out._json_struct)
-    return qry_layer
 
 
 def make_feature(feature):
@@ -94,14 +67,36 @@ def make_feature(feature):
         raise NullGeometry
 
 
+def query_layer(layer, spatial_rel='esriSpatialRelIntersects', where='1=1',
+                out_fields='*', out_sr=4326, return_geometry=True):
+    """Returns a GPFeatureRecordSetLayer from a feature service layer or
+    a GPRecordSet form a feature service table.
+    """
+    if layer.type == 'Feature Layer':
+        query = {'spatialRel': spatial_rel, 'where': where,
+                 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr}
+        out = layer._get_subfolder('./query', arcrest.JsonResult, query)
+        qry_layer = arcrest.gptypes.GPFeatureRecordSetLayer.fromJson(out._json_struct)
+    else:
+        query = {'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry}
+        out = layer._get_subfolder('./query', arcrest.JsonResult, query)
+        qry_layer = arcrest.gptypes.GPRecordSet.fromJson(out._json_struct)
+    return qry_layer
+
+
+def update_row(fields, rows, row):
+    """Updates the coded values in a row with the coded value descriptions."""
+    field_domains = {f.name: f.domain for f in fields if f.domain}
+    fields_values = zip(rows.fields, row)
+    for j, x in enumerate(fields_values):
+        if x[0] in field_domains:
+            domain_name = field_domains[x[0]]
+            row[j] = job.domains[domain_name][x[1]]
+    return row
+
+
 def index_service(url):
     """Index the records in Map and Feature Services."""
-    try:
-        import _server_admin as arcrest
-    except ImportError as ie:
-        status_writer.send_state(status.STAT_FAILED, ie.message)
-        return
-
     job.connect_to_zmq()
     geo = {}
     entry = {}
@@ -109,8 +104,12 @@ def index_service(url):
     service = arcrest.FeatureService(url)
 
     layers = service.layers + service.tables
-
     for layer in layers:
+        fields_types = {}
+        for f in layer.fields:
+            fields_types[f['name']] = f['type']
+
+        # Check if the layer is empty.
         ql = query_layer(layer)
         if not ql.features:
             status_writer.send_status("Layer {0} has no features.".format(layer.name))
@@ -123,6 +122,8 @@ def index_service(url):
         status_writer.send_status('Indexing {0}...'.format(layer.name))
         if layer.type == 'Feature Layer':
             geo['srid'] = ql.spatialReference.wkid
+
+        # Map the field and it's value.
         if not job.fields_to_keep == ['*']:
             for fk in job.fields_to_keep:
                 mapped_fields = dict((name, val) for name, val in attributes.items() if fk in name)
@@ -132,7 +133,10 @@ def index_service(url):
         else:
             mapped_fields = attributes
 
-        job.tables_to_keep()  # This call will generate the field mapping dictionary.
+        # This will generate the field mapping dictionary.
+        job.tables_to_keep()
+
+        date_fields = set()
         if 'map' in job.field_mapping[0]:
             field_map = job.field_mapping[0]['map']
             for k, v in mapped_fields.items():
@@ -140,27 +144,45 @@ def index_service(url):
                     new_field = field_map[k]
                     mapped_attributes[new_field] = mapped_fields.pop(k)
                 else:
-                    field_type = job.default_mapping(type(v))
-                    mapped_attributes[field_type + k] = mapped_fields.pop(k)
+                    field_type = job.default_mapping(fields_types[k])
+                    if field_type == 'fd_':
+                        # Because dates are being returned as longs.
+                        mapped_attributes[field_type + k] = v
+                        date_fields.add(field_type + k)
+                    else:
+                        mapped_attributes[field_type + k] = mapped_fields.pop(k)
         else:
             for k, v in mapped_fields.items():
-                field_type = job.default_mapping(type(v))
-                mapped_attributes[field_type + k] = mapped_fields.pop(k)
+                field_type = job.default_mapping(fields_types[k])
+                if field_type == 'fd_':
+                    # Because dates are being returned as longs.
+                    mapped_attributes[field_type + k] = v
+                    date_fields.add(field_type + k)
+                else:
+                    mapped_attributes[field_type + k] = mapped_fields.pop(k)
 
         row_count = len(ql.features)
-        increment = job.get_increment(row_count)
+        increment = float(job.get_increment(row_count))
         if layer.type == 'Table':
             for i, row in enumerate(ql.features):
                 entry['id'] = '{0}_{1}_{2}'.format(job.location_id, layer.name, i)
                 entry['location'] = job.location_id
                 entry['action'] = job.action_type
                 mapped_fields = dict(zip(mapped_attributes.keys(), row['attributes'].values()))
-                entry['title'] = layer.name
+                # Convert longs to datetime.
+                for df in date_fields:
+                    try:
+                        mapped_fields[df] = datetime.datetime.fromtimestamp(mapped_fields[df] / 1e3)
+                    except KeyError:
+                        pass
+                mapped_fields['title'] = layer.name
+                mapped_fields['_discoveryID'] = job.discovery_id
                 entry['entry'] = {'fields': mapped_fields}
                 job.send_entry(entry)
                 if (i % increment) == 0:
                     status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer.name, i / row_count), 'esri_worker')
         else:
+            # Faster to do one if check for geometry type then to condense code and check in every iteration.
             if isinstance(ql.features[0]['geometry'], arcrest.geometry.Point):
                 for i, feature in enumerate(ql.features):
                     pt = feature['geometry']
@@ -169,8 +191,15 @@ def index_service(url):
                     entry['id'] = '{0}_{1}_{2}'.format(job.location_id, layer.name, i)
                     entry['location'] = job.location_id
                     entry['action'] = job.action_type
-                    entry['title'] = layer.name
                     mapped_fields = dict(zip(mapped_attributes.keys(), feature['attributes'].values()))
+                    # Convert longs to datetime.
+                    for df in date_fields:
+                        try:
+                            mapped_fields[df] = datetime.datetime.fromtimestamp(mapped_fields[df] / 1e3)
+                        except KeyError:
+                            pass
+                    mapped_fields['_discoveryID'] = job.discovery_id
+                    mapped_fields['title'] = layer.name
                     entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                     job.send_entry(entry)
                     if (i % increment) == 0:
@@ -186,8 +215,15 @@ def index_service(url):
                     entry['id'] = '{0}_{1}_{2}'.format(job.location_id, layer.name, i)
                     entry['location'] = job.location_id
                     entry['action'] = job.action_type
-                    entry['title'] = layer.name
                     mapped_fields = dict(zip(mapped_attributes.keys(), feature['attributes'].values()))
+                    # Convert longs to datetime.
+                    for df in date_fields:
+                        try:
+                            mapped_fields[df] = datetime.datetime.fromtimestamp(mapped_fields[df] / 1e3)
+                        except KeyError:
+                            pass
+                    mapped_fields['title'] = layer.name
+                    mapped_fields['_discoveryID'] = job.discovery_id
                     entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                     job.send_entry(entry)
                     if (i % increment) == 0:
@@ -237,7 +273,6 @@ def worker(data_path, esri_service=False):
                     entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), row[fld_index])
                     entry['location'] = job.location_id
                     entry['action'] = job.action_type
-                    entry['title'] = dsc.name
                     entry['entry'] = {'fields': mapped_fields}
                     job.send_entry(entry)
                     if (i % increment) == 0:
@@ -277,10 +312,10 @@ def worker(data_path, esri_service=False):
                             geo['wkt'] = row[0].WKT
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
+                        mapped_fields['title'] = dsc.name
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
-                        entry['title'] = dsc.name
                         entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                         job.send_entry(entry)
                         if (i % increment) == 0:
@@ -303,10 +338,10 @@ def worker(data_path, esri_service=False):
                             geo['wkt'] = row[0].WKT
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
+                        mapped_fields['title'] = dsc.name
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
-                        entry['title'] = dsc.name
                         entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                         job.send_entry(entry)
                         if (i % increment) == 0:
@@ -324,7 +359,6 @@ def run_job(esri_job):
         return
 
     dsc = arcpy.Describe(job.path)
-
     # A single feature class or table.
     if dsc.dataType in ('DbaseTable', 'FeatureClass', 'Shapefile', 'Table'):
         global_job(job, int(arcpy.GetCount_management(job.path).getOutput(0)))

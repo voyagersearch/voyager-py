@@ -52,7 +52,8 @@ def add_fields(layer_name, fields):
         try:
             field_type = esri_field_types[name.split('_')[0]]
             real_name = '_'.join(name.split('_')[1:])
-            arcpy.AddField_management(layer_name, real_name, field_type)
+            if not real_name.lower() == 'objectid':
+                arcpy.AddField_management(layer_name, real_name, field_type)
             new_fields[real_name] = value
         except KeyError:
             arcpy.AddField_management(layer_name, name, 'TEXT')
@@ -127,6 +128,8 @@ def export_to_shapefiles(jobs, output_folder):
         if 'srs_code' in job:
             srs_code = int(job['srs_code'])
             job.pop('srs_code')
+        elif 'pointDD' in job or 'bbox' in job:
+            srs_code = 4326
         else:
             status_writer.send_state(status.STAT_WARNING, _("{0} has no geographic information").format(job['id']))
             continue
@@ -227,12 +230,12 @@ def export_to_geodatabase(jobs, output_workspace):
     global gdb
 
     for cnt, job in enumerate(jobs, 1):
-        location = job['location']
-
         # Get the geographic information.
         if 'srs_code' in job:
             srs_code = int(job['srs_code'])
             job.pop('srs_code')
+        elif 'pointDD' in job or 'bbox' in job:
+            srs_code = 4326
         else:
             status_writer.send_state(status.STAT_WARNING, _("{0} has no geographic information").format(job['id']))
             continue
@@ -263,12 +266,18 @@ def export_to_geodatabase(jobs, output_workspace):
         title = None
         if 'title' in job:
             title = job['title']
+            title = arcpy.ValidateTableName(title, gdb)
+            titles.add(title)
             job.pop('title')
+        else:
+            # Use the name.
+            title = arcpy.ValidateTableName(job['name'], gdb)
+            titles.add(title)
 
         # Each unique location is a new geodatabase.
+        location = job['location']
         if location not in locations:
             locations.add(location)
-            titles.add(title)
             gdb = arcpy.CreateFileGDB_management(output_workspace, "{0}.gdb".format(location))
             fc = arcpy.CreateFeatureclass_management(gdb, title, geometry_type, spatial_reference=srs_code)
             layer = arcpy.MakeFeatureLayer_management(fc, title)
@@ -276,14 +285,12 @@ def export_to_geodatabase(jobs, output_workspace):
             layers.append(layer)
         # Create a feature class for each new title.
         elif title not in titles:
-            titles.add(title)
-            title = arcpy.ValidateTableName(title, gdb)
             fc = arcpy.CreateFeatureclass_management(gdb, title, geometry_type, spatial_reference=srs_code)
             layer = arcpy.MakeFeatureLayer_management(fc, title)
             field_names = add_fields(layer, job)
             layers.append(layer)
         else:
-            layer = [l for l in layers if l[0].name == title][0]
+            layer = [l for l in layers if l.getOutput(0).name == title][0]
             names = [f.name for f in arcpy.ListFields(layer)]
             field_names = {}
             for k, v in job.iteritems():
@@ -296,6 +303,8 @@ def export_to_geodatabase(jobs, output_workspace):
 
         if '[thumbURL]' in field_names:
             field_names.pop('[thumbURL]')
+
+        # Insert geometry and fields (row).
         with arcpy.da.InsertCursor(layer, ['SHAPE@WKT'] + field_names.keys()) as icur:
             icur.insertRow([feature] + field_names.values())
 
@@ -304,18 +313,13 @@ def execute(request):
     """Exports features and rows to a shapefile or geodatabase.
     :param request: json as a dict.
     """
-    chunk_size = 25
+    chunk_size = task_utils.CHUNK_SIZE
     out_format = task_utils.get_parameter_value(request['params'], 'output_format', 'value')
 
     # Create the temporary workspace if clip_feature_class:
     task_folder = os.path.join(request['folder'], 'temp')
     if not os.path.exists(task_folder):
         os.makedirs(task_folder)
-
-    # # Create a task folder if it does not exist.
-    # task_folder = request['folder']
-    # if not os.path.exists(task_folder):
-    #     os.makedirs(task_folder)
 
     num_results, response_index = task_utils.get_result_count(request['params'])
     if num_results > chunk_size:
@@ -375,4 +379,3 @@ def execute(request):
     # Zip up outputs.
     zip_file = task_utils.zip_data(task_folder, 'output.zip')
     shutil.move(zip_file, os.path.join(os.path.dirname(task_folder), os.path.basename(zip_file)))
-    #task_utils.zip_data(task_folder, 'output.zip')
