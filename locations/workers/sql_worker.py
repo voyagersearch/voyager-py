@@ -158,7 +158,6 @@ def run_job(sql_job):
             entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
             entry['location'] = location_id
             entry['action'] = action_type
-            entry['title'] = tbl
             entry['entry'] = {'geo': geo, 'fields': mapped_cols}
             entry['entry']['fields']['_discoveryID'] = discovery_id
             job.send_entry(entry)
