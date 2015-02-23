@@ -308,11 +308,10 @@ def run_job(oracle_job):
                     if has_shape:
                         [mapped_cols.pop(name) for name in geom_fields]
                     mapped_cols['_discoveryID'] = discovery_id
-                    mapped_cols['title'] = tbl
+                    mapped_cols['fs_table_name'] = tbl
                     entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
                     entry['location'] = location_id
                     entry['action'] = action_type
-                    entry['title'] = tbl
                     entry['entry'] = {'fields': mapped_cols}
                     job.send_entry(entry)
                     if (i % increment) == 0:
@@ -360,7 +359,7 @@ def run_job(oracle_job):
                     mapped_cols = dict(izip(mapped_fields, row))
                     [mapped_cols.pop(name) for name in geom_fields]
                     mapped_cols['_discoveryID'] = discovery_id
-                    mapped_cols['title'] = tbl
+                    mapped_cols['fs_table_name'] = tbl
                     entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
                     entry['location'] = location_id
                     entry['action'] = action_type
