@@ -38,6 +38,10 @@ class ObjectEncoder(json.JSONEncoder):
                     return obj.strftime('%Y-%m-%dT%H:%M:%S.%f%Z')
                 else:
                     return obj.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            except ValueError:
+                # For dates before 1900.
+                date_str = datetime.datetime.isoformat(obj) + 'Z'
+                return date_str
             except Exception:
                 return list(obj.timetuple())[0:6]
         elif isinstance(obj, memoryview):
