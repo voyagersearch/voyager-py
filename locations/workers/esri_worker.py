@@ -76,6 +76,9 @@ def query_layer(layer, spatial_rel='esriSpatialRelIntersects', where='1=1',
         query = {'spatialRel': spatial_rel, 'where': where,
                  'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr}
         out = layer._get_subfolder('./query', arcrest.JsonResult, query)
+        # Because of a bug on line 209 of _sever_admin.gptypes where it fails to check for empty geometry.
+        features = [feat for feat in out._json_struct['features'] if 'geometry' in feat]
+        out._json_struct['features'] = features
         qry_layer = arcrest.gptypes.GPFeatureRecordSetLayer.fromJson(out._json_struct)
     else:
         query = {'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry}
@@ -104,6 +107,20 @@ def index_service(url):
     service = arcrest.FeatureService(url)
 
     layers = service.layers + service.tables
+
+    # Support wildcards for filtering layers and views in the service.
+    layers_to_keep = job.tables_to_keep()
+    for layer in layers_to_keep:
+        lk = layer.split('*')
+        if len(lk) == 3 and layer.startswith('*') and layer.endswith('*'):
+            layers = [l for l in layers if lk[1] in l.name]
+        elif layer.endswith('*'):
+            layers = [l for l in layers if lk[0] in l.name]
+        elif layer.startswith('*'):
+            layers = [l for l in layers if lk[1] in l.name]
+        else:
+            layers = [l for l in layers if lk[0] == l.name]
+
     for layer in layers:
         fields_types = {}
         for f in layer.fields:
