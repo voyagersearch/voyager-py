@@ -146,18 +146,25 @@ def get_views(job):
 
 
 def run_job(oracle_job):
-    """Worker function to index each row in each table in the database."""
+    """Worker function to do the indexing."""
     job = oracle_job
     job.connect_to_zmq()
     job.connect_to_database()
+    job.db_cursor.arraysize = 250
 
     tables = get_tables(job)
     layers = get_layers(job)
     views = get_views(job)
-    all_tables = tables + layers + views
+    all_tables = []
+    if tables:
+        all_tables += tables
+    if layers:
+        all_tables += layers
+    if views:
+        all_tables += views
 
     if not all_tables:
-        status_writer.send_state(status.STAT_FAILED, "No tables or views found.")
+        status_writer.send_state(status.STAT_FAILED, "No tables, views or layers found. Check the configuration.")
         return
 
     # Begin indexing.
@@ -174,8 +181,10 @@ def run_job(oracle_job):
         if isinstance(tbl, tuple):
             column_query = "select column_name, data_type from all_tab_cols where " \
                            "table_name = '{0}' and column_name like".format(tbl[0])
+            query = job.get_table_query(tbl[0])
             tbl = "{0}.{1}".format(tbl[1], tbl[0])
         else:
+            query = job.get_table_query(tbl)
             column_query = "select column_name, data_type from all_tab_cols where " \
                            "table_name = '{0}' and column_name like".format(tbl)
 
@@ -237,7 +246,6 @@ def run_job(oracle_job):
                         job.db_cursor.execute("SDO_CS.TRANSFORM({0}.{1}, 4326)".format(schema, geometry_field))
                 else:
                     columns.insert(0, "sdo_geom.sdo_mbr({0}).sdo_ordinates".format(geometry_field))
-
             else:  # ST_GEOMETRY
                 shape_type = job.db_cursor.execute("select {0}.ST_GEOMETRYTYPE({1}) from {2}".format(schema, geometry_field, tbl)).fetchone()[0]
                 geo['code'] = int(job.db_cursor.execute("select {0}.ST_SRID({1}) from {2}".format(schema, geometry_field, tbl)).fetchone()[0])
@@ -268,11 +276,15 @@ def run_job(oracle_job):
             columns.pop(0)
 
         # Get the count of all the rows to use for reporting progress.
-        row_count = job.db_cursor.execute("select count(*) from {0}".format(tbl)).fetchall()[0][0]
+        if query:
+            row_count = job.db_cursor.execute("select count(*) from {0} where {1}".format(tbl, query)).fetchall()[0][0]
+        else:
+            row_count = job.db_cursor.execute("select count(*) from {0}".format(tbl)).fetchall()[0][0]
         if row_count == 0 or row_count is None:
             continue
         else:
             row_count = float(row_count)
+
         # Get the rows.
         try:
             if geometry_type == 'SDO_GEOMETRY':
@@ -281,12 +293,18 @@ def run_job(oracle_job):
                 # Quick check to ensure ST_GEOMETRY operations are supported.
                 row = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl)).fetchone()
                 del row
-                rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl))
+                if query:
+                    rows = job.db_cursor.execute("select {0} from {1} where {2}".format(','.join(columns), tbl, query))
+                else:
+                    rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl))
         except Exception:
             # This can occur for ST_GEOMETRY when spatial operators are un-available (See: http://tinyurl.com/lvvhwyl)
             columns.pop(0)
             geo['wkt'] = None
-            rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl))
+            if query:
+                rows = job.db_cursor.execute("select {0} from {1} where {2}".format(','.join(columns), tbl, query))
+            else:
+                rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl))
 
         # Continue if the table has zero records.
         if not rows:
@@ -367,7 +385,6 @@ def run_job(oracle_job):
                     job.send_entry(entry)
                     if (i % increment) == 0:
                         status_writer.send_percent(i / row_count, "{0}: {1:%}".format(tbl, i / row_count), 'oracle_worker')
-
                 except Exception as ex:
                     status_writer.send_status(ex)
                     continue
