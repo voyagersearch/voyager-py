@@ -29,6 +29,7 @@ import arcpy
 if arcpy.GetInstallInfo()['Version'] == '10.0':
     raise ImportError('write_metadata not available with ArcGIS 10.0.')
 
+
 def execute(request):
     """Writes existing metadata for summary, description and tags.
     If overwrite is false, existing metadata is untouched unless any
@@ -88,15 +89,18 @@ def execute(request):
     else:
         input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
         updated, errors, skipped = write_metadata(input_items, template_xml, xslt_file,
-                                                    summary, description, tags, overwrite, True)
+                                                  summary, description, tags, overwrite, True)
 
     try:
         shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
         pass
-    # Update state if necessary.
+
+    # Report state.
     if skipped > 0 or errors > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
+    else:
+        status_writer.send_state(status.STAT_SUCCESS)
     task_utils.report(os.path.join(request['folder'], '_report.json'), updated, skipped, errors)
 
 
