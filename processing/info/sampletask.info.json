@@ -1,18 +1,58 @@
 {
   "name": "sampletask",
   "runner": "python",
-  "categories": ["download"],
+  "security": ["_ADMIN"],
+  "categories": ["dev"],
   "params": [
+	{
+		"type": "CatalogPath",
+		"name": "sample_catalog",
+		"required": true,
+		"value": "C:\\voyager\\voyager.shp"
+	},
+	{
+		"type": "CheckBox",
+		"name": "sample_checkbox",
+		"required": false,
+		"value": true	
+	},
+	{
+		"type": "Date",
+		"name": "sample_date",
+		"required": true
+	},
+	{
+		"type": "DateTime",
+		"name": "sample_date_time",
+		"required": true
+	},
   	{
 		"type": "VoyagerResults",
 		"name": "sample_results",
 		"required": true
   	},
+  	{
+		"type": "FieldList",
+		"name": "sample_field_list",
+		"required": true
+  	},
+  	{
+		"type": "Field",
+		"name": "sample_field",
+		"required": true
+  	},
 	{
-		"type": "String",
-		"name": "sample_string",
+		"type": "FolderLocation",
+		"name": "sample_folder",
 		"required": true,
-		"value": "value of sample_string"
+		"value": "C:\\voyager\\"
+	},
+	{
+		"type": "Geometry",
+		"name": "sample_geometry",
+		"required": false,
+		"extentParam": false,
+		"initWithResultsExtent": false
 	},
 	{
 		"type": "Integer",
@@ -23,29 +63,15 @@
 		"value": 55
 	},
 	{
-		"type": "StringChoice",
-		"name": "sample_choice",
-		"required": true,
-		"choices": [ "Value Choice 01", "Value Choice 02", "Value Choice 03" ],
-		"value": "Value Choice 01"
-	},
-	{
-		"type": "CatalogPath",
-		"name": "sample_catalog",
-		"required": true,
-		"value": "C:\\voyager\\voyager.shp"
-	},
-	{
-		"type": "FolderLocation",
-		"name": "sample_folder",
-		"required": true,
-		"value": "C:\\voyager\\"
-	},
-	{
-		"type": "CheckBox",
-		"name": "sample_checkbox",
+		"type": "MapView",
+		"name": "sample_mapview",
 		"required": false,
-		"value": true	
+		"initWithResultsExtent": false
+	},
+	{
+		"type": "Password",
+		"name": "sample_password",
+		"required": true,
 	},
 	{
 		"type": "Projection",
@@ -54,18 +80,31 @@
 		"code": "Same As Input"
 	},
 	{
-		"type": "Geometry",
-		"name": "sample_geometry",
-		"required": false,
-		"extentParam": false,
-		"initWithResultsExtent": false
+		"type": "StringChoiceFromService",
+		"name": "sample_choice_from_service",
+		"required": true,
+		"url": "http://host/path/to/something",
+		"value": "Value Choice 01"
 	},
 	{
-		"type": "MapView",
-		"name": "sample_mapview",
-		"required": false,
-		"initWithResultsExtent": false
-	}
+		"type": "StringChoice",
+		"name": "sample_choice",
+		"required": true,
+		"choices": [ "Value Choice 01", "Value Choice 02", "Value Choice 03" ],
+		"value": "Value Choice 01"
+	},
+	{
+		"type": "String",
+		"name": "sample_string",
+		"required": true,
+		"value": "value of sample_string"
+	},
+	{
+		"type": "TextArea",
+		"name": "sample_text_area",
+		"required": true,
+		"value": "value of sample_string"
+	},
   ],
   "display": {
   	"en": {
