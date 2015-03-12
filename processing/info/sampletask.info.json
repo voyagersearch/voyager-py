@@ -89,9 +89,18 @@
 	{
 		"type": "StringChoice",
 		"name": "sample_choice",
+		"freeText": false,
 		"required": true,
 		"choices": [ "Value Choice 01", "Value Choice 02", "Value Choice 03" ],
 		"value": "Value Choice 01"
+	},
+	{
+		"type": "StringChoice",
+		"name": "sample_choice_with_free_text",
+		"freeText": true,
+		"required": true,
+		"choices": [ "Value Choice 01", "Value Choice 02", "Value Choice 03" ],
+		"value": "Value Can be anything (not just from the choices)"
 	},
 	{
 		"type": "String",
