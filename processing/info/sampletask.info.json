@@ -1,0 +1,87 @@
+{
+  "name": "sampletask",
+  "runner": "python",
+  "categories": ["download"],
+  "params": [
+  	{
+		"type": "VoyagerResults",
+		"name": "sample_results",
+		"required": true
+  	},
+	{
+		"type": "String",
+		"name": "sample_string",
+		"required": true,
+		"value": "value of sample_string"
+	},
+	{
+		"type": "Integer",
+		"name": "sample_integer",
+		"required": true,
+		"min": 1,
+		"max": 100,
+		"value": 55
+	},
+	{
+		"type": "StringChoice",
+		"name": "sample_choice",
+		"required": true,
+		"choices": [ "Value Choice 01", "Value Choice 02", "Value Choice 03" ],
+		"value": "Value Choice 01"
+	},
+	{
+		"type": "CatalogPath",
+		"name": "sample_catalog",
+		"required": true,
+		"value": "C:\\voyager\\voyager.shp"
+	},
+	{
+		"type": "FolderLocation",
+		"name": "sample_folder",
+		"required": true,
+		"value": "C:\\voyager\\"
+	},
+	{
+		"type": "CheckBox",
+		"name": "sample_checkbox",
+		"required": false,
+		"value": true	
+	},
+	{
+		"type": "Projection",
+		"name": "sample_projection",
+		"required": false,
+		"code": "Same As Input"
+	},
+	{
+		"type": "Geometry",
+		"name": "sample_geometry",
+		"required": false,
+		"extentParam": false,
+		"initWithResultsExtent": false
+	},
+	{
+		"type": "MapView",
+		"name": "sample_mapview",
+		"required": false,
+		"initWithResultsExtent": false
+	}
+  ],
+  "display": {
+  	"en": {
+  		"display": "Sample Task",
+  		"description": "A pretend/synthesized example that uses all Voyager task parameter types for testing/training.",
+  		"params": {
+  			"sample_string": {"display": "Sample String", "description": "An example of a String parameter type ('string')."},
+  			"sample_integer": {"display": "Sample Integer", "description": "An example of an Integer parameter type (99)."},
+  			"sample_choice": {"display": "Sample StringChoice", "description": "An example of a Choice parameter type ('string')."},
+  			"sample_catalog": {"display": "Sample CatalogPath", "description": "An example of a Catalog parameter type ('c:\\string\\path\\to\\file.shp')."},
+  			"sample_folder": {"display": "Sample FolderLocation", "description": "An example of a FolderLocation parameter type ('c:\\string\\path\\to\\folder\\')."},
+  			"sample_checkbox": {"display": "Sample CheckBox", "description": "An example of a CheckBox parameter type (true/false)."},
+  			"sample_projection": {"display": "Sample Projection", "description": "An example of a Projection parameter type (4326)."},
+  			"sample_geometry": {"display": "Sample Geometry", "description": "An example of a Geometry parameter type ('BBOX/WKT')."},
+  			"sample_mapview": {"display": "Sample MapView", "description": "An example of a MapView parameter type ('BBOX')."}
+  		}
+  	}
+  }
+}
