@@ -1,5 +1,5 @@
 {
-  "name": "sampletask",
+  "name": "sample_task",
   "runner": "python",
   "security": ["_ADMIN"],
   "categories": ["dev"],
