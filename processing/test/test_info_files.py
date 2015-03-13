@@ -17,6 +17,7 @@ class TestInfoFiles(unittest.TestCase):
         self.tasks.remove('template_task')
         self.tasks.remove('dev_pretend_py')
         self.tasks.remove('ogr')
+        self.tasks.remove('sample_task')
         self.info_dir = os.path.abspath(os.path.join(os.getcwd(), '..', 'info'))
         self.json_files = set([os.path.basename(f).split('.')[0] for f in glob.glob(os.path.join(self.info_dir, '*.info.json'))])
         self.names = []
