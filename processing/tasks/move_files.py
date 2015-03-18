@@ -23,6 +23,19 @@ from tasks import _
 
 status_writer = status.Writer()
 
+def remove_from_index(id):
+    # Build the request and post.
+    try:
+        solr_url = "{0}/update?stream.body=<delete><id>{1}</id></delete>&commit=true".format(sys.argv[2].split('=')[1], id)
+        request = urllib2.Request(solr_url, headers={'Content-type': 'application/json'})
+        response = urllib2.urlopen(request)
+        if not response.code == 200:
+            status_writer.send_status('Error removing {0}: {1}'.format(id, response.code))
+    except urllib2.HTTPError as http_error:
+        print(http_error)
+    except urllib2.URLError as url_error:
+        print(url_error)
+
 
 def create_dir(src_file, target_folder):
     """Create a directory if it does not exist.
@@ -49,6 +62,8 @@ def execute(request):
     moved = 0
     skipped = 0
     errors = 0
+    new_folder = False
+
     parameters = request['params']
     target_folder = task_utils.get_parameter_value(parameters, 'target_folder', 'value')
     flatten_results = task_utils.get_parameter_value(parameters, 'flatten_results', 'value')
@@ -57,6 +72,7 @@ def execute(request):
     if target_folder:
         if not os.path.exists(target_folder):
             os.makedirs(target_folder)
+            new_folder = True
 
     num_results, response_index = task_utils.get_result_count(parameters)
     if num_results > task_utils.CHUNK_SIZE:
@@ -80,20 +96,21 @@ def execute(request):
             else:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'], True)
             result = move_files(input_items, target_folder, flatten_results)
             moved += result[0]
             errors += result[1]
             skipped += result[2]
             status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'move_files')
     else:
-        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
+        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], True)
         moved, errors, skipped = move_files(input_items, target_folder, flatten_results, True)
 
     try:
         shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
         pass
+
     # Update state if necessary.
     if errors > 0 or skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
@@ -127,6 +144,8 @@ def move_files(input_items, target_folder, flatten_results, show_progress=False)
                 if show_progress:
                     status_writer.send_percent(i / file_count, _('Archived: {0}').format(src_file), 'move_files')
                     i += 1
+                # Remove item from the index.
+                remove_from_index(input_items[src_file][1])
                 moved += 1
             else:
                 if show_progress:

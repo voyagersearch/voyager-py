@@ -69,6 +69,9 @@ class QueryIndex(object):
                     # Replace spaces with %20 & remove \\ to avoid HTTP Error 400.
                     self._fq += '&fq={0}'.format(self._items['query']['fq'].replace("\\", ""))
                     self._fq = self._fq.replace(' ', '%20')
+            elif 'q' in self._items['query']:
+                self._fq += '&q={0}'.format(self._items['query']['q'].replace("\\", ""))
+                self._fq = self._fq.replace(' ', '%20')
         return self._fq
 
 
@@ -197,21 +200,27 @@ def get_parameter_value(parameters, parameter_name, value_key='value'):
                 return ''
 
 
-def get_input_items(parameters):
+def get_input_items(parameters, list_ids=False):
     """Get the input search result items and output names.
 
     :param: parameters: parameter list
     :rtype: dict
     """
-    #status_writer = status.Writer()
     results = {}
     docs = parameters
     try:
         for i in docs:
+
             try:
-                results[get_data_path(i)] = i['name']
+                if list_ids:
+                    results[get_data_path(i)] = (i['name'], i['id'])
+                else:
+                    results[get_data_path(i)] = i['name']
             except KeyError:
-                results[get_data_path(i)] = ''
+                if list_ids:
+                    results[get_data_path(i)] = ('', i['id'])
+                else:
+                    results[get_data_path(i)] = ''
             except IOError:
                 continue
     except IOError:

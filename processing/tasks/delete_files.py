@@ -24,6 +24,20 @@ from tasks import _
 status_writer = status.Writer()
 
 
+def remove_from_index(id):
+    # Build the request and post.
+    try:
+        solr_url = "{0}/update?stream.body=<delete><id>{1}</id></delete>&commit=true".format(sys.argv[2].split('=')[1], id)
+        request = urllib2.Request(solr_url, headers={'Content-type': 'application/json'})
+        response = urllib2.urlopen(request)
+        if not response.code == 200:
+            status_writer.send_status('Could not remove {0} from the index: {1}'.format(id, response.code))
+    except urllib2.HTTPError as http_error:
+        status_writer.send_state(status.STAT_FAILED, http_error.message)
+    except urllib2.URLError as url_error:
+        status_writer.send_state(status.STAT_FAILED, url_error.message)
+
+
 def execute(request):
     """Deletes files.
     :param request: json as a dict.
@@ -34,6 +48,7 @@ def execute(request):
     parameters = request['params']
     if not os.path.exists(request['folder']):
         os.makedirs(request['folder'])
+
 
     num_results, response_index = task_utils.get_result_count(parameters)
     if num_results > task_utils.CHUNK_SIZE:
@@ -57,13 +72,13 @@ def execute(request):
             else:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'], True)
             result = delete_files(input_items)
             deleted += result[0]
             skipped += result[1]
             status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'delete_files')
     else:
-        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
+        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], True)
         deleted, skipped = delete_files(input_items, True)
 
     try:
@@ -97,6 +112,8 @@ def delete_files(input_items, show_progress=False):
                 if show_progress:
                     status_writer.send_percent(i / file_count, _('Deleted: {0}').format(src_file), 'delete_files')
                     i += 1
+                # Remove item from the index.
+                remove_from_index(input_items[src_file][1])
                 deleted += 1
             else:
                 if show_progress:

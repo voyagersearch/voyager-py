@@ -24,6 +24,24 @@ from tasks import _
 status_writer = status.Writer()
 import arcpy
 
+def index_item(id):
+    """Re-indexes an item.
+    :param id: Item's index ID
+    """
+    try:
+        solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
+        request = urllib2.Request(solr_url, headers={'Content-type': 'application/json'})
+        response = urllib2.urlopen(request)
+        if not response.code == 200:
+            status_writer.send_state(status.STAT_FAILED, 'Error sending {0}: {1}'.format(id, response.code))
+            return
+    except urllib2.HTTPError as http_error:
+        status_writer.send_state(status.STAT_FAILED, http_error.message)
+        return
+    except urllib2.URLError as url_error:
+        status_writer.send_state(status.STAT_FAILED, url_error.message)
+        return
+
 
 def execute(request):
     """Replace the workspace path for layer files and map document layers.
@@ -65,13 +83,13 @@ def execute(request):
             else:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'], True)
             result = replace_workspace_path(input_items, old_workspace, new_workspace, backup)
             updated += result[0]
             skipped += result[1]
             status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'replace_workspace_path')
     else:
-        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
+        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], True)
         updated, skipped = replace_workspace_path(input_items, old_workspace, new_workspace, backup, True)
 
     try:
@@ -142,5 +160,6 @@ def replace_workspace_path(input_items, old_workspace, new_workspace, backup, sh
             i += 1.
         else:
             status_writer.send_status(_('Updated: {0}').format(item))
+        index_item(input_items[item][1])
         updated += 1
     return updated, skipped
