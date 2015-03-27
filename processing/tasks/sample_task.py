@@ -20,7 +20,8 @@ from utils import task_utils
 from tasks import _
 
 status_writer = status.Writer()
-outfile = open('c:\\temp\\outfile.txt', 'w')
+### outfile = open('c:\\temp\\outfile.txt', 'w')
+outfile = open('outfile.txt', 'w')
 
 def execute(request):
 
