@@ -5,9 +5,14 @@
   "categories": ["dev"],
   "params": [
 	{
+		"type": "VoyagerResults",
+		"name": "sample_results",
+		"required": false
+  	},
+	{
 		"type": "CatalogPath",
 		"name": "sample_catalog",
-		"required": true,
+		"required": false,
 		"value": "C:\\voyager\\voyager.shp"
 	},
 	{
@@ -19,32 +24,27 @@
 	{
 		"type": "Date",
 		"name": "sample_date",
-		"required": true
+		"required": false
 	},
 	{
 		"type": "DateTime",
-		"name": "sample_date_time",
-		"required": true
+		"name": "sample_datetime",
+		"required": false
 	},
-  	{
-		"type": "VoyagerResults",
-		"name": "sample_results",
-		"required": true
-  	},
-  	{
-		"type": "FieldList",
-		"name": "sample_field_list",
-		"required": true
-  	},
   	{
 		"type": "Field",
 		"name": "sample_field",
-		"required": true
+		"required": false
+  	},
+    	{
+		"type": "FieldList",
+		"name": "sample_fieldlist",
+		"required": false
   	},
 	{
 		"type": "FolderLocation",
 		"name": "sample_folder",
-		"required": true,
+		"required": false,
 		"value": "C:\\voyager\\"
 	},
 	{
@@ -57,7 +57,7 @@
 	{
 		"type": "Integer",
 		"name": "sample_integer",
-		"required": true,
+		"required": false,
 		"min": 1,
 		"max": 100,
 		"value": 55
@@ -71,7 +71,7 @@
 	{
 		"type": "Password",
 		"name": "sample_password",
-		"required": true,
+		"required": false
 	},
 	{
 		"type": "Projection",
@@ -80,55 +80,63 @@
 		"code": "Same As Input"
 	},
 	{
-		"type": "StringChoiceFromService",
-		"name": "sample_choice_from_service",
-		"required": true,
-		"url": "http://host/path/to/something",
-		"value": "Value Choice 01"
+		"type": "String",
+		"name": "sample_string",
+		"required": false,
+		"value": "value of sample_string"
 	},
 	{
 		"type": "StringChoice",
 		"name": "sample_choice",
 		"freeText": false,
-		"required": true,
+		"required": false,
 		"choices": [ "Value Choice 01", "Value Choice 02", "Value Choice 03" ],
 		"value": "Value Choice 01"
 	},
 	{
 		"type": "StringChoice",
-		"name": "sample_choice_with_free_text",
+		"name": "sample_choicecombo",
 		"freeText": true,
-		"required": true,
+		"required": false,
 		"choices": [ "Value Choice 01", "Value Choice 02", "Value Choice 03" ],
 		"value": "Value Can be anything (not just from the choices)"
 	},
 	{
-		"type": "String",
-		"name": "sample_string",
-		"required": true,
-		"value": "value of sample_string"
+		"type": "StringChoiceFromService",
+		"name": "sample_choiceservice",
+		"required": false,
+		"url": "http://host/path/to/something",
+		"value": "Value Choice 01"
 	},
 	{
 		"type": "TextArea",
-		"name": "sample_text_area",
-		"required": true,
+		"name": "sample_textarea",
+		"required": false,
 		"value": "value of sample_string"
-	},
+	}
   ],
   "display": {
   	"en": {
   		"display": "Sample Task",
-  		"description": "A pretend/synthesized example that uses all Voyager task parameter types for testing/training.",
+  		"description": "A synthesized example that uses all Voyager processing parameter types for testing/training.",
   		"params": {
-  			"sample_string": {"display": "Sample String", "description": "An example of a String parameter type ('string')."},
-  			"sample_integer": {"display": "Sample Integer", "description": "An example of an Integer parameter type (99)."},
-  			"sample_choice": {"display": "Sample StringChoice", "description": "An example of a Choice parameter type ('string')."},
-  			"sample_catalog": {"display": "Sample CatalogPath", "description": "An example of a Catalog parameter type ('c:\\string\\path\\to\\file.shp')."},
-  			"sample_folder": {"display": "Sample FolderLocation", "description": "An example of a FolderLocation parameter type ('c:\\string\\path\\to\\folder\\')."},
-  			"sample_checkbox": {"display": "Sample CheckBox", "description": "An example of a CheckBox parameter type (true/false)."},
-  			"sample_projection": {"display": "Sample Projection", "description": "An example of a Projection parameter type (4326)."},
-  			"sample_geometry": {"display": "Sample Geometry", "description": "An example of a Geometry parameter type ('BBOX/WKT')."},
-  			"sample_mapview": {"display": "Sample MapView", "description": "An example of a MapView parameter type ('BBOX')."}
+			"sample_catalog": {"display": "Sample CatalogPath", "description": "An example of a Catalog parameter type ('c:\\string\\path\\to\\file.shp')."},
+			"sample_checkbox": {"display": "Sample CheckBox", "description": "An example of a CheckBox parameter type (true/false)."},
+			"sample_choice": {"display": "Sample StringChoice", "description": "An example of a Choice parameter type ('string')."},
+			"sample_choicecombo": {"display": "Sample Choice + Free Text", "description": "An example of a Choice + Free Text parameter type ('xxx')."},
+			"sample_choiceservice": {"display": "Sample Choice from Service", "description": "An example of a Choice from Service parameter type ('xxx')."},
+			"sample_date": {"display": "Sample Date", "description": "An example of a Date parameter type ('xxx')."},
+			"sample_datetime": {"display": "Sample Date+Time", "description": "An example of a Date+Time parameter type ('xxx')."},
+			"sample_field": {"display": "Sample Field", "description": "An example of a Field parameter type ('xxx')."},
+			"sample_fieldlist": {"display": "Sample Field List", "description": "An example of a Field List parameter type ('xxx')."},
+			"sample_folder": {"display": "Sample FolderLocation", "description": "An example of a FolderLocation parameter type ('c:\\string\\path\\to\\folder\\')."},
+			"sample_geometry": {"display": "Sample Geometry", "description": "An example of a Geometry parameter type ('BBOX/WKT')."},
+			"sample_integer": {"display": "Sample Integer", "description": "An example of an Integer parameter type (99)."},
+			"sample_mapview": {"display": "Sample MapView", "description": "An example of a MapView parameter type ('BBOX')."},
+			"sample_password": {"display": "Sample Password", "description": "An example of a Password parameter type ('********')."},
+			"sample_projection": {"display": "Sample Projection", "description": "An example of a Projection parameter type (4326)."},
+			"sample_string": {"display": "Sample String", "description": "An example of a String parameter type ('string')."},
+			"sample_textarea": {"display": "Sample Text Area", "description": "An example of a Text Area parameter type ('string')."}
   		}
   	}
   }
