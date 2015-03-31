@@ -14,8 +14,6 @@
 import decimal
 import json
 from utils import status
-from utils import worker_utils
-
 
 status_writer = status.Writer()
 
@@ -133,23 +131,16 @@ def run_job(sql_job):
             mapped_fields = columns
 
         increment = job.get_increment(row_count)
-        geometry_ops = worker_utils.GeometryOps()
-        generalize_value = job.generalize_value
         for i, row in enumerate(rows):
             if has_shape:
+                if job.include_wkt:
+                    geo['wkt'] = row[0]
                 if is_point:
-                    if job.include_wkt:
-                        geo['wkt'] = row[0]
                     geo['lon'] = row[2]
                     geo['lat'] = row[1]
                     mapped_cols = dict(zip(mapped_fields[3:], row[3:]))
                     mapped_cols['geometry_type'] = 'Point'
                 else:
-                    if job.include_wkt:
-                        if generalize_value == 0:
-                            geo['wkt'] = row[0]
-                        else:
-                            geo['wkt'] = geometry_ops.generalize_geometry(str(row[0]), generalize_value)
                     geo['xmin'] = row[1]
                     geo['ymin'] = row[2]
                     geo['xmax'] = row[3]

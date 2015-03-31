@@ -16,7 +16,6 @@ import decimal
 from itertools import izip
 import json
 from utils import status
-from utils import worker_utils
 
 
 status_writer = status.Writer()
@@ -340,18 +339,10 @@ def run_job(oracle_job):
                     continue
         else:
             geom_fields = [name for name in mapped_fields if '{0}'.format(geometry_field) in name]
-            geometry_ops = worker_utils.GeometryOps()
-            generalize_value = job.generalize_value
             for i, row in enumerate(rows):
                 try:
                     if include_wkt:
-                        try:
-                            if generalize_value == 0:
-                                geo['wkt'] = row[0]
-                            else:
-                                geo['wkt'] = geometry_ops.generalize_geometry(str(row[0]), generalize_value)
-                        except Exception:
-                            pass
+                        geo['wkt'] = row[0]
                         if is_point:
                             geo['lon'] = row[1]
                             geo['lat'] = row[2]
