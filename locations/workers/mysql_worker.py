@@ -15,6 +15,8 @@ import re
 import decimal
 import json
 from utils import status
+from utils import worker_utils
+
 
 status_writer = status.Writer()
 
@@ -115,6 +117,13 @@ def run_job(mysql_job):
         else:
             rows = job.db_cursor.execute("select {0} from {1} where {2}".format(','.join(columns), table, expression))
 
+        # Remove shape columns from field list.
+        for x in ("X({0})".format(col.column_name), "Y({0})".format(col.column_name), "AsText({0})".format(col.column_name)):
+            try:
+                columns.remove(x)
+            except ValueError:
+                continue
+
         # Index each row in the table.
         entry = {}
         location_id = job.location_id
@@ -123,30 +132,34 @@ def run_job(mysql_job):
         mapped_fields = job.map_fields(table, columns, column_types)
         row_count = float(rows.rowcount)
         increment = job.get_increment(row_count)
+        geometry_ops = worker_utils.GeometryOps()
+        generalize_value = job.generalize_value
         for i, row in enumerate(rows):
             if has_shape:
-                if job.include_wkt:
-                    geo['wkt'] = row[0]
                 if is_point:
+                    if job.include_wkt:
+                        geo['wkt'] = row[0]
                     geo['lon'] = row[2]
                     geo['lat'] = row[1]
-                    #mapped_cols = job.map_fields(table, columns, column_types)
                     mapped_cols = dict(zip(mapped_fields[3:], row[3:]))
                     mapped_cols['geometry_type'] = 'Point'
                 else:
+                    if job.include_wkt:
+                        if generalize_value == 0:
+                            geo['wkt'] = row[0]
+                        else:
+                            geo['wkt'] = geometry_ops.generalize_geometry(str(row[0]), generalize_value)
                     nums = re.findall("-?(?:\.\d+|\d+(?:\.\d*)?)", row[0].rpartition(',')[0])
                     geo['xmin'] = float(nums[0])
                     geo['ymin'] = float(nums[1])
                     geo['xmax'] = float(nums[4])
                     geo['ymax'] = float(nums[5])
-                    #mapped_cols = job.map_fields(table, columns, column_types)
                     mapped_cols = dict(zip(mapped_fields[1:], row[1:]))
                     if 'POLYGON' in geom_type:
                         mapped_cols['geometry_type'] = 'Polygon'
                     else:
                         mapped_cols['geometry_type'] = 'Polyline'
             else:
-                #mapped_cols = job.map_fields(table, columns, column_types)
                 mapped_cols = dict(zip(mapped_fields, row))
 
             # Create an entry to send to ZMQ for indexing.

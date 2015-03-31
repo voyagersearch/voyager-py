@@ -21,7 +21,7 @@ import multiprocessing
 import arcpy
 import _server_admin as arcrest
 from utils import status
-
+from utils import worker_utils
 
 status_writer = status.Writer()
 
@@ -295,6 +295,7 @@ def worker(data_path, esri_service=False):
                     if (i % increment) == 0:
                         status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
         else:
+            generalize_value = job.generalize_value
             sr = arcpy.SpatialReference(4326)
             geo['spatialReference'] = dsc.spatialReference.name
             geo['code'] = dsc.spatialReference.factoryCode
@@ -325,8 +326,7 @@ def worker(data_path, esri_service=False):
                             row = update_row(dsc.fields, rows, list(row))
                         geo['lon'] = row[0].firstPoint.X
                         geo['lat'] = row[0].firstPoint.Y
-                        if job.include_wkt:
-                            geo['wkt'] = row[0].WKT
+                        geo['wkt'] = row[0].WKT
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['title'] = dsc.name
@@ -338,6 +338,7 @@ def worker(data_path, esri_service=False):
                         if (i % increment) == 0:
                             status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
             else:
+                geometry_ops = worker_utils.GeometryOps()
                 with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, expression, sr) as rows:
                     increment = job.get_increment(row_count)
                     mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
@@ -351,8 +352,10 @@ def worker(data_path, esri_service=False):
                         geo['xmax'] = row[0].extent.XMax
                         geo['ymin'] = row[0].extent.YMin
                         geo['ymax'] = row[0].extent.YMax
-                        if job.include_wkt:
+                        if generalize_value == 0:
                             geo['wkt'] = row[0].WKT
+                        else:
+                            geo['wkt'] = geometry_ops.generalize_geometry(row[0].WKT, generalize_value)
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['title'] = dsc.name
@@ -377,7 +380,7 @@ def run_job(esri_job):
 
     dsc = arcpy.Describe(job.path)
     # A single feature class or table.
-    if dsc.dataType in ('DbaseTable', 'FeatureClass', 'Shapefile', 'Table'):
+    if dsc.dataType in ('DbaseTable', 'FeatureClass', 'ShapeFile', 'Shapefile', 'Table'):
         global_job(job, int(arcpy.GetCount_management(job.path).getOutput(0)))
         job.tables_to_keep()  # This will populate field mapping.
         worker(job.path)
