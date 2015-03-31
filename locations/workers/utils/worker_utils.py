@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import math
+import ogr
 
 class GeoJSONConverter(object):
     """
@@ -105,3 +106,57 @@ class GeoJSONConverter(object):
                 raise Exception('Unknown geometry type.')
 
         return 'GEOMETRYCOLLECTION ({0})'.format(wkt_geometries)
+
+
+class GeometryOps(object):
+    """Geometry operators."""
+    def __str__(self):
+        return "GeometryOps"
+
+    def approximate_radius(self, geometry):
+        """Return the approximate radius of a polygon geometry.
+        :param geometry: an OGR geometry
+        """
+        corners = geometry.GetEnvelope()
+        centroid = geometry.Centroid()
+        corner_point = ogr.CreateGeometryFromWkt('POINT({0} {1})'.format(corners[0], corners[1]))
+        return centroid.Distance(corner_point)
+
+    def generalize_geometry(self, wkt, tolerance):
+        """Return a generalized geometry by a given tolerance.
+        :param wkt: the well-known text string of the geometry to be generalized
+        :param tolerance: a simplification tolerance
+        """
+        try:
+            geometry = ogr.CreateGeometryFromWkt(wkt)
+            if geometry.GetGeometryName() == 'LINESTRING' and tolerance > 0.9:
+                first_point = "{0:.2f} {1:.2f}".format(geometry.GetPoint()[0], geometry.GetPoint()[1])
+                mid_point = "{0:.2f} {1:.2f}".format(geometry.Centroid().GetPoint()[0], geometry.Centroid().GetPoint()[1])
+                last_point = "{0:.2f} {1:.2f}".format(geometry.GetPoint(geometry.GetPointCount() - 1)[0], geometry.GetPoint(geometry.GetPointCount() - 1)[1])
+                return "LINESTRING ({0}, {1}, {2})".format(first_point, mid_point, last_point)
+            elif geometry.GetGeometryName() == 'MULTILINESTRING' and tolerance > 0.9:
+                gen_geometry = 'MULTILINESTRING ('
+                parts = []
+                for line in geometry:
+                    first_point = "{0:.2f} {1:.2f}".format(line.GetPoint()[0], line.GetPoint()[1])
+                    mid_point = "{0:.2f} {1:.2f}".format(line.Centroid().GetPoint()[0], line.Centroid().GetPoint()[1])
+                    last_point = "{0:.2f} {1:.2f}".format(line.GetPoint(line.GetPointCount() - 1)[0], line.GetPoint(line.GetPointCount() - 1)[1])
+                    parts.append("({0}, {1}, {2})".format(first_point, mid_point, last_point))
+                gen_geometry += ",".join(parts)
+                gen_geometry += ')'
+                return gen_geometry
+
+            else:
+                if tolerance > 0.9:
+                    gen_geometry = geometry.ConvexHull()
+                else:
+                    factor = self.approximate_radius(geometry)
+                    if not 'LINESTRING' in geometry.GetGeometryName():
+                        factor /= max((geometry.GetArea(), 10))
+                    else:
+                        factor /= 10
+                    factor *= math.pow(1 + tolerance, tolerance * 10) - 1
+                    gen_geometry = geometry.SimplifyPreserveTopology(factor)
+        except AttributeError:
+            return None
+        return gen_geometry.ExportToWkt()

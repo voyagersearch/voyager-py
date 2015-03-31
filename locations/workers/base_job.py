@@ -205,6 +205,18 @@ class Job(object):
         return self.job['location']['id']
 
     @property
+    def generalize_value(self):
+        """The value setting for generalizing the geometry.
+        0   - do not generalize
+        0.5 - generalize but maintain shape enough to depict (default)
+        1   - most generalized (i.e. convex hull)
+        """
+        try:
+            return self.job['location']['settings']['geometry']['generalize']
+        except KeyError:
+            return 0.5
+
+    @property
     def multiprocess(self):
         try:
             if self.job['location']['config']['multiprocessing'] == 'true':
@@ -317,7 +329,13 @@ class Job(object):
 
             if self.drvr == 'Oracle':
                 import cx_Oracle
-                self.db_connection = cx_Oracle.connect("{0}/{1}@{2}/{3}".format(un, pw, srvr, db))
+                try:
+                    self.db_connection = cx_Oracle.connect("{0}/{1}@{2}/{3}".format(un, pw, srvr, db))
+                except Exception:
+                    port = self.sql_connection_info['connection']['port']
+                    sid = self.sql_connection_info['connection']['sid']
+                    dsn_string = cx_Oracle.makedsn(srvr, port, sid)
+                    self.db_connection = cx_Oracle.connect(user=un, password=pw, dsn=dsn_string)
                 self.db_cursor = self.db_connection.cursor()
             elif self.drvr == 'SQL Server':
                 import pyodbc

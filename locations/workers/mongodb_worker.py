@@ -69,6 +69,8 @@ def run_job(mongodb_job):
 
         # Index each document -- get a suitable base 10 increment for reporting percentage.
         increment = job.get_increment(documents.count())
+        geometry_ops = worker_utils.GeometryOps()
+        generalize_value = job.generalize_value
         for i, doc in enumerate(documents):
             fields = doc.keys()
             field_types = dict((k, type(v)) for k, v in doc.iteritems())
@@ -90,14 +92,20 @@ def run_job(mongodb_job):
             geo_json_converter = worker_utils.GeoJSONConverter()
             if 'loc' in doc:
                 if 'type' in doc['loc']:
-                    if job.include_wkt:
-                        geo['wkt'] = geo_json_converter.convert_to_wkt(doc['loc'], 3)
                     if 'bbox' in doc['loc']:
+                        if job.include_wkt:
+                            wkt = geo_json_converter.convert_to_wkt(doc['loc'], 3)
+                            if generalize_value == 0:
+                                geo['wkt'] = wkt
+                            else:
+                                geo['wkt'] = geometry_ops.generalize_geometry(wkt, generalize_value)
                         geo['xmin'] = doc['loc']['bbox'][0]
                         geo['ymin'] = doc['loc']['bbox'][1]
                         geo['xmax'] = doc['loc']['bbox'][2]
                         geo['ymax'] = doc['loc']['bbox'][3]
                     elif 'Point' in doc['loc']['type']:
+                        if job.include_wkt:
+                            geo['wkt'] = geo_json_converter.convert_to_wkt(doc['loc'], 3)
                         geo['lon'] = doc['loc']['coordinates'][0]
                         geo['lat'] = doc['loc']['coordinates'][1]
                     else:
