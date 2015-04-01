@@ -214,6 +214,9 @@ def replace_data_source(input_items, old_data_source, new_workspace,
             i += 1.
         else:
             status_writer.send_status(_('Updated: {0}').format(item))
-        index_item(input_items[item][1])
+        try:
+            index_item(input_items[item][1])
+        except Exception:
+            pass
         updated += 1
     return updated, skipped
