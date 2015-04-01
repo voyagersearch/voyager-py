@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
+import sys
 import ogr
 
 class GeoJSONConverter(object):
@@ -157,6 +158,10 @@ class GeometryOps(object):
                         factor /= 10
                     factor *= math.pow(1 + tolerance, tolerance * 10) - 1
                     gen_geometry = geometry.SimplifyPreserveTopology(factor)
+                    wkt = gen_geometry.ExportToWkt()
+                    if sys.getsizeof(wkt) > 32766:
+                        gen_geometry = geometry.Simplify(factor)
+                        wkt = gen_geometry.ExportToWkt()
+                    return wkt
         except AttributeError:
             return None
-        return gen_geometry.ExportToWkt()
