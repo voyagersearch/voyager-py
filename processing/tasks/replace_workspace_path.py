@@ -30,7 +30,7 @@ def index_item(id):
     """
     try:
         solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
-        request = urllib2.Request(solr_url, headers={'Content-type': 'application/json'})
+        request = urllib2.Request(solr_url)
         response = urllib2.urlopen(request)
         if not response.code == 200:
             status_writer.send_state(status.STAT_FAILED, 'Error sending {0}: {1}'.format(id, response.code))

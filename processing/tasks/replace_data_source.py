@@ -31,16 +31,19 @@ def index_item(id):
     """
     try:
         solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
-        request = urllib2.Request(solr_url, headers={'Content-type': 'application/json'})
+        status_writer.send_status(solr_url)
+        request = urllib2.Request(solr_url)
         response = urllib2.urlopen(request)
         if not response.code == 200:
             status_writer.send_state(status.STAT_FAILED, 'Error sending {0}: {1}'.format(id, response.code))
             return
     except urllib2.HTTPError as http_error:
-        status_writer.send_state(status.STAT_FAILED, http_error.message)
+        status_writer.send_status(http_error)
+        status_writer.send_state(status.STAT_FAILED, '')
         return
     except urllib2.URLError as url_error:
-        status_writer.send_state(status.STAT_FAILED, url_error.message)
+        status_writer.send_status(url_error)
+        status_writer.send_state(status.STAT_FAILED, '')
         return
 
 
