@@ -113,6 +113,19 @@
 		"name": "sample_textarea",
 		"required": false,
 		"value": "value of sample_string"
+	},
+	{
+		"type": "String",
+		"name": "hidden_string",
+		"required": false,
+		"hidden": true,
+		"value": "This value should not be displayed in the UI (and may potentially be excluded form the REST API)"
+	},
+	{
+		"type": "String",
+		"name": "readonly_string",
+		"readOnly": true,
+		"value": "You should not be able to edit this string"
 	}
   ],
   "display": {
