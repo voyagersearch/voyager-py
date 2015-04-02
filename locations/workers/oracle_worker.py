@@ -79,20 +79,31 @@ def get_tables(job):
     tables_to_keep = job.tables_to_keep()
 
     # There are no tables to index.
-    if '*' in tables_to_skip:
+    if tables_to_skip and '*' in tables_to_skip[0]:
         return tables
 
-    if not tables_to_keep[0] == '*':
-        for tk in tables_to_keep:
-            statement = "select table_name from user_tables where table_name like '{0}'".format(tk)
-            [tables.append(t[0]) for t in job.db_cursor.execute(statement).fetchall()]
-    else:
-        [tables.append(t[0]) for t in job.db_cursor.execute("select table_name from user_tables").fetchall()]
+    if tables_to_keep:
+        if '*' not in tables_to_keep[0]:
+            for tk in tables_to_keep:
+                if isinstance(tk, tuple):
+                    statement = "select table_name from all_tables where table_name like '{0}' and owner = '{1}'".format(tk[0], tk[1])
+                else:
+                    statement = "select table_name from user_tables where table_name like '{0}'".format(tk[0])
+                [tables.append(t[0]) for t in job.db_cursor.execute(statement).fetchall()]
+        else:
+            tk = tables_to_keep[0]
+            if isinstance(tk, tuple):
+                [tables.append(t[0]) for t in job.db_cursor.execute("select table_name from all_tables where owner = '{0}'".format(tk[1]))]
+            else:
+                [tables.append(t[0]) for t in job.db_cursor.execute("select table_name from user_tables").fetchall()]
 
     # Remove any tables from the list meant to be excluded.
-    if tables_to_skip:
+    if tables_to_skip and '*' not in tables_to_skip[0]:
         for tk in tables_to_skip:
-            statement = "select table_name from user_tables where table_name like '{0}'".format(tk)
+            if isinstance(tk, tuple):
+                statement = "select table_name from all_tables where table_name like '{0}' and owner = '{1}'".format(tk[0], tk[1])
+            else:
+                statement = "select table_name from user_tables where table_name like '{0}'".format(tk)
             [tables.remove(t[0]) for t in job.db_cursor.execute(statement).fetchall()]
 
     return tables

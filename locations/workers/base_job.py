@@ -78,6 +78,7 @@ class Job(object):
         self.zmq_socket = None
 
         self.__field_mapping = []
+        self.__new_fields = []
         self.__table_constraints = []
         self.__table_queries = []
         self.__get_domains()
@@ -118,6 +119,10 @@ class Job(object):
     @property
     def field_mapping(self):
         return self.__field_mapping
+
+    @property
+    def new_fields(self):
+        return self.__new_fields
 
     @property
     def field_types(self):
@@ -421,7 +426,10 @@ class Job(object):
             for table in tables:
                 try:
                     if table['action'] == 'INCLUDE':
-                        tables_to_keep.add(table['name'])
+                        if 'owner' in table:
+                            tables_to_keep.add((table['name'], table['owner']))
+                        else:
+                            tables_to_keep.add(table['name'])
                         self.__get_info(table)
                 except KeyError:
                     # There is no action, but map fields.
@@ -439,7 +447,7 @@ class Job(object):
             for table in tables:
                 try:
                     if table['action'] == 'EXCLUDE':
-                        tables_to_skip.add(table['name'])
+                        tables_to_skip.add((table['name'], table['owner']))
                 except KeyError:
                     # There is no action, but continue.
                     continue
@@ -594,6 +602,11 @@ class Job(object):
             try:
                 if not {'name': table['name'], 'map': table['map']} in self.__field_mapping:
                     self.__field_mapping.append({'name': table['name'], 'map': table['map']})
+            except KeyError:
+                pass
+            try:
+                if not {'name': table['name'], 'new_fields': table['new_fields']} in self.__new_fields:
+                    self.__new_fields.append({'name': table['name'], 'new_fields': table['new_fields']})
             except KeyError:
                 pass
         except KeyError:
