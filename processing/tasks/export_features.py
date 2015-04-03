@@ -16,7 +16,6 @@ import os
 import sys
 import shutil
 import urllib2
-import tasks
 from utils import status
 from utils import task_utils
 from tasks import _
@@ -120,6 +119,8 @@ def export_to_shapefiles(jobs, output_folder):
     import ogr
     global location_dir
     shape_file = None
+    geo_json = None
+    wkt = None
 
     for cnt, job in enumerate(jobs, 1):
         location = job['location']
@@ -128,7 +129,7 @@ def export_to_shapefiles(jobs, output_folder):
         if 'srs_code' in job:
             srs_code = int(job['srs_code'])
             job.pop('srs_code')
-        elif 'pointDD' in job or 'bbox' in job:
+        elif 'pointDD' in job or '[geo]' in job:
             srs_code = 4326
         else:
             status_writer.send_state(status.STAT_WARNING, _("{0} has no geographic information").format(job['id']))
@@ -155,12 +156,11 @@ def export_to_shapefiles(jobs, output_folder):
             wkt = "POINT ({0} {1})".format(float(lon), float(lat))
             geometry_type = ogr.wkbPoint
             job.pop('pointDD')
-            job.pop('bbox')
+            job.pop('[geo]')
         else:
-            xmin, ymin, xmax, ymax = [float(x) for x in job['bbox'].split()]
-            wkt = "POLYGON (({0} {1}, {0} {3}, {2} {3}, {2} {1}, {0} {1}))".format(xmin, ymin, xmax, ymax)
+            geo_json = job['[geo]']
             geometry_type = ogr.wkbPolygon
-            job.pop('bbox')
+            job.pop('[geo]')
 
         # Drop this field if it exists (not required).
         if 'geometry_type' in job:
@@ -207,7 +207,10 @@ def export_to_shapefiles(jobs, output_folder):
             layer_def = layer.GetLayerDefn()
 
         # Point or bbox or WKT?
-        geom = ogr.CreateGeometryFromWkt(wkt)
+        if geo_json:
+            geom = ogr.CreateGeometryFromJson("{0}".format(geo_json))
+        else:
+            geom = ogr.CreateGeometryFromWkt(wkt)
         feature = ogr.Feature(layer_def)
         feature.SetGeometry(geom)
         if '[thumbURL]' in field_names:
@@ -234,7 +237,7 @@ def export_to_geodatabase(jobs, output_workspace):
         if 'srs_code' in job:
             srs_code = int(job['srs_code'])
             job.pop('srs_code')
-        elif 'pointDD' in job or 'bbox' in job:
+        elif 'pointDD' in job or '[geo]' in job:
             srs_code = 4326
         else:
             status_writer.send_state(status.STAT_WARNING, _("{0} has no geographic information").format(job['id']))
@@ -255,12 +258,19 @@ def export_to_geodatabase(jobs, output_workspace):
             feature = "POINT ({0} {1})".format(float(lon), float(lat))
             geometry_type = 'POINT'
             job.pop('pointDD')
-            job.pop('bbox')
+            job.pop('[geo]')
         else:
-            geometry_type = 'POLYGON'
-            xmin, ymin, xmax, ymax = [float(x) for x in job['bbox'].split()]
-            feature = "POLYGON (({0} {1}, {0} {3}, {2} {3}, {2} {1}, {0} {1}))".format(xmin, ymin, xmax, ymax)
-            job.pop('bbox')
+            if job['[geo]']['type'].upper() == 'MULTIPOINT':
+                geometry_type = 'MULTIPOINT'
+            elif job['[geo]']['type'].upper() in ('POLYGON', 'MULTIPOLYGON'):
+                geometry_type = 'POLYGON'
+            else:
+                geometry_type = 'POLYLINE'
+            #xmin, ymin, xmax, ymax = [float(x) for x in job['bbox'].split()]
+            #feature = "POLYGON (({0} {1}, {0} {3}, {2} {3}, {2} {1}, {0} {1}))".format(xmin, ymin, xmax, ymax)
+            shape = arcpy.AsShape(job['[geo]'])
+            feature = shape.WKT
+            job.pop('[geo]')
 
         # Get the title (if available).
         title = None
@@ -325,59 +335,52 @@ def execute(request):
         os.makedirs(task_folder)
 
     num_results, response_index = task_utils.get_result_count(request['params'])
-    if num_results > chunk_size:
-        query = '{0}{1}'.format(sys.argv[2].split('=')[1], '/select?&wt=json&fl=id,location,name,title,fs_*,fl_*,fi_*,ff_*,fu_*,fd*_,meta_*,pointDD,bbox,srs_code')
-        if 'query' in request['params'][response_index]:
-            # Voyager Search Traditional UI
-            for p in request['params']:
-                if 'query' in p:
-                    request_qry = p['query']
-                    break
-            if 'voyager.list' in request_qry:
-                query += '&{0}'.format(request_qry['voyager.list'])
-            if 'fq' in request_qry:
-                if isinstance(request_qry['fq'], list):
-                    query += '&fq={0}'.format('&fq='.join(request_qry['fq']).replace('\\', ''))
-                    query = query.replace(' ', '%20')
-                else:
-                    # Replace spaces with %20 & remove \\ to avoid HTTP Error 400.
-                    query += '&fq={0}'.format(request_qry['fq'].replace("\\", ""))
-                    query = query.replace(' ', '%20')
-            query += '&rows={0}&start={1}'
-            for i in xrange(0, num_results, chunk_size):
-                for n in urllib2.urlopen(query.format(chunk_size, i)):
-                    jobs = eval(n)['response']['docs']
-                    if out_format == 'SHP':
-                        export_to_shapefiles(jobs, task_folder)
-                    else:
-                        export_to_geodatabase(jobs, task_folder)
-                status_writer.send_percent(float(i) / num_results,
-                                           '{0}: {1:%}'.format("exported", float(i) / num_results), 'export_features')
-        else:
-            # Voyager Search Portal/Cart UI
-            ids = []
-            for p in request['params']:
-                if 'ids' in p:
-                    ids = p['ids']
-                    break
-            groups = task_utils.grouper(list(ids), chunk_size, '')
-            i = 0
-            for group in groups:
-                i += len(group)
-                results = urllib2.urlopen(query + '&ids={0}'.format(','.join(group)))
-                jobs = eval(results.read())['response']['docs']
+    query = '{0}{1}'.format(sys.argv[2].split('=')[1], '/select?&wt=json&fl=id,location,name,title,fs_*,fl_*,fi_*,ff_*,fu_*,fd*_,meta_*,pointDD,bbox,srs_code,[geo],wkt')
+    if 'query' in request['params'][response_index]:
+        # Voyager Search Traditional UI
+        for p in request['params']:
+            if 'query' in p:
+                request_qry = p['query']
+                break
+        if 'voyager.list' in request_qry:
+            query += '&{0}'.format(request_qry['voyager.list'])
+        if 'fq' in request_qry:
+            if isinstance(request_qry['fq'], list):
+                query += '&fq={0}'.format('&fq='.join(request_qry['fq']).replace('\\', ''))
+                query = query.replace(' ', '%20')
+            else:
+                # Replace spaces with %20 & remove \\ to avoid HTTP Error 400.
+                query += '&fq={0}'.format(request_qry['fq'].replace("\\", ""))
+                query = query.replace(' ', '%20')
+        query += '&rows={0}&start={1}'
+        for i in xrange(0, num_results, chunk_size):
+            for n in urllib2.urlopen(query.format(chunk_size, i)):
+                jobs = eval(n)['response']['docs']
                 if out_format == 'SHP':
                     export_to_shapefiles(jobs, task_folder)
                 else:
                     export_to_geodatabase(jobs, task_folder)
-                status_writer.send_percent(float(i) / num_results,
-                                           '{0}: {1:%}'.format("exported", float(i) / num_results), 'export_features')
+            status_writer.send_percent(float(i) / num_results,
+                                       '{0}: {1:%}'.format("exported", float(i) / num_results), 'export_features')
     else:
-        jobs = request['params'][response_index]['response']['docs']
-        if out_format == 'SHP':
-            export_to_shapefiles(jobs, task_folder)
-        else:
-            export_to_geodatabase(jobs, task_folder)
+        # Voyager Search Portal/Cart UI
+        ids = []
+        for p in request['params']:
+            if 'ids' in p:
+                ids = p['ids']
+                break
+        groups = task_utils.grouper(list(ids), chunk_size, '')
+        i = 0
+        for group in groups:
+            i += len(group)
+            results = urllib2.urlopen(query + '&ids={0}'.format(','.join(group)))
+            jobs = eval(results.read())['response']['docs']
+            if out_format == 'SHP':
+                export_to_shapefiles(jobs, task_folder)
+            else:
+                export_to_geodatabase(jobs, task_folder)
+            status_writer.send_percent(float(i) / num_results,
+                                       '{0}: {1:%}'.format("exported", float(i) / num_results), 'export_features')
 
     # Zip up outputs.
     zip_file = task_utils.zip_data(task_folder, 'output.zip')
