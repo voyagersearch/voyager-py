@@ -70,8 +70,13 @@ class QueryIndex(object):
                     self._fq += '&fq={0}'.format(self._items['query']['fq'].replace("\\", ""))
                     self._fq = self._fq.replace(' ', '%20')
             elif 'q' in self._items['query']:
-                self._fq += '&q={0}'.format(self._items['query']['q'].replace("\\", ""))
-                self._fq = self._fq.replace(' ', '%20')
+                if self._items['query']['q'].startswith('id:'):
+                    ids = self._items['query']['q']
+                    self._fq += '&q={0}'.format(ids)
+                    self._fq = self._fq.replace(' ', '%20')
+                else:
+                    self._fq += '&q={0}'.format(self._items['query']['q'].replace("\\", ""))
+                    self._fq = self._fq.replace(' ', '%20')
         return self._fq
 
 
