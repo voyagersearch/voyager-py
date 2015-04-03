@@ -21,7 +21,6 @@ import multiprocessing
 import arcpy
 import _server_admin as arcrest
 from utils import status
-from utils import worker_utils
 
 status_writer = status.Writer()
 
@@ -257,6 +256,10 @@ def worker(data_path, esri_service=False):
         entry = {}
         dsc = arcpy.Describe(data_path)
 
+        if job.include_wkt:
+            from utils import worker_utils
+            geometry_ops = worker_utils.GeometryOps()
+
         if dsc.dataType == 'Table':
             field_types = job.search_fields(data_path)
             fields = field_types.keys()
@@ -272,6 +275,7 @@ def worker(data_path, esri_service=False):
             row_count = float(arcpy.GetCount_management(data_path).getOutput(0))
             with arcpy.da.SearchCursor(data_path, fields, expression) as rows:
                 mapped_fields = job.map_fields(dsc.name, fields, field_types)
+                new_fields = job.new_fields
                 ordered_fields = OrderedDict()
                 for f in mapped_fields:
                     ordered_fields[f] = None
@@ -282,6 +286,10 @@ def worker(data_path, esri_service=False):
                     mapped_fields = dict(zip(ordered_fields.keys(), row))
                     mapped_fields['_discoveryID'] = job.discovery_id
                     mapped_fields['title'] = dsc.name
+                    for nf in new_fields:
+                        if nf['name'] == '*' or nf['name'] == dsc.name:
+                            for k, v in nf['new_fields'].iteritems():
+                                mapped_fields[k] = v
                     oid_field = filter(lambda x: x in ('FID', 'OID', 'OBJECTID'), rows.fields)
                     if oid_field:
                         fld_index = rows.fields.index(oid_field[0])
@@ -317,6 +325,7 @@ def worker(data_path, esri_service=False):
             if dsc.shapeType == 'Point':
                 with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, expression, sr) as rows:
                     mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
+                    new_fields = job.new_fields
                     ordered_fields = OrderedDict()
                     for f in mapped_fields:
                         ordered_fields[f] = None
@@ -331,6 +340,10 @@ def worker(data_path, esri_service=False):
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['title'] = dsc.name
+                        for nf in new_fields:
+                            if nf['name'] == '*' or nf['name'] == dsc.name:
+                                for k, v in nf['new_fields'].iteritems():
+                                    mapped_fields[k] = v
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
@@ -339,10 +352,10 @@ def worker(data_path, esri_service=False):
                         if (i % increment) == 0:
                             status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
             else:
-                geometry_ops = worker_utils.GeometryOps()
                 with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, expression, sr) as rows:
                     increment = job.get_increment(row_count)
                     mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
+                    new_fields = job.new_fields
                     ordered_fields = OrderedDict()
                     for f in mapped_fields:
                         ordered_fields[f] = None
@@ -361,6 +374,10 @@ def worker(data_path, esri_service=False):
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['title'] = dsc.name
+                        for nf in new_fields:
+                            if nf['name'] == '*' or nf['name'] == dsc.name:
+                                for k, v in nf['new_fields'].iteritems():
+                                    mapped_fields[k] = v
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
