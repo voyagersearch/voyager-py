@@ -233,6 +233,8 @@ def execute(request):
     clip_feature_class = task_utils.get_parameter_value(parameters, 'clip_features', 'value')
     where_statement = task_utils.get_parameter_value(parameters, 'where_statement', 'value')
 
+    create_mxd = task_utils.get_parameter_value(parameters, 'create_mxd', 'value')
+
     # Create the temporary workspace if clip_feature_class:
     out_workspace = os.path.join(request['folder'], 'temp')
     if not os.path.exists(out_workspace):
@@ -297,7 +299,8 @@ def execute(request):
             elif out_format == 'LPK':
                 create_lpk(out_workspace, files_to_package)
             else:
-                create_mxd_or_mpk(out_workspace)
+                if create_mxd:
+                    create_mxd_or_mpk(out_workspace)
                 zip_file = task_utils.zip_data(out_workspace, 'output.zip')
                 shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
         except arcpy.ExecuteError as ee:

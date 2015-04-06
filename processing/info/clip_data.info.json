@@ -33,6 +33,10 @@
       ]
     },
     {
+      "type": "CheckBox",
+      "name": "create_mxd"
+    },
+    {
       "type": "Geometry",
       "name": "clip_geometry",
       "initWithResultsExtent": true
@@ -63,6 +67,10 @@
         "output_format": {
           "display": "Output Format",
           "description": "Choose the output format"
+        },
+        "create_mxd": {
+          "display": "Create Map Document",
+          "description": "Add clip results to a new map document (.mxd)"
         }
       }
     },
