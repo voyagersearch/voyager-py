@@ -3,7 +3,6 @@
   "runner": "python",
   "categories": ["download"],
   "group": "Managing Data and Files",
-  "fields": "location,name,title,fs_*,fl_*,fi_*,ff_*,fu_*,fd*_,pointDD,bbox,srs_code",
   "params": [
     {
       "type": "VoyagerResults",
