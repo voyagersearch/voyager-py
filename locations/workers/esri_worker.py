@@ -295,7 +295,7 @@ def worker(data_path, esri_service=False):
                         fld_index = rows.fields.index(oid_field[0])
                     else:
                         fld_index = i
-                    entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), row[fld_index])
+                    entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), fld_index)
                     entry['location'] = job.location_id
                     entry['action'] = job.action_type
                     entry['entry'] = {'fields': mapped_fields}
