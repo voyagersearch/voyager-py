@@ -31,7 +31,6 @@ def index_item(id):
     """
     try:
         solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
-        status_writer.send_status(solr_url)
         request = urllib2.Request(solr_url)
         response = urllib2.urlopen(request)
         if not response.code == 200:
@@ -78,14 +77,18 @@ def execute(request):
         status_writer.send_state(status.STAT_FAILED, _('{0} does not exist').format(new_data_source))
         return
 
-    new_dataset = os.path.basename(new_data_source)
-    dsc = arcpy.Describe(os.path.dirname(new_data_source))
+    if os.path.splitext(new_data_source)[1] not in ('.gdb', '.mdb', '.sde'):
+        new_dataset = os.path.basename(new_data_source)
+        dsc = arcpy.Describe(os.path.dirname(new_data_source))
+    else:
+        dsc = arcpy.Describe(new_data_source)
+        new_dataset = ''
     wks_type = 'NONE'
     if dsc.dataType == 'FeatureDataset':
         new_workspace = dsc.path
         wks_type = get_workspace_type(new_workspace)
     elif dsc.dataType == 'Workspace':
-        new_workspace = os.path.dirname(new_data_source)
+        new_workspace = dsc.catalogPath
         wks_type = get_workspace_type(new_workspace)
     elif dsc.dataType == 'Folder':
         new_workspace = dsc.catalogPath
@@ -102,40 +105,39 @@ def execute(request):
         new_workspace = os.path.dirname(new_data_source)
 
     num_results, response_index = task_utils.get_result_count(parameters)
-    if num_results > task_utils.CHUNK_SIZE:
-        # Query the index for results in groups of 25.
-        query_index = task_utils.QueryIndex(parameters[response_index])
-        fl = query_index.fl
-        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
-        fq = query_index.get_fq()
-        if fq:
-            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
-            query += fq
-        else:
-            groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
-
-        status_writer.send_percent(0.0, _('Starting to process...'), 'replace_data_source')
-        i = 0.
-        for group in groups:
-            i += len(group) - group.count('')
-            if fq:
-                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
-            else:
-                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
-
-            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'], True)
-            result = replace_data_source(input_items, old_data_source, new_workspace, new_dataset, wks_type, backup)
-            updated += result[0]
-            skipped += result[1]
-            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'replace_data_source')
+    # Query the index for results in groups of 25.
+    query_index = task_utils.QueryIndex(parameters[response_index])
+    fl = query_index.fl
+    query = '{0}{1}'.format(sys.argv[2].split('=')[1], '/select?&wt=json')
+    fq = query_index.get_fq()
+    if fq:
+        groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
+        query += fq
     else:
-        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], True)
-        updated, skipped = replace_data_source(input_items, old_data_source, new_workspace, new_dataset, wks_type, backup, True)
+        groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
 
+    status_writer.send_percent(0.0, _('Starting to process...'), 'replace_data_source')
+    i = 0.
+    for group in groups:
+        i += len(group) - group.count('')
+        if fq:
+            results = urllib2.urlopen(query + "{0}&rows={1}&start={2}".format(fl, task_utils.CHUNK_SIZE, group[0]))
+        else:
+            results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+        results_str = results.read().replace('false', 'False')
+        results_str = results_str.replace('true', 'True')
+        input_items = task_utils.get_input_items(eval(results_str)['response']['docs'], True)
+        result = replace_data_source(input_items, old_data_source, new_workspace, new_dataset, wks_type, backup)
+        updated += result[0]
+        skipped += result[1]
+        status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'replace_data_source')
+
+    # Copy a default thumbnail image to the request folder.
     try:
         shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
         pass
+
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
@@ -143,13 +145,12 @@ def execute(request):
 
 
 def replace_data_source(input_items, old_data_source, new_workspace,
-                        new_dataset, workspace_type, backup, show_progress=False):
+                        new_dataset, workspace_type, backup):
     """Replaces data sources."""
     updated = 0
     skipped = 0
-    if show_progress:
-        i = 1.
-        count = len(input_items)
+    i = 1.
+    count = len(input_items)
 
     for item in input_items:
         layers = None
@@ -159,7 +160,7 @@ def replace_data_source(input_items, old_data_source, new_workspace,
             if backup:
                 try:
                     shutil.copyfile(item, '{0}.bak'.format(item))
-                except IOError as ex:
+                except IOError:
                     status_writer.send_status(_('Cannot make a backup of: {0}').format(item))
                     skipped += 1
                     continue
@@ -179,14 +180,14 @@ def replace_data_source(input_items, old_data_source, new_workspace,
             for layer in layers:
                 try:
                     if layer.isFeatureLayer or layer.isRasterLayer:
-                        if layer.dataSource.lower() == old_data_source.lower():
+                        if old_data_source.lower() in layer.dataSource.lower():
                             if layer.datasetName.lower() == new_dataset.lower():
                                 layer.replaceDataSource(new_workspace, workspace_type, validate=False)
                             else:
                                 layer.replaceDataSource(new_workspace, workspace_type, new_dataset, False)
                             status_writer.send_status(_('Updated layer: {0}'.format(layer.name)))
                     elif layer.isRasterLayer:
-                        if layer.dataSource.lower() == old_data_source.lower():
+                        if old_data_source.lower() in layer.dataSource.lower():
                             if layer.datasetName.lower() == new_dataset.lower():
                                 layer.replaceDataSource(new_workspace, workspace_type, validate=False)
                             else:
@@ -201,7 +202,7 @@ def replace_data_source(input_items, old_data_source, new_workspace,
         if table_views:
             for table_view in table_views:
                 try:
-                    if table_view.dataSource.lower() == old_data_source.lower():
+                    if old_data_source.lower() in table_view.dataSource.lower():
                         if layer.datasetName.lower() == new_dataset.lower():
                             table_view.replaceDataSource(new_workspace, workspace_type, validate=False)
                         else:
@@ -212,11 +213,11 @@ def replace_data_source(input_items, old_data_source, new_workspace,
                     pass
         if mxd:
             mxd.save()
-        if show_progress:
-            status_writer.send_percent(i / count, _('Updated: {0}').format(item), 'replace_data_source')
-            i += 1.
-        else:
-            status_writer.send_status(_('Updated: {0}').format(item))
+
+        status_writer.send_percent(i / count, _('Updated: {0}').format(item), 'replace_data_source')
+        i += 1.
+
+        # Try to re-index the item once it is updated.
         try:
             index_item(input_items[item][1])
         except Exception:

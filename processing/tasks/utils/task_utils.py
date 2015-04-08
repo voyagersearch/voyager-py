@@ -256,6 +256,8 @@ def get_data_path(item):
 
         if os.path.exists(item['path']):
             return item['path']
+        elif item['format'] == 'format:application/vnd.esri.lyr':
+            return item['[absolute]']
         elif item['format'] == 'application/vnd.esri.map.data.frame':
             return item['path']
         elif os.path.exists(item['[lyrFile]']):
