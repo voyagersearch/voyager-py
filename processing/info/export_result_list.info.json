@@ -1,0 +1,50 @@
+{
+  "name": "export_result_list",
+  "runner": "python",
+  "categories": ["download"],
+  "group": "Managing Data and Files",
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "String",
+      "name": "file_name",
+      "required": true
+    },
+    {
+      "type": "StringChoice",
+      "name": "output_format",
+      "value": "CSV",
+      "choices": [
+        "CSV",
+        "SHP",
+        "XML"
+      ]
+    }
+  ],
+  "display":
+  {
+    "en":
+	{
+      "display": "Export Result List",
+      "description": "Export search results to a CSV, shapefile or XML document",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#export_result_list",
+	  "params":
+	  {
+        "file_name":
+		{
+			"display": "Output File Name",
+			"description": "The output file name"
+		},
+		"output_format":
+		{
+			"display": "Output Format",
+			"description": "The output format as CSV, Shapefile or XML"
+		}
+	  }
+	 }
+  }
+}
