@@ -110,6 +110,7 @@ def execute(request):
     """
     chunk_size = task_utils.CHUNK_SIZE
     file_name = task_utils.get_parameter_value(request['params'], 'file_name', 'value')
+    fields = task_utils.get_parameter_value(request['params'], 'fields', 'value')
     out_format = task_utils.get_parameter_value(request['params'], 'output_format', 'value')
 
     # Create the temporary workspace.
@@ -119,9 +120,10 @@ def execute(request):
 
     num_results, response_index = task_utils.get_result_count(request['params'])
     if out_format in ('CSV', 'XML'):
-        query = '{0}{1}'.format(sys.argv[2].split('=')[1], '/select?&wt=json&fl=id,location,name,title,format')
+        fields.remove('[geo]')
+        query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
     else:
-        query = '{0}{1}'.format(sys.argv[2].split('=')[1], '/select?&wt=json&fl=id,location,name,title,format,[geo]')
+        query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
     if 'query' in request['params'][response_index]:
         # Voyager Search Traditional UI
         for p in request['params']:

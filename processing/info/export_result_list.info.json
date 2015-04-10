@@ -15,6 +15,18 @@
       "required": true
     },
     {
+      "type": "FieldList",
+      "name": "fields",
+      "required": true,
+      "value": [
+        "id",
+        "name",
+        "location",
+        "format",
+        "[geo]"
+      ]
+ 	},
+    {
       "type": "StringChoice",
       "name": "output_format",
       "value": "CSV",
@@ -38,6 +50,11 @@
 		{
 			"display": "Output File Name",
 			"description": "The output file name"
+		},
+        "fields":
+		{
+			"display": "Output Fields",
+			"description": "The fields to be included in the output file"
 		},
 		"output_format":
 		{
