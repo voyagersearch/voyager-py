@@ -205,7 +205,7 @@ def get_parameter_value(parameters, parameter_name, value_key='value'):
                 return ''
 
 
-def get_input_items(parameters, list_ids=False):
+def get_input_items(parameters, list_ids=False, list_components=False):
     """Get the input search result items and output names.
 
     :param: parameters: parameter list
@@ -215,7 +215,6 @@ def get_input_items(parameters, list_ids=False):
     docs = parameters
     try:
         for i in docs:
-
             try:
                 if list_ids:
                     results[get_data_path(i)] = (i['name'], i['id'])
@@ -228,6 +227,9 @@ def get_input_items(parameters, list_ids=False):
                     results[get_data_path(i)] = ''
             except IOError:
                 continue
+            if list_components and 'component_files' in i:
+                    for c in i['component_files']:
+                        results[os.path.join(os.path.dirname(i['path']), c)] = ''
     except IOError:
         pass
     return results

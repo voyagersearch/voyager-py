@@ -64,14 +64,14 @@ def execute(request):
             else:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'], list_components=True)
             result = copy_files(input_items, target_folder, flatten_results, target_dirs)
             copied += result[0]
             errors += result[1]
             skipped += result[2]
             status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'copy_files')
     else:
-        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
+        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], list_components=True)
         converted, errors, skipped = copy_files(input_items, target_folder, flatten_results, target_dirs, True)
 
     try:

@@ -72,13 +72,13 @@ def execute(request):
             else:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'], True)
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'], True, True)
             result = delete_files(input_items)
             deleted += result[0]
             skipped += result[1]
             status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'delete_files')
     else:
-        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], True)
+        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], True, True)
         deleted, skipped = delete_files(input_items, True)
 
     try:
@@ -113,8 +113,11 @@ def delete_files(input_items, show_progress=False):
                     status_writer.send_percent(i / file_count, _('Deleted: {0}').format(src_file), 'delete_files')
                     i += 1
                 # Remove item from the index.
-                remove_from_index(input_items[src_file][1])
-                deleted += 1
+                try:
+                    remove_from_index(input_items[src_file][1])
+                    deleted += 1
+                except IndexError:
+                    continue
             else:
                 if show_progress:
                     status_writer.send_percent(i / file_count,

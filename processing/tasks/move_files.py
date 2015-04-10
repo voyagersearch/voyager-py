@@ -14,6 +14,7 @@
 # limitations under the License.
 import os
 import sys
+import json
 import shutil
 import urllib2
 from utils import status
@@ -23,7 +24,7 @@ from tasks import _
 
 status_writer = status.Writer()
 
-def remove_from_index(id):
+def remove_from_index(id, file_location):
     # Build the request and post.
     try:
         solr_url = "{0}/update?stream.body=<delete><id>{1}</id></delete>&commit=true".format(sys.argv[2].split('=')[1], id)
@@ -96,14 +97,14 @@ def execute(request):
             else:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'], True)
+            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'], True, True)
             result = move_files(input_items, target_folder, flatten_results)
             moved += result[0]
             errors += result[1]
             skipped += result[2]
             status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'move_files')
     else:
-        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], True)
+        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], True, True)
         moved, errors, skipped = move_files(input_items, target_folder, flatten_results, True)
 
     try:
@@ -145,8 +146,11 @@ def move_files(input_items, target_folder, flatten_results, show_progress=False)
                     status_writer.send_percent(i / file_count, _('Archived: {0}').format(src_file), 'move_files')
                     i += 1
                 # Remove item from the index.
-                remove_from_index(input_items[src_file][1])
-                moved += 1
+                try:
+                    remove_from_index(input_items[src_file][1], os.path.join(dst, os.path.basename(src_file)))
+                    moved += 1
+                except IndexError:
+                    continue
             else:
                 if show_progress:
                     status_writer.send_percent(
