@@ -149,7 +149,7 @@ def move_files(input_items, target_folder, flatten_results, show_progress=False)
                 try:
                     remove_from_index(input_items[src_file][1], os.path.join(dst, os.path.basename(src_file)))
                     moved += 1
-                except IndexError:
+                except Exception:
                     continue
             else:
                 if show_progress:

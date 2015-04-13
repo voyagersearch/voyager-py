@@ -116,7 +116,7 @@ def delete_files(input_items, show_progress=False):
                 try:
                     remove_from_index(input_items[src_file][1])
                     deleted += 1
-                except IndexError:
+                except Exception:
                     continue
             else:
                 if show_progress:
