@@ -261,8 +261,15 @@ def worker(data_path, esri_service=False):
             geometry_ops = worker_utils.GeometryOps()
 
         if dsc.dataType == 'Table':
-            field_types = job.search_fields(data_path)
-            fields = field_types.keys()
+            # Get join information.
+            table_join = job.get_join(dsc.name)
+            if table_join:
+                table_view = arcpy.MakeTableView_management(dsc.catalogPath, 'view')
+                arcpy.AddJoin_management(table_view, table_join['field'], os.path.join(job.path, table_join['table']), table_join['field'], 'KEEP_COMMON')
+            else:
+                table_view = dsc.catalogPath
+
+            # Get any query or constraint.
             query = job.get_table_query(dsc.name)
             constraint = job.get_table_constraint(dsc.name)
             if query and constraint:
@@ -272,8 +279,11 @@ def worker(data_path, esri_service=False):
                     expression = query
                 else:
                     expression = constraint
-            row_count = float(arcpy.GetCount_management(data_path).getOutput(0))
-            with arcpy.da.SearchCursor(data_path, fields, expression) as rows:
+
+            field_types = job.search_fields(table_view)
+            fields = field_types.keys()
+            row_count = float(arcpy.GetCount_management(table_view).getOutput(0))
+            with arcpy.da.SearchCursor(table_view, fields, expression) as rows:
                 mapped_fields = job.map_fields(dsc.name, fields, field_types)
                 new_fields = job.new_fields
                 ordered_fields = OrderedDict()
@@ -307,7 +317,16 @@ def worker(data_path, esri_service=False):
             sr = arcpy.SpatialReference(4326)
             geo['spatialReference'] = dsc.spatialReference.name
             geo['code'] = dsc.spatialReference.factoryCode
-            field_types = job.search_fields(dsc.catalogPath)
+
+            # Get join information.
+            table_join = job.get_join(dsc.name)
+            if table_join:
+                lyr = arcpy.MakeFeatureLayer_management(dsc.catalogPath, 'lyr')
+                arcpy.AddJoin_management(lyr, table_join['input_join_field'], os.path.join(job.path, table_join['table']), table_join['output_join_field'], 'KEEP_COMMON')
+            else:
+                lyr = dsc.catalogPath
+
+            field_types = job.search_fields(lyr)
             fields = field_types.keys()
             query = job.get_table_query(dsc.name)
             constraint = job.get_table_constraint(dsc.name)
@@ -321,9 +340,12 @@ def worker(data_path, esri_service=False):
             if dsc.shapeFieldName in fields:
                 fields.remove(dsc.shapeFieldName)
                 field_types.pop(dsc.shapeFieldName)
-            row_count = float(arcpy.GetCount_management(data_path).getOutput(0))
+            elif table_join:
+                fields.remove(arcpy.Describe(lyr).shapeFieldName)
+                field_types.pop(arcpy.Describe(lyr).shapeFieldName)
+            row_count = float(arcpy.GetCount_management(lyr).getOutput(0))
             if dsc.shapeType == 'Point':
-                with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, expression, sr) as rows:
+                with arcpy.da.SearchCursor(lyr, ['SHAPE@'] + fields, expression, sr) as rows:
                     mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
                     new_fields = job.new_fields
                     ordered_fields = OrderedDict()
@@ -352,7 +374,7 @@ def worker(data_path, esri_service=False):
                         if (i % increment) == 0:
                             status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
             else:
-                with arcpy.da.SearchCursor(dsc.catalogPath, ['SHAPE@'] + fields, expression, sr) as rows:
+                with arcpy.da.SearchCursor(lyr, ['SHAPE@'] + fields, expression, sr) as rows:
                     increment = job.get_increment(row_count)
                     mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
                     new_fields = job.new_fields

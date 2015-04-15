@@ -79,6 +79,7 @@ class Job(object):
 
         self.__field_mapping = []
         self.__new_fields = []
+        self.__joins = []
         self.__table_constraints = []
         self.__table_queries = []
         self.__get_domains()
@@ -123,6 +124,10 @@ class Job(object):
     @property
     def new_fields(self):
         return self.__new_fields
+
+    @property
+    def joins(self):
+        return self.__joins
 
     @property
     def field_types(self):
@@ -505,6 +510,14 @@ class Job(object):
         else:
             return mapped_field_names
 
+    def get_join(self, table_name):
+        """Get and return the join information."""
+        join = None
+        if self.joins:
+            for j in self.joins:
+                if table_name.lower() == j['name'].lower():
+                    join = j['join']
+            return join
 
     def get_table_constraint(self, table_name):
         """Get and return the constraint for a table."""
@@ -554,7 +567,7 @@ class Job(object):
         fields = {}
         if not self.fields_to_keep == ['*']:
             for fld in self.fields_to_keep:
-                fdict = dict((f.name, f.type) for f in arcpy.ListFields(dataset, fld))
+                fdict = dict((f.name, f.type) for f in arcpy.ListFields(dataset, '*{0}*'.format(fld)))
                 fields = dict(fields.items() + fdict.items())
         if self.fields_to_skip:
             for fld in self.fields_to_skip:
@@ -607,6 +620,11 @@ class Job(object):
             try:
                 if not {'name': table['name'], 'new_fields': table['new_fields']} in self.__new_fields:
                     self.__new_fields.append({'name': table['name'], 'new_fields': table['new_fields']})
+            except KeyError:
+                pass
+            try:
+                if not {'name': table['name'], 'join': table['join']} in self.__joins:
+                    self.__joins.append({'name': table['name'], 'join': table['join']})
             except KeyError:
                 pass
         except KeyError:
