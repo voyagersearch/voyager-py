@@ -21,6 +21,7 @@
       "value": [
         "id",
         "name",
+        "path",
         "location",
         "format",
         "[geo]"
