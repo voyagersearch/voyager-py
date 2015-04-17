@@ -357,8 +357,6 @@ def worker(data_path, esri_service=False):
                             row = update_row(dsc.fields, rows, list(row))
                         geo['lon'] = row[0].firstPoint.X
                         geo['lat'] = row[0].firstPoint.Y
-                        if job.include_wkt:
-                            geo['wkt'] = row[0].WKT
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['title'] = dsc.name
@@ -384,15 +382,15 @@ def worker(data_path, esri_service=False):
                     for i, row in enumerate(rows):
                         if job.domains:
                             row = update_row(dsc.fields, rows, list(row))
-                        geo['xmin'] = row[0].extent.XMin
-                        geo['xmax'] = row[0].extent.XMax
-                        geo['ymin'] = row[0].extent.YMin
-                        geo['ymax'] = row[0].extent.YMax
-                        if job.include_wkt:
-                            if generalize_value == 0:
-                                geo['wkt'] = row[0].WKT
-                            else:
-                                geo['wkt'] = geometry_ops.generalize_geometry(row[0].WKT, generalize_value)
+                        if generalize_value > 0.9:
+                            geo['xmin'] = row[0].extent.XMin
+                            geo['xmax'] = row[0].extent.XMax
+                            geo['ymin'] = row[0].extent.YMin
+                            geo['ymax'] = row[0].extent.YMax
+                        elif generalize_value == 0 or generalize_value == 0.0:
+                            geo['wkt'] = row[0].WKT
+                        else:
+                            geo['wkt'] = geometry_ops.generalize_geometry(row[0].WKT, generalize_value)
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['title'] = dsc.name
