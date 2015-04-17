@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import glob
 import locale
 import gettext
 import sys
@@ -32,6 +33,9 @@ else:
     os.environ['PATH'] += os.pathsep + dll_path
 egg_path = os.path.join(dll_path, 'py')
 sys.path.append(egg_path)
+libs = glob.glob(os.path.join(egg_path, '*.egg'))
+for lib in libs:
+    sys.path.append(lib)
 __all__.append('ogr')
 
 # Code for translating task messages.
