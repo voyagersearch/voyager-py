@@ -20,11 +20,11 @@ from utils import task_utils
 from tasks import _
 
 status_writer = status.Writer()
-## outfile = open('c:\\temp\\outfile.txt', 'w')
-outfile = open('outfile.txt', 'w')
 
 def execute(request):
 
+	outfile = open('c:\\temp\\outfile.txt', 'w')
+	
 	status_writer.send_status(_('Starting process ...'))
 	outfile.write("=== STARTING ===\n\n")
 	
