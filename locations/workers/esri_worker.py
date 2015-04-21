@@ -256,9 +256,8 @@ def worker(data_path, esri_service=False):
         entry = {}
         dsc = arcpy.Describe(data_path)
 
-        if job.include_wkt:
-            from utils import worker_utils
-            geometry_ops = worker_utils.GeometryOps()
+        from utils import worker_utils
+        geometry_ops = worker_utils.GeometryOps()
 
         if dsc.dataType == 'Table':
             # Get join information.
