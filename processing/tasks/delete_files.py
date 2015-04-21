@@ -16,8 +16,8 @@ import os
 import sys
 import shutil
 import urllib2
-from utils import status
-from utils import task_utils
+from tasks.utils import status
+from tasks.utils import task_utils
 from tasks import _
 
 
@@ -33,9 +33,10 @@ def remove_from_index(id):
         if not response.code == 200:
             status_writer.send_status('Could not remove {0} from the index: {1}'.format(id, response.code))
     except urllib2.HTTPError as http_error:
-        status_writer.send_state(status.STAT_FAILED, http_error.message)
+        status_writer.send_status(http_error)
+        status_writer.send_state(status.STAT_FAILED, http_error)
     except urllib2.URLError as url_error:
-        status_writer.send_state(status.STAT_FAILED, url_error.message)
+        status_writer.send_state(status.STAT_FAILED, url_error)
 
 
 def execute(request):
@@ -113,11 +114,8 @@ def delete_files(input_items, show_progress=False):
                     status_writer.send_percent(i / file_count, _('Deleted: {0}').format(src_file), 'delete_files')
                     i += 1
                 # Remove item from the index.
-                try:
-                    remove_from_index(input_items[src_file][1])
-                    deleted += 1
-                except Exception:
-                    continue
+                remove_from_index(input_items[src_file][1])
+                deleted += 1
             else:
                 if show_progress:
                     status_writer.send_percent(i / file_count,

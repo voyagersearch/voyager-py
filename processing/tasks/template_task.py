@@ -6,8 +6,8 @@ This script must live in the voyager_tasks folder.
 import os
 import sys
 import arcpy
-from utils import status
-from utils import task_utils
+from tasks.utils import status
+from tasks.utils import task_utils
 from tasks import _
 
 

@@ -1,5 +1,5 @@
 import time
-from utils import status
+from tasks.utils import status
 
 
 def execute(request=''):

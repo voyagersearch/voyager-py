@@ -22,8 +22,8 @@ try:
     import requests
 except ImportError:
     pass
-from utils import status
-from utils import task_utils
+from tasks.utils import status
+from tasks.utils import task_utils
 from tasks import _
 
 status_writer = status.Writer()

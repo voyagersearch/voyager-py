@@ -14,11 +14,10 @@
 # limitations under the License.
 import os
 import sys
-import json
 import shutil
 import urllib2
-from utils import status
-from utils import task_utils
+from tasks.utils import status
+from tasks.utils import task_utils
 from tasks import _
 
 
@@ -33,9 +32,9 @@ def remove_from_index(id, file_location):
         if not response.code == 200:
             status_writer.send_status('Error removing {0}: {1}'.format(id, response.code))
     except urllib2.HTTPError as http_error:
-        print(http_error)
+        status_writer.send_state(status.STAT_FAILED, http_error)
     except urllib2.URLError as url_error:
-        print(url_error)
+       status_writer.send_state(status.STAT_FAILED, url_error.message)
 
 
 def create_dir(src_file, target_folder):
@@ -146,11 +145,8 @@ def move_files(input_items, target_folder, flatten_results, show_progress=False)
                     status_writer.send_percent(i / file_count, _('Archived: {0}').format(src_file), 'move_files')
                     i += 1
                 # Remove item from the index.
-                try:
-                    remove_from_index(input_items[src_file][1], os.path.join(dst, os.path.basename(src_file)))
-                    moved += 1
-                except Exception:
-                    continue
+                remove_from_index(input_items[src_file][1], os.path.join(dst, os.path.basename(src_file)))
+                moved += 1
             else:
                 if show_progress:
                     status_writer.send_percent(

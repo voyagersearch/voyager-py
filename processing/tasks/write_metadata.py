@@ -19,8 +19,8 @@ import tempfile
 import urllib2
 import xml.etree.cElementTree as eTree
 import shutil
-from utils import status
-from utils import task_utils
+from tasks.utils import status
+from tasks.utils import task_utils
 from tasks import _
 
 

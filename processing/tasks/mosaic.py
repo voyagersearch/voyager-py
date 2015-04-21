@@ -17,8 +17,8 @@ import sys
 import collections
 import shutil
 import urllib2
-from utils import status
-from utils import task_utils
+from tasks.utils import status
+from tasks.utils import task_utils
 from tasks import _
 
 

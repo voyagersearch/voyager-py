@@ -16,8 +16,8 @@ import os
 import sys
 import shutil
 import urllib2
-from utils import status
-from utils import task_utils
+from tasks.utils import status
+from tasks.utils import task_utils
 from tasks import _
 
 
@@ -31,6 +31,7 @@ def index_item(id):
     """
     try:
         solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
+        status_writer.send_status(solr_url)
         request = urllib2.Request(solr_url)
         response = urllib2.urlopen(request)
         if not response.code == 200:

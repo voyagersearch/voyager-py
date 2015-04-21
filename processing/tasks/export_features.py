@@ -16,8 +16,8 @@ import os
 import sys
 import shutil
 import urllib2
-from utils import status
-from utils import task_utils
+from tasks.utils import status
+from tasks.utils import task_utils
 from tasks import _
 
 
@@ -127,7 +127,10 @@ def export_to_shapefiles(jobs, output_folder):
 
         # Get the geographic information (if available)
         if 'srs_code' in job:
-            srs_code = int(job['srs_code'])
+            if 'EPSG:' in job['srs_code']:
+                srs_code = int(job['srs_code'].split('EPSG:')[1])
+            else:
+                srs_code = int(job['srs_code'])
             job.pop('srs_code')
         elif 'pointDD' in job or '[geo]' in job:
             srs_code = 4326
@@ -158,9 +161,23 @@ def export_to_shapefiles(jobs, output_folder):
             job.pop('pointDD')
             job.pop('[geo]')
         else:
-            geo_json = job['[geo]']
-            geometry_type = ogr.wkbPolygon
-            job.pop('[geo]')
+            try:
+                geo_json = job['[geo]']
+                if geo_json['type'].lower() == 'polygon':
+                    geometry_type = ogr.wkbPolygon
+                elif geo_json['type'].lower() == 'multipolygon':
+                    geometry_type = ogr.wkbMultiPolygon
+                elif geo_json['type'].lower() == 'linestring':
+                    geometry_type = ogr.wkbLineString
+                elif geo_json['type'].lower() == 'multilinestring':
+                    geometry_type = ogr.wkbMultiLineString
+                elif geo_json['type'].lower() == 'point':
+                    geometry_type = ogr.wkbPoint
+                elif geo_json['type'].lower() == 'multipoint':
+                    geometry_type = ogr.wkbMultiPoint
+                job.pop('[geo]')
+            except KeyError:
+                continue
 
         # Drop this field if it exists (not required).
         if 'geometry_type' in job:
@@ -266,8 +283,6 @@ def export_to_geodatabase(jobs, output_workspace):
                 geometry_type = 'POLYGON'
             else:
                 geometry_type = 'POLYLINE'
-            #xmin, ymin, xmax, ymax = [float(x) for x in job['bbox'].split()]
-            #feature = "POLYGON (({0} {1}, {0} {3}, {2} {3}, {2} {1}, {0} {1}))".format(xmin, ymin, xmax, ymax)
             shape = arcpy.AsShape(job['[geo]'])
             feature = shape.WKT
             job.pop('[geo]')
@@ -336,6 +351,7 @@ def execute(request):
 
     num_results, response_index = task_utils.get_result_count(request['params'])
     query = '{0}{1}'.format(sys.argv[2].split('=')[1], '/select?&wt=json&fl=id,location,name,title,fs_*,fl_*,fi_*,ff_*,fu_*,fd*_,meta_*,pointDD,bbox,srs_code,[geo],wkt')
+    # query = '{0}{1}'.format("http://localhost:8888/solr/v0", '/select?&wt=json&fl=id,location,name,title,fs_*,fl_*,fi_*,ff_*,fu_*,fd*_,meta_*,pointDD,bbox,srs_code,[geo],wkt')
     if 'query' in request['params'][response_index]:
         # Voyager Search Traditional UI
         for p in request['params']:
@@ -353,6 +369,7 @@ def execute(request):
                 query += '&fq={0}'.format(request_qry['fq'].replace("\\", ""))
                 query = query.replace(' ', '%20')
         query += '&rows={0}&start={1}'
+        # exported_cnt = 0.
         for i in xrange(0, num_results, chunk_size):
             for n in urllib2.urlopen(query.format(chunk_size, i)):
                 jobs = eval(n)['response']['docs']
@@ -360,6 +377,7 @@ def execute(request):
                     export_to_shapefiles(jobs, task_folder)
                 else:
                     export_to_geodatabase(jobs, task_folder)
+                # exported_cnt += chunk_size
             status_writer.send_percent(float(i) / num_results,
                                        '{0}: {1:%}'.format("exported", float(i) / num_results), 'export_features')
     else:
