@@ -373,6 +373,7 @@ def worker(data_path, esri_service=False):
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['title'] = dsc.name
                         mapped_fields['meta_table_name'] = dsc.name
+                        mapped_fields['geometry_type'] = 'Point'
                         for nf in new_fields:
                             if nf['name'] == '*' or nf['name'] == dsc.name:
                                 for k, v in nf['new_fields'].iteritems():
@@ -416,6 +417,7 @@ def worker(data_path, esri_service=False):
                                     mapped_fields[k] = v
                         if global_id_field:
                             mapped_fields['meta_{0}'.format(global_id_field)] = mapped_fields.pop('fi_{0}'.format(global_id_field))
+                        mapped_fields['geometry_type'] = dsc.shapeType
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
