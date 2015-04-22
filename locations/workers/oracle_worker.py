@@ -89,7 +89,7 @@ def get_tables(job):
                     statement = "select table_name from all_tables where table_name like '{0}' and owner = '{1}'".format(tk[0], tk[1])
                     [tables.append((t[0], tk[1])) for t in job.db_cursor.execute(statement).fetchall()]
                 else:
-                    statement = "select table_name from user_tables where table_name like '{0}'".format(tk[0])
+                    statement = "select table_name from user_tables where table_name like '{0}'".format(tk)
                     [tables.append(t[0]) for t in job.db_cursor.execute(statement).fetchall()]
         else:
             tk = tables_to_keep[0]

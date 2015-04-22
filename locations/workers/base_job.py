@@ -452,7 +452,10 @@ class Job(object):
             for table in tables:
                 try:
                     if table['action'] == 'EXCLUDE':
-                        tables_to_skip.add((table['name'], table['owner']))
+                        if 'owner' in table:
+                            tables_to_skip.add((table['name'], table['owner']))
+                        else:
+                            tables_to_skip.add(table['name'])
                 except KeyError:
                     # There is no action, but continue.
                     continue
