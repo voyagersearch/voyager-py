@@ -182,6 +182,11 @@ msgstr "Pas de résultats pour emballer"
 msgid "{0} has no geographic information"
 msgstr "{0} a aucune information géographique"
 
+#: move_files.py:158
+#, python-format
+msgid "Proposée par: {0}"
+msgstr ""
+
 #: replace_workspace_path.py:100
 #, python-format
 msgid "Updated: {0}"

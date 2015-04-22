@@ -26,15 +26,15 @@ status_writer = status.Writer()
 def remove_from_index(id, file_location):
     # Build the request and post.
     try:
-        solr_url = "{0}/update?stream.body=<delete><id>{1}</id></delete>&commit=true".format(sys.argv[2].split('=')[1], id)
-        request = urllib2.Request(solr_url, headers={'Content-type': 'application/json'})
-        response = urllib2.urlopen(request)
-        if not response.code == 200:
-            status_writer.send_status('Error removing {0}: {1}'.format(id, response.code))
-    except urllib2.HTTPError as http_error:
-        status_writer.send_state(status.STAT_FAILED, http_error)
-    except urllib2.URLError as url_error:
-       status_writer.send_state(status.STAT_FAILED, url_error.message)
+        import zmq
+        indexer = sys.argv[3].split('=')[1]
+        zmq_socket = zmq.Context.instance().socket(zmq.PUSH)
+        zmq_socket.connect(indexer)
+        entry = {"id": id, "action": "ADD", "path": file_location, "entry": {"fields": {"__to_extract": "true"}}}
+        zmq_socket.send_json(entry)
+    except ImportError as ie:
+        status_writer.send_state(status.STAT_WARNING, ie.message)
+        pass
 
 
 def create_dir(src_file, target_folder):
@@ -125,7 +125,7 @@ def move_files(input_items, target_folder, flatten_results, show_progress=False)
     if show_progress:
         i = 1.
         file_count = len(input_items)
-        status_writer.send_percent(0.0, _('Starting to process...'), 'copy_files')
+        status_writer.send_percent(0.0, _('Starting to process...'), 'move_files')
 
     for src_file in input_items:
         try:
@@ -142,10 +142,13 @@ def move_files(input_items, target_folder, flatten_results, show_progress=False)
                     skipped += 1
                     continue
                 if show_progress:
-                    status_writer.send_percent(i / file_count, _('Archived: {0}').format(src_file), 'move_files')
+                    status_writer.send_percent(i / file_count, _('Moved: {0}').format(src_file), 'move_files')
                     i += 1
                 # Remove item from the index.
-                remove_from_index(input_items[src_file][1], os.path.join(dst, os.path.basename(src_file)))
+                try:
+                    remove_from_index(input_items[src_file][1], os.path.join(dst, os.path.basename(src_file)))
+                except Exception:
+                    pass
                 moved += 1
             else:
                 if show_progress:

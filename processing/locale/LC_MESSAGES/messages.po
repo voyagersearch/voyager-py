@@ -184,6 +184,11 @@ msgstr ""
 msgid "{0} has no geographic information"
 msgstr ""
 
+#: move_files.py:158
+#, python-format
+msgid "Moved: {0}"
+msgstr ""
+
 #: replace_workspace_path.py:100
 #, python-format
 msgid "Updated: {0}"
