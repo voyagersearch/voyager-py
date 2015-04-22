@@ -263,6 +263,8 @@ def worker(data_path, esri_service=False):
         from utils import worker_utils
         geometry_ops = worker_utils.GeometryOps()
 
+        global_id_field = dsc.globalIDFieldName
+
         if dsc.dataType == 'Table':
             # Get join information.
             table_join = job.get_join(dsc.name)
@@ -286,6 +288,8 @@ def worker(data_path, esri_service=False):
             field_types = job.search_fields(table_view)
             fields = field_types.keys()
             row_count = float(arcpy.GetCount_management(table_view).getOutput(0))
+            if row_count == 0.0:
+                return
             with arcpy.da.SearchCursor(table_view, fields, expression) as rows:
                 mapped_fields = job.map_fields(dsc.name, fields, field_types)
                 new_fields = job.new_fields
@@ -309,6 +313,8 @@ def worker(data_path, esri_service=False):
                         fld_index = rows.fields.index(oid_field[0])
                     else:
                         fld_index = i
+                    if global_id_field:
+                         mapped_fields['meta_{0}'.format(global_id_field)] = mapped_fields.pop('fi_{0}'.format(global_id_field))
                     entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), fld_index)
                     entry['location'] = job.location_id
                     entry['action'] = job.action_type
@@ -348,6 +354,8 @@ def worker(data_path, esri_service=False):
                 fields.remove(arcpy.Describe(lyr).shapeFieldName)
                 field_types.pop(arcpy.Describe(lyr).shapeFieldName)
             row_count = float(arcpy.GetCount_management(lyr).getOutput(0))
+            if row_count == 0.0:
+                return
             if dsc.shapeType == 'Point':
                 with arcpy.da.SearchCursor(lyr, ['SHAPE@'] + fields, expression, sr) as rows:
                     mapped_fields = job.map_fields(dsc.name, list(rows.fields[1:]), field_types)
@@ -369,6 +377,8 @@ def worker(data_path, esri_service=False):
                             if nf['name'] == '*' or nf['name'] == dsc.name:
                                 for k, v in nf['new_fields'].iteritems():
                                     mapped_fields[k] = v
+                        if global_id_field:
+                             mapped_fields['meta_{0}'.format(global_id_field)] = mapped_fields.pop('fi_{0}'.format(global_id_field))
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
@@ -404,6 +414,8 @@ def worker(data_path, esri_service=False):
                             if nf['name'] == '*' or nf['name'] == dsc.name:
                                 for k, v in nf['new_fields'].iteritems():
                                     mapped_fields[k] = v
+                        if global_id_field:
+                            mapped_fields['meta_{0}'.format(global_id_field)] = mapped_fields.pop('fi_{0}'.format(global_id_field))
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
