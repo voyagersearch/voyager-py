@@ -87,13 +87,14 @@ def get_tables(job):
             for tk in tables_to_keep:
                 if isinstance(tk, tuple):
                     statement = "select table_name from all_tables where table_name like '{0}' and owner = '{1}'".format(tk[0], tk[1])
+                    [tables.append((t[0], tk[1])) for t in job.db_cursor.execute(statement).fetchall()]
                 else:
                     statement = "select table_name from user_tables where table_name like '{0}'".format(tk[0])
-                [tables.append(t[0]) for t in job.db_cursor.execute(statement).fetchall()]
+                    [tables.append(t[0]) for t in job.db_cursor.execute(statement).fetchall()]
         else:
             tk = tables_to_keep[0]
             if isinstance(tk, tuple):
-                [tables.append(t[0]) for t in job.db_cursor.execute("select table_name from all_tables where owner = '{0}'".format(tk[1]))]
+                [tables.append((t[0], tk[1])) for t in job.db_cursor.execute("select table_name from all_tables where owner = '{0}'".format(tk[1]))]
             else:
                 [tables.append(t[0]) for t in job.db_cursor.execute("select table_name from user_tables").fetchall()]
 
@@ -102,9 +103,10 @@ def get_tables(job):
         for tk in tables_to_skip:
             if isinstance(tk, tuple):
                 statement = "select table_name from all_tables where table_name like '{0}' and owner = '{1}'".format(tk[0], tk[1])
+                [tables.remove((t[0], tk[1])) for t in job.db_cursor.execute(statement).fetchall()]
             else:
                 statement = "select table_name from user_tables where table_name like '{0}'".format(tk)
-            [tables.remove(t[0]) for t in job.db_cursor.execute(statement).fetchall()]
+                [tables.remove(t[0]) for t in job.db_cursor.execute(statement).fetchall()]
 
     return tables
 
@@ -164,16 +166,10 @@ def run_job(oracle_job):
     job.connect_to_database()
     job.db_cursor.arraysize = 250
 
-    tables = get_tables(job)
-    layers = get_layers(job)
-    views = get_views(job)
     all_tables = []
-    if tables:
-        all_tables += tables
-    if layers:
-        all_tables += layers
-    if views:
-        all_tables += views
+    all_tables += get_tables(job)
+    all_tables += get_layers(job)
+    all_tables += get_views(job)
 
     if not all_tables:
         status_writer.send_state(status.STAT_FAILED, "No tables, views or layers found. Check the configuration.")
@@ -338,7 +334,7 @@ def run_job(oracle_job):
                     if has_shape:
                         [mapped_cols.pop(name) for name in geom_fields]
                     mapped_cols['_discoveryID'] = discovery_id
-                    mapped_cols['fs_table_name'] = tbl
+                    mapped_cols['meta_table_name'] = tbl
                     entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
                     entry['location'] = location_id
                     entry['action'] = action_type
@@ -397,7 +393,7 @@ def run_job(oracle_job):
                     mapped_cols = dict(izip(mapped_fields, row))
                     [mapped_cols.pop(name) for name in geom_fields]
                     mapped_cols['_discoveryID'] = discovery_id
-                    mapped_cols['fs_table_name'] = tbl
+                    mapped_cols['meta_table_name'] = tbl
                     entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
                     entry['location'] = location_id
                     entry['action'] = action_type

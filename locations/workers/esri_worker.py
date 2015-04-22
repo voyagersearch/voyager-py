@@ -38,6 +38,7 @@ def global_job(*args):
 def make_feature(feature):
     """Makes a feature from a arcrest.geometry object."""
     geometry = None
+    point_array = None
     if isinstance(feature['geometry'], arcrest.geometry.Polyline):
         if feature['geometry'].paths:
             for path in feature['geometry'].paths:
@@ -192,6 +193,7 @@ def index_service(url):
                     except KeyError:
                         pass
                 mapped_fields['title'] = layer.name
+                mapped_fields['meta_table_name'] = layer.name
                 mapped_fields['_discoveryID'] = job.discovery_id
                 entry['entry'] = {'fields': mapped_fields}
                 job.send_entry(entry)
@@ -216,6 +218,7 @@ def index_service(url):
                             pass
                     mapped_fields['_discoveryID'] = job.discovery_id
                     mapped_fields['title'] = layer.name
+                    mapped_fields['meta_table_name'] = layer.name
                     entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                     job.send_entry(entry)
                     if (i % increment) == 0:
@@ -239,6 +242,7 @@ def index_service(url):
                         except KeyError:
                             pass
                     mapped_fields['title'] = layer.name
+                    mapped_fields['meta_table_name'] = layer.name
                     mapped_fields['_discoveryID'] = job.discovery_id
                     entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                     job.send_entry(entry)
@@ -295,6 +299,7 @@ def worker(data_path, esri_service=False):
                     mapped_fields = dict(zip(ordered_fields.keys(), row))
                     mapped_fields['_discoveryID'] = job.discovery_id
                     mapped_fields['title'] = dsc.name
+                    mapped_fields['meta_table_name'] = dsc.name
                     for nf in new_fields:
                         if nf['name'] == '*' or nf['name'] == dsc.name:
                             for k, v in nf['new_fields'].iteritems():
@@ -359,6 +364,7 @@ def worker(data_path, esri_service=False):
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['title'] = dsc.name
+                        mapped_fields['meta_table_name'] = dsc.name
                         for nf in new_fields:
                             if nf['name'] == '*' or nf['name'] == dsc.name:
                                 for k, v in nf['new_fields'].iteritems():
@@ -393,6 +399,7 @@ def worker(data_path, esri_service=False):
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['title'] = dsc.name
+                        mapped_fields['meta_table_name'] = dsc.name
                         for nf in new_fields:
                             if nf['name'] == '*' or nf['name'] == dsc.name:
                                 for k, v in nf['new_fields'].iteritems():
