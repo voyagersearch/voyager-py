@@ -260,8 +260,11 @@ def worker(data_path, esri_service=False):
         entry = {}
         dsc = arcpy.Describe(data_path)
 
-        from utils import worker_utils
-        geometry_ops = worker_utils.GeometryOps()
+        try:
+            from utils import worker_utils
+            geometry_ops = worker_utils.GeometryOps()
+        except ImportError:
+            geometry_ops = None
 
         global_id_field = dsc.globalIDFieldName
 
@@ -406,7 +409,13 @@ def worker(data_path, esri_service=False):
                         elif generalize_value == 0 or generalize_value == 0.0:
                             geo['wkt'] = row[0].WKT
                         else:
-                            geo['wkt'] = geometry_ops.generalize_geometry(row[0].WKT, generalize_value)
+                            if geometry_ops:
+                                geo['wkt'] = geometry_ops.generalize_geometry(row[0].WKT, generalize_value)
+                            else:
+                                geo['xmin'] = row[0].extent.XMin
+                                geo['xmax'] = row[0].extent.XMax
+                                geo['ymin'] = row[0].extent.YMin
+                                geo['ymax'] = row[0].extent.YMax
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['title'] = dsc.name
