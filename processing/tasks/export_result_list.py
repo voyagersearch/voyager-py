@@ -14,6 +14,7 @@
 # limitations under the License.
 import os
 import sys
+import itertools
 import csv
 import shutil
 import urllib2
@@ -23,8 +24,8 @@ from tasks.utils import status
 from tasks.utils import task_utils
 from tasks import _
 
-SHAPE_FIELD_LENGTH = slice(0, 10)
 
+SHAPE_FIELD_LENGTH = slice(0, 10)
 status_writer = status.Writer()
 
 
@@ -36,20 +37,49 @@ def export_to_shp(jobs, file_name, output_folder):
     """
     import ogr
     driver = ogr.GetDriverByName("ESRI Shapefile")
-    shape_file = driver.CreateDataSource(os.path.join(output_folder, '{0}.shp'.format(file_name)))
-    epsg_code = 4326
-    srs = ogr.osr.SpatialReference()
-    srs.ImportFromEPSG(epsg_code)
-    layer = shape_file.CreateLayer(str(file_name), srs, ogr.wkbPolygon)
-    for name in jobs[0].keys():
-        if not name == '[geo]':
-            name = str(name)
-            new_field = ogr.FieldDefn(name, ogr.OFTString)
-            layer.CreateField(new_field)
-
-    layer_def = layer.GetLayerDefn()
     for job in jobs:
         try:
+            geo_json = job['[geo]']
+            if geo_json['type'].lower() == 'polygon':
+                geometry_type = ogr.wkbPolygon
+            elif geo_json['type'].lower() == 'geometrycollection':
+                geom = ogr.CreateGeometryFromJson("{0}".format(job['[geo]']))
+                if geom.GetDimension() == 0:
+                    geometry_type = ogr.wkbPoint
+                elif geom.GetDimension() == 1:
+                    geometry_type = ogr.wkbLineString
+                else:
+                    geometry_type = ogr.wkbPolygon
+            elif geo_json['type'].lower() == 'multipolygon':
+                geometry_type = ogr.wkbMultiPolygon
+            elif geo_json['type'].lower() == 'linestring':
+                geometry_type = ogr.wkbLineString
+            elif geo_json['type'].lower() == 'multilinestring':
+                geometry_type = ogr.wkbMultiLineString
+            elif geo_json['type'].lower() == 'point':
+                geometry_type = ogr.wkbPoint
+            elif geo_json['type'].lower() == 'multipoint':
+                geometry_type = ogr.wkbMultiPoint
+        except KeyError:
+            continue
+
+        if os.path.exists(os.path.join(output_folder, '{0}_{1}.shp'.format(file_name, geo_json['type']))):
+            shape_file = ogr.Open(os.path.join(output_folder, '{0}_{1}.shp'.format(file_name, geo_json['type'])), 1)
+            layer = shape_file.GetLayer()
+        else:
+            shape_file = driver.CreateDataSource(os.path.join(output_folder, '{0}_{1}.shp'.format(file_name, geo_json['type'])))
+            epsg_code = 4326
+            srs = ogr.osr.SpatialReference()
+            srs.ImportFromEPSG(epsg_code)
+            layer = shape_file.CreateLayer('{0}_{1}'.format(file_name, geo_json['type']), srs, geometry_type)
+            for name in jobs[0].keys():
+                if not name == '[geo]':
+                    name = str(name)
+                    new_field = ogr.FieldDefn(name, ogr.OFTString)
+                    layer.CreateField(new_field)
+
+        try:
+            layer_def = layer.GetLayerDefn()
             feature = ogr.Feature(layer_def)
             geom = ogr.CreateGeometryFromJson("{0}".format(job['[geo]']))
             feature.SetGeometry(geom)
@@ -65,8 +95,8 @@ def export_to_shp(jobs, file_name, output_folder):
             i = feature.GetFieldIndex(field)
             feature.SetField(i, value)
         layer.CreateFeature(feature)
-    shape_file.Destroy()
-    shape_file = None
+        shape_file.Destroy()
+        shape_file = None
 
 
 def export_to_csv(jobs, file_name, output_folder):
@@ -76,10 +106,14 @@ def export_to_csv(jobs, file_name, output_folder):
     :param file_name: the output file name
     :param output_folder: the output task folder
     """
-    with open(os.path.join(output_folder, '{0}.csv'.format(file_name)), 'wb') as csv_file:
+    write_keys = True
+    if os.path.exists(os.path.join(output_folder, '{0}.csv'.format(file_name))):
+        write_keys = False
+    with open(os.path.join(output_folder, '{0}.csv'.format(file_name)), 'ab') as csv_file:
         field_names = jobs[0].keys()
         writer = csv.DictWriter(csv_file, fieldnames=field_names)
-        writer.writeheader()
+        if write_keys:
+            writer.writeheader()
         for cnt, job in enumerate(jobs, 1):
             writer.writerow(job)
 
@@ -92,17 +126,70 @@ def export_to_xml(jobs, file_name, output_folder):
     :param output_folder: the output task folder
     """
     comment = et.Comment('{0}'.format(datetime.datetime.today().strftime('Exported: %c')))
-    results = et.Element('results')
-    for job in jobs:
-        result = et.SubElement(results, 'result')
-        for key, val in job.items():
-            child = et.SubElement(result, key)
-            child.text = str(val)
-
-    tree = et.ElementTree(results)
+    if not os.path.exists(os.path.join(output_folder, "{0}.xml".format(file_name))):
+        results = et.Element('results')
+        for job in jobs:
+            result = et.SubElement(results, 'result')
+            for key, val in job.items():
+                if key == '[geo]':
+                    child = et.SubElement(result, 'geo')
+                    if 'geometries' in val:
+                        geom_collection = et.SubElement(child, val['type'])
+                        for geom in val['geometries']:
+                            geom_part = et.SubElement(geom_collection, geom['type'])
+                            for part in list(itertools.chain(*geom['coordinates'])):
+                                point = et.SubElement(geom_part, 'point')
+                                point.text = str(part).replace('[', '').replace(']', '')
+                    else:
+                        geom_parent = et.SubElement(child, val['type'])
+                        try:
+                            list_coords = list(itertools.chain(*val['coordinates']))
+                        except TypeError:
+                            list_coords = [val['coordinates']]
+                        if list_coords:
+                            for coords in list_coords:
+                                point = et.SubElement(geom_parent, 'point')
+                                point.text = str(coords).replace('[', '').replace(']', '')
+                        else:
+                            for coords in val['coordinates']:
+                                point.text = str(coords).replace('[', '').replace(']', '')
+                    continue
+                child = et.SubElement(result, key)
+                child.text = str(val)
+        tree = et.ElementTree(results)
+    else:
+        tree = et.parse(os.path.join(output_folder, "{0}.xml".format(file_name)))
+        root = tree.getroot()
+        for job in jobs:
+            result = et.SubElement(root, 'result')
+            for key, val in job.items():
+                if key == '[geo]':
+                    child = et.SubElement(result, 'geo')
+                    if 'geometries' in val:
+                        geom_collection = et.SubElement(child, val['type'])
+                        for geom in val['geometries']:
+                            geom_part = et.SubElement(geom_collection, geom['type'])
+                            for part in list(itertools.chain(*geom['coordinates'])):
+                                point = et.SubElement(geom_part, 'point')
+                                point.text = str(part).replace('[', '').replace(']', '')
+                    else:
+                        geom_parent = et.SubElement(child, val['type'])
+                        try:
+                            list_coords = list(itertools.chain(*val['coordinates']))
+                        except TypeError:
+                            list_coords = [val['coordinates']]
+                        if list_coords:
+                            for coords in list_coords:
+                                point = et.SubElement(geom_parent, 'point')
+                                point.text = str(coords).replace('[', '').replace(']', '')
+                        else:
+                            for coords in val['coordinates']:
+                                point.text = str(coords).replace('[', '').replace(']', '')
+                    continue
+                child = et.SubElement(result, key)
+                child.text = str(val)
     tree.getroot().insert(0, comment)
     tree.write(os.path.join(output_folder, "{0}.xml".format(file_name)), encoding='UTF-8')
-
 
 def execute(request):
     """Exports search results a CSV, shapefile or XML document.
@@ -120,10 +207,11 @@ def execute(request):
 
     num_results, response_index = task_utils.get_result_count(request['params'])
     if out_format in ('CSV', 'XML'):
-        fields.remove('[geo]')
         query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
+        # query = '{0}/select?&wt=json&fl={1}'.format('http://localhost:8888/solr/v0', ','.join(fields))
     else:
         query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
+        # query = '{0}/select?&wt=json&fl={1}'.format('http://localhost:8888/solr/v0', ','.join(fields))
     if 'query' in request['params'][response_index]:
         # Voyager Search Traditional UI
         for p in request['params']:
