@@ -32,14 +32,7 @@ if os.environ['PATH'].endswith(';'):
     os.environ['PATH'] += dll_path
 else:
     os.environ['PATH'] += os.pathsep + dll_path
-
-try:
-    if os.environ['GDAL_DATA'].endswith(';'):
-        os.environ['GDAL_DATA'] += gdal_path
-    else:
-        os.environ['GDAL_DATA'] += os.pathsep + gdal_path
-except KeyError:
-    os.environ['GDAL_DATA'] = gdal_path
+os.environ['GDAL_DATA'] = gdal_path
 
 egg_path = os.path.join(dll_path, 'py')
 sys.path.append(egg_path)
