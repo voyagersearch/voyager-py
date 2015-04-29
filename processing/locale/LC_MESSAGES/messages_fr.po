@@ -296,3 +296,8 @@ msgstr "Aucune modification de métadonnées pour: {0}"
 #, python-format
 msgid "Zipped: {0}"
 msgstr "Zippée: {0}"
+
+#: zip_files.py:85
+#, python-format
+msgid "No results were zipped."
+msgstr "Aucun résultat n'a été compressés."

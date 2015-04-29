@@ -298,3 +298,8 @@ msgstr ""
 #, python-format
 msgid "Zipped: {0}"
 msgstr ""
+
+#: zip_files.py:85
+#, python-format
+msgid "No results were zipped."
+msgstr ""

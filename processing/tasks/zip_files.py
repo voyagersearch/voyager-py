@@ -76,6 +76,10 @@ def execute(request):
 
     zipper.close()
 
+    if zipped == 0:
+        status_writer.send_state(status.STAT_FAILED, _('No results were zipped.'))
+        return
+    
     try:
         shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:
