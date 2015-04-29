@@ -62,6 +62,8 @@ def export_to_shp(jobs, file_name, output_folder):
                 geometry_type = ogr.wkbMultiPoint
         except KeyError:
             continue
+        except TypeError:
+            continue
 
         if os.path.exists(os.path.join(output_folder, '{0}_{1}.shp'.format(file_name, geo_json['type']))):
             shape_file = ogr.Open(os.path.join(output_folder, '{0}_{1}.shp'.format(file_name, geo_json['type'])), 1)
@@ -99,7 +101,7 @@ def export_to_shp(jobs, file_name, output_folder):
         shape_file = None
 
 
-def export_to_csv(jobs, file_name, output_folder):
+def export_to_csv(jobs, file_name, output_folder, fields):
     """
     Exports result to a CSV file.
     :param jobs: list of jobs (a job contains the result information)
@@ -110,13 +112,11 @@ def export_to_csv(jobs, file_name, output_folder):
     if os.path.exists(os.path.join(output_folder, '{0}.csv'.format(file_name))):
         write_keys = False
     with open(os.path.join(output_folder, '{0}.csv'.format(file_name)), 'ab') as csv_file:
-        field_names = jobs[0].keys()
-        writer = csv.DictWriter(csv_file, fieldnames=field_names)
+        writer = csv.DictWriter(csv_file, fieldnames=fields)
         if write_keys:
             writer.writeheader()
         for cnt, job in enumerate(jobs, 1):
             writer.writerow(job)
-
 
 def export_to_xml(jobs, file_name, output_folder):
     """
@@ -234,7 +234,7 @@ def execute(request):
             for n in urllib2.urlopen(query.format(chunk_size, i)):
                 jobs = eval(n)['response']['docs']
                 if out_format == 'CSV':
-                    export_to_csv(jobs, file_name, task_folder)
+                    export_to_csv(jobs, file_name, task_folder, fields)
                 elif out_format == 'XML':
                     export_to_xml(jobs, file_name, task_folder)
                 elif out_format == 'SHP':
@@ -259,7 +259,7 @@ def execute(request):
             results = urllib2.urlopen(query + '&ids={0}'.format(','.join(group)))
             jobs = eval(results.read())['response']['docs']
             if out_format == 'CSV':
-                export_to_csv(jobs, file_name, task_folder)
+                export_to_csv(jobs, file_name, task_folder, fields)
             elif out_format == 'XML':
                 export_to_xml(jobs, file_name, task_folder)
             elif out_format == 'SHP':
