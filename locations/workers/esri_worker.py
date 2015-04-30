@@ -305,7 +305,7 @@ def worker(data_path, esri_service=False):
                         row = update_row(dsc.fields, rows, list(row))
                     mapped_fields = dict(zip(ordered_fields.keys(), row))
                     mapped_fields['_discoveryID'] = job.discovery_id
-                    mapped_fields['title'] = dsc.name
+                    # mapped_fields['title'] = dsc.name
                     mapped_fields['meta_table_name'] = dsc.name
                     for nf in new_fields:
                         if nf['name'] == '*' or nf['name'] == dsc.name:
@@ -374,7 +374,7 @@ def worker(data_path, esri_service=False):
                         geo['lat'] = row[0].firstPoint.Y
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
-                        mapped_fields['title'] = dsc.name
+                        # mapped_fields['title'] = dsc.name
                         mapped_fields['meta_table_name'] = dsc.name
                         mapped_fields['geometry_type'] = 'Point'
                         for nf in new_fields:
@@ -418,7 +418,7 @@ def worker(data_path, esri_service=False):
                                 geo['ymax'] = row[0].extent.YMax
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
-                        mapped_fields['title'] = dsc.name
+                        # mapped_fields['title'] = dsc.name
                         mapped_fields['meta_table_name'] = dsc.name
                         for nf in new_fields:
                             if nf['name'] == '*' or nf['name'] == dsc.name:
