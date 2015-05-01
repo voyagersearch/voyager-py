@@ -1,4 +1,4 @@
-#Export Features
+#Export Result List
 
 Exports search results to a CSV file, a XML file or an Esri shapefile.
 

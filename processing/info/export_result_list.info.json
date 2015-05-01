@@ -3,6 +3,7 @@
   "runner": "python",
   "categories": ["download"],
   "group": "Managing Data and Files",
+  "help_link": "",
   "params": [
     {
       "type": "VoyagerResults",
@@ -22,7 +23,7 @@
         "id",
         "name",
         "path",
-        "location",
+        "location:[localize]",
         "format",
         "[geo]"
       ]

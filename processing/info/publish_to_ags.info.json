@@ -3,6 +3,7 @@
   "runner": "python",
   "categories": ["download"],
   "group": "Publishing Services",
+  "help_link": "https://voyagersearch.zendesk.com/hc/en-us/articles/203950193-Publish-to-ArcGIS-Server",
   "params": [
     {
       "type": "VoyagerResults",
