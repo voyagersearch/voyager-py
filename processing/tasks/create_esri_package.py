@@ -31,7 +31,7 @@ def get_items(input_items, out_workspace):
     files = []
     errors = 0
     skipped = 0
-    for item in input_items:
+    for i, item in enumerate(input_items, 1):
         try:
             if item.endswith('.lyr'):
                 layers.append(arcpy.mapping.Layer(item))
@@ -42,16 +42,24 @@ def get_items(input_items, out_workspace):
                     item = item.split('|')[0].strip()
                 dsc = arcpy.Describe(item)
                 if dsc.dataType in ('FeatureClass', 'ShapeFile', 'RasterDataset'):
-                    if dsc.dataType == 'RasterDataset':
-                        arcpy.MakeRasterLayer_management(item, os.path.basename(item))
+                    if os.path.basename(item) in [l.name for l in layers]:
+                        layer_name = '{0}_{1}'.format(os.path.basename(item), i)
                     else:
-                        arcpy.MakeFeatureLayer_management(item, os.path.basename(item))
-                    layers.append(arcpy.mapping.Layer(os.path.basename(item)))
+                        layer_name = os.path.basename(item)
+                    if dsc.dataType == 'RasterDataset':
+                        arcpy.MakeRasterLayer_management(item, layer_name)
+                    else:
+                        arcpy.MakeFeatureLayer_management(item, layer_name)
+                    layers.append(arcpy.mapping.Layer(layer_name))
                 elif dsc.dataType in ('CadDrawingDataset', 'FeatureDataset'):
                     arcpy.env.workspace = item
                     for fc in arcpy.ListFeatureClasses():
-                        arcpy.MakeFeatureLayer_management(fc, os.path.basename(fc))
-                        layers.append(arcpy.mapping.Layer(os.path.basename(fc)))
+                        if os.path.basename(fc) in [l.name for l in layers]:
+                            layer_name = '{0}_{1}'.format(os.path.basename(fc), i)
+                        else:
+                            layer_name = os.path.basename(fc)
+                        arcpy.MakeFeatureLayer_management(fc, layer_name)
+                        layers.append(arcpy.mapping.Layer(layer_name))
                     arcpy.env.workspace = out_workspace
                 elif dsc.dataType == 'MapDocument':
                     in_mxd = arcpy.mapping.MapDocument(item)
@@ -64,17 +72,29 @@ def get_items(input_items, out_workspace):
                 elif item.endswith('.gdb') or item.endswith('.mdb'):
                     arcpy.env.workspace = item
                     for fc in arcpy.ListFeatureClasses():
-                        arcpy.MakeFeatureLayer_management(fc, os.path.basename(fc))
-                        layers.append(arcpy.mapping.Layer(os.path.basename(fc)))
+                        if os.path.basename(fc) in [l.name for l in layers]:
+                            layer_name = '{0}_{1}'.format(os.path.basename(fc), i)
+                        else:
+                            layer_name = os.path.basename(fc)
+                        arcpy.MakeFeatureLayer_management(fc, layer_name)
+                        layers.append(arcpy.mapping.Layer(layer_name))
                     for raster in arcpy.ListRasters():
-                        arcpy.MakeRasterLayer_management(raster, os.path.basename(raster))
-                        layers.append(arcpy.mapping.Layer(os.path.basename(raster)))
+                        if os.path.basename(raster) in [l.name for l in layers]:
+                            layer_name = '{0}_{1}'.format(os.path.basename(raster), i)
+                        else:
+                            layer_name = os.path.basename(raster)
+                        arcpy.MakeRasterLayer_management(raster, layer_name)
+                        layers.append(arcpy.mapping.Layer(layer_name))
                     datasets = arcpy.ListDatasets('*', 'Feature')
                     for fds in datasets:
                         arcpy.env.workspace = fds
                         for fc in arcpy.ListFeatureClasses():
-                            arcpy.MakeFeatureLayer_management(fc, os.path.basename(fc))
-                            layers.append(arcpy.mapping.Layer(os.path.basename(fc)))
+                            if os.path.basename(fc) in [l.name for l in layers]:
+                                layer_name = '{0}_{1}'.format(os.path.basename(fc), i)
+                            else:
+                                layer_name = os.path.basename(fc)
+                            arcpy.MakeFeatureLayer_management(fc, layer_name)
+                            layers.append(arcpy.mapping.Layer(layer_name))
                         arcpy.env.workspace = item
                     arcpy.env.workspace = out_workspace
                 elif dsc.dataType == 'File':
@@ -158,7 +178,7 @@ def execute(request):
             for layer in layers:
                 arcpy.mapping.AddLayer(df, layer)
             mxd.save()
-            status_writer.send_status(_('Packaging results...'))
+            status_writer.send_status(_('Generating {0}. Large input {1} will take longer to process.'.format('MPK', 'results')))
             if arcpy.GetInstallInfo()['Version'] == '10.0':
                 arcpy.PackageMap_management(mxd.filePath,
                                             os.path.join(os.path.dirname(out_workspace), 'output.mpk'),
@@ -187,7 +207,7 @@ def execute(request):
             #  Create a thumbnail size PNG of the mxd.
             task_utils.make_thumbnail(mxd, os.path.join(request['folder'], '_thumb.png'))
         else:
-            status_writer.send_status(_('Packaging results...'))
+            status_writer.send_status(_('Generating {0}. Large input {1} will take longer to process.'.format('LPK', 'results')))
             for layer in layers:
                 if layer.description == '':
                     layer.description = layer.name
