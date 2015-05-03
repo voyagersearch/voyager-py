@@ -355,7 +355,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system,
                     out_sr = task_utils.get_spatial_reference(4326)
                     arcpy.env.outputCoordinateSystem = out_sr
             else:
-                out_sr = task_utils.get_spatial_reference(4326)
+                out_sr = task_utils.get_spatial_reference(out_coordinate_system)
                 arcpy.env.outputCoordinateSystem = out_sr
 
             # If a file, no need to project the clip area.
@@ -370,7 +370,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system,
                         try:
                             geo_transformation = arcpy.ListTransformations(gcs_sr, out_sr)[0]
                             clip_poly = gcs_clip_poly.projectAs(out_sr, geo_transformation)
-                        except AttributeError:
+                        except (AttributeError, IndexError):
                             try:
                                 clip_poly = gcs_clip_poly.projectAs(out_sr)
                             except AttributeError:
