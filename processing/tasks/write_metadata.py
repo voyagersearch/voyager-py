@@ -34,19 +34,9 @@ def index_item(id):
     """Re-indexes an item.
     :param id: Item's index ID
     """
-    try:
-        solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
-        request = urllib2.Request(solr_url, headers={'Content-type': 'application/json'})
-        response = urllib2.urlopen(request)
-        if not response.code == 200:
-            status_writer.send_state(status.STAT_FAILED, 'Error sending {0}: {1}'.format(id, response.code))
-            return
-    except urllib2.HTTPError as http_error:
-        status_writer.send_state(status.STAT_FAILED, http_error.message)
-        return
-    except urllib2.URLError as url_error:
-        status_writer.send_state(status.STAT_FAILED, url_error.message)
-        return
+    solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
+    request = urllib2.Request(solr_url, headers={'Content-type': 'application/json'})
+    urllib2.urlopen(request)
 
 
 def execute(request):
@@ -219,7 +209,11 @@ def write_metadata(input_items, template_xml, xslt_file, summary, description, t
                     i += 1
                 else:
                     status_writer.send_status(_('Metadata updated for: {0}').format(item))
-                index_item(input_items[item][1])
+
+                try:
+                    index_item(input_items[item][1])
+                except (IndexError, urllib2.HTTPError, urllib2.URLError):
+                    pass
                 updated += 1
             else:
                 if show_progress:

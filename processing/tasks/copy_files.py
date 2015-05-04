@@ -24,6 +24,16 @@ from tasks import _
 status_writer = status.Writer()
 
 
+def update_index(file_location):
+    """Update the index by re-indexng an item."""
+    import zmq
+    indexer = sys.argv[3].split('=')[1]
+    zmq_socket = zmq.Context.instance().socket(zmq.PUSH)
+    zmq_socket.connect(indexer)
+    entry = {"action": "ADD", "path": file_location, "entry": {"fields": {"__to_extract": "true"}}}
+    zmq_socket.send_json(entry)
+
+
 def execute(request):
     """Copies files to a target folder.
     :param request: json as a dict.
@@ -125,6 +135,12 @@ def copy_files(input_items, target_folder, flatten_results, target_dirs, show_pr
                     shutil.copytree(src_file, os.path.join(dst, os.path.basename(src_file)))
                 if show_progress:
                     status_writer.send_percent(i / file_count, _('Copied: {0}').format(src_file), 'copy_files')
+
+                # Update the index.
+                try:
+                    update_index(os.path.join(dst, os.path.basename(src_file)))
+                except (IndexError, ImportError):
+                    pass
                 copied += 1
             else:
                 if show_progress:

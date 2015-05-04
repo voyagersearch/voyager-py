@@ -29,22 +29,10 @@ def index_item(id):
     """Re-indexes an item.
     :param id: Item's index ID
     """
-    try:
-        solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
-        status_writer.send_status(solr_url)
-        request = urllib2.Request(solr_url)
-        response = urllib2.urlopen(request)
-        if not response.code == 200:
-            status_writer.send_state(status.STAT_FAILED, 'Error sending {0}: {1}'.format(id, response.code))
-            return
-    except urllib2.HTTPError as http_error:
-        status_writer.send_status(http_error)
-        status_writer.send_state(status.STAT_FAILED, '')
-        return
-    except urllib2.URLError as url_error:
-        status_writer.send_status(url_error)
-        status_writer.send_state(status.STAT_FAILED, '')
-        return
+    solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
+    status_writer.send_status(solr_url)
+    request = urllib2.Request(solr_url)
+    urllib2.urlopen(request)
 
 
 def get_workspace_type(workspace_path):
@@ -221,7 +209,7 @@ def replace_data_source(input_items, old_data_source, new_workspace,
         # Try to re-index the item once it is updated.
         try:
             index_item(input_items[item][1])
-        except Exception:
+        except (IndexError, urllib2.URLError, urllib2.HTTPError):
             pass
         updated += 1
     return updated, skipped
