@@ -69,7 +69,7 @@ def execute(request):
 	outfile.write("Sample TextArea (sample_textarea, value) @ " + sample_textarea + "\n\n")
 
 	status_writer.send_status(_('Stopping process ...'))
-	outfile.write("=== STOPING ===\n\n")
+	outfile.write("=== STOPPING ===\n\n")
 
 	outfile.close()
 
