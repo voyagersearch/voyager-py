@@ -3,7 +3,6 @@
   "runner": "python",
   "categories": ["download"],
   "group": "Publishing Services",
-  "help_link": "https://voyagersearch.zendesk.com/hc/en-us/articles/203950223-Publish-to-ArcGIS-for-Portal-",
   "params": [
     {
       "type": "VoyagerResults",
@@ -42,7 +41,7 @@
     {
       "display": "Publish to Portal for ArcGIS",
       "description": "Publish results as a map service to a portal for ArcGIS",
-      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#publish_to_agol",
+      "helpURL": "https://voyagersearch.zendesk.com/hc/en-us/articles/203950223-Publish-to-ArcGIS-for-Portal-",
       "params":
       {
 		"url":

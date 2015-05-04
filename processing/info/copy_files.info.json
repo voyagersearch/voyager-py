@@ -3,7 +3,6 @@
   "runner": "python",
   "categories": ["download"],
   "group": "Managing Data and Files",
-  "help_link": "https://voyagersearch.zendesk.com/entries/92842153-Copy-Files",
   "security": ["_ADMIN", "_LOGGEDIN"],
   "params": [
     {
@@ -27,7 +26,7 @@
     {
       "display": "Copy Files",
       "description": "Copies files to a target folder",
-      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#copy_files",
+      "helpURL": "https://voyagersearch.zendesk.com/entries/92842153-Copy-Files",
   	  "params":
   	  {
   	    "target_folder": {

@@ -3,7 +3,6 @@
   "runner": "python",
   "categories": ["download"],
   "group": "Managing Data and Files",
-  "help_link": "https://voyagersearch.zendesk.com/entries/93995916-Move-Files",
   "security": ["_ADMIN"],
   "params": [
     {
@@ -29,7 +28,7 @@
     {
       "display": "Move Files",
       "description": "Moves files to a target folder",
-      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#move_files",
+      "helpURL": "https://voyagersearch.zendesk.com/entries/93995916-Move-Files",
   	  "params":
   	  {
   	    "archive_location": {

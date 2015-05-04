@@ -3,7 +3,6 @@
   "runner": "python",
   "categories": ["download"],
   "group": "Managing Data and Files",
-  "help_link": "https://voyagersearch.zendesk.com/hc/en-us/articles/204436747-Export-Result-List",
   "params": [
     {
       "type": "VoyagerResults",
@@ -45,7 +44,7 @@
 	{
       "display": "Export Result List",
       "description": "Export search results to a CSV, shapefile or XML document",
-      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#export_result_list",
+      "helpURL": "https://voyagersearch.zendesk.com/hc/en-us/articles/204436747-Export-Result-List",
 	  "params":
 	  {
         "file_name":

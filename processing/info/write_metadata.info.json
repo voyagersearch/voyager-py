@@ -3,7 +3,6 @@
   "runner": "python",
   "categories": ["metadata"],
   "group": "Managing Data and Files",
-  "help_link": "https://voyagersearch.zendesk.com/hc/en-us/articles/204035673-Write-Metadata",
   "params": [
       {
       "type": "VoyagerResults",
@@ -33,7 +32,7 @@
     {
       "display": "Write Metadata",
       "description": "Create or update existing metadata",
-      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#zip_files",
+      "helpURL": "https://voyagersearch.zendesk.com/hc/en-us/articles/204035673-Write-Metadata",
       "params":
       {
       "overwrite": {

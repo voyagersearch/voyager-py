@@ -3,7 +3,6 @@
   "runner": "python",
   "categories": ["download"],
   "group": "Managing Raster",
-  "help_link": "https://voyagersearch.zendesk.com/hc/en-us/articles/203104778-Build-Raster-Pyramids",
   "params": [
     {
       "type": "VoyagerResults",
@@ -48,7 +47,7 @@
     {
       "display": "Build Raster Pyramids",
       "description": "Builds pyramids for input raster datasets. Pyramids improves display performance.",
-      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#build_raster_pyramids",
+      "helpURL": "https://voyagersearch.zendesk.com/hc/en-us/articles/203104778-Build-Raster-Pyramids",
   	  "params":
   	  {
     		"resampling_method": {
