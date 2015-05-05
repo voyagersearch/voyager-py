@@ -419,7 +419,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system,
                 else:
                     name = task_utils.create_unique_name(out_name, out_workspace)
                 ext = '{0} {1} {2} {3}'.format(extent.XMin, extent.YMin, extent.XMax, extent.YMax)
-                arcpy.Clip_management(ds, ext, name)
+                arcpy.Clip_management(ds, ext, name, in_template_dataset=clip_poly, clipping_geometry="ClippingGeometry")
 
             # Layer file
             elif dsc.dataType == 'Layer':
