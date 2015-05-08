@@ -1,40 +1,27 @@
-# Python worker. Use extractor name "md5" to get the md5 hash of the
-# input file.
+# -*- coding: utf-8 -*-
+# (C) Copyright 2014 Voyager Search
 #
-# Invoke something like this:
-#   PYTHONPATH=path/to/voyager-1.9.1dev-py2.7.egg python VoyagerWorkerPy.py --help
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
+#  http://www.apache.org/licenses/LICENSE-2.0
 #
-
-import sys
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import platform
-import glob
-import os
+import sys
 
-pwd = os.path.dirname(os.path.split(os.path.dirname(__file__))[0]) #os.path.dirname(os.path.realpath(__file__))
-arch = platform.architecture()[0]
-system = platform.system()
-path = None
-
-if system == 'Windows':
-    if arch == '32bit': path = 'win32_x86'
-    elif arch == '64bit': path = 'win_amd64'
-elif system == 'Darwin': path = 'darwin_x86_64'
-elif system == 'Linux':
-    if arch == '32bit': path = 'linux_x86'
-    elif arch == '64bit': path = 'linux_amd64'
-
-sys.path.append(os.path.join(pwd, "arch", path, "py"))
-pwd = os.path.join(pwd, 'py', 'extractors')
-for f in glob.glob(os.path.join(pwd, "*.zip")): sys.path.append(f)
-sys.path.append(pwd)
 
 try:
-    from voyager import ExtractionWorker
-    from voyager import ExtractionJob
-    from voyager import VgErr
-    from voyager import VgDexField
     import vgextractors
+    from vgextractors._extraction_worker import ExtractionWorker
+    from vgextractors._job import ExtractionJob
+    from vgextractors._error import VgErr
+    from vgextractors._vgdexfield import VgDexField
 except ImportError as ie:
     sys.stdout.write(str(ie))
     sys.exit(1)

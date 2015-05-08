@@ -1,7 +1,5 @@
 Voyager Python Worker
 =====================
 
-Run test like so (on osx):
-
-    PYTHONPATH=../../bin/deps/arch/darwin_x86_64/pydeps python test.py
+VoyagerWorkerPy.py - used to run an Extractor. The --info option returns extractor information for all extractors.
 
