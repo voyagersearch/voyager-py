@@ -31,6 +31,7 @@ else:
         os.environ['PATH'] += os.pathsep + dll_path
 egg_path = os.path.join(dll_path, 'py')
 sys.path.append(egg_path)
+sys.path.append(os.path.dirname(dll_path))
 libs = glob.glob(os.path.join(egg_path, '*.egg'))
 for lib in libs:
     sys.path.append(lib)

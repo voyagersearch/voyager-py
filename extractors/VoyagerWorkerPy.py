@@ -21,7 +21,7 @@ try:
     from vgextractors._extraction_worker import ExtractionWorker
     from vgextractors._job import ExtractionJob
     from vgextractors._error import VgErr
-    from vgextractors._vgdexfield import VgDexField
+    from _vgdexfield import VgDexField
 except ImportError as ie:
     sys.stdout.write(str(ie))
     sys.exit(1)
