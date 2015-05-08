@@ -29,15 +29,18 @@ pwd = os.path.join(pwd, 'py', 'extractors')
 for f in glob.glob(os.path.join(pwd, "*.zip")): sys.path.append(f)
 sys.path.append(pwd)
 
-from voyager import ExtractionWorker
-from voyager import ExtractionJob
-from voyager import VgErr
-from voyager import VgDexField
-
-
-# Users can drop "extractors" in here
-import vgextractors
-
+try:
+    from voyager import ExtractionWorker
+    from voyager import ExtractionJob
+    from voyager import VgErr
+    from voyager import VgDexField
+    import vgextractors
+except ImportError as ie:
+    sys.stdout.write(str(ie))
+    sys.exit(1)
+except OSError as ose:
+    sys.stdout.write("{0}. {1}.".format(str(ose), "This version of pyzmq requires 32bit Python"))
+    sys.exit(1)
 
 def get_class( kls ):
     parts = kls.split('.')
