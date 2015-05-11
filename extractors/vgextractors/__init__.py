@@ -25,9 +25,12 @@ if platform.system() == 'Darwin':
 else:
     # dll_path = r"C:\Voyager\server_1.9.6.3147\app\arch\win32_x86" #os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'arch', 'win32_x86'))
     dll_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'arch', 'win32_x86'))
-    if os.environ['PATH'].endswith(';'):
-        os.environ['PATH'] += dll_path
-    else:
+    try:
+        if os.environ['PATH'].endswith(';'):
+            os.environ['PATH'] += dll_path
+        else:
+            os.environ['PATH'] += os.pathsep + dll_path
+    except KeyError:
         os.environ['PATH'] += os.pathsep + dll_path
 egg_path = os.path.join(dll_path, 'py')
 sys.path.append(egg_path)
