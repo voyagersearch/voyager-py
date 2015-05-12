@@ -83,6 +83,8 @@ class Job(object):
         self.__table_constraints = []
         self.__table_queries = []
         self.__get_domains()
+        self.__related_tables = []
+        self.__format = None
 
     def __del__(self):
         """Close open connections, streams, etc. after all references to Job are deleted."""
@@ -128,6 +130,14 @@ class Job(object):
     @property
     def joins(self):
         return self.__joins
+
+    @property
+    def format(self):
+        return self.__format
+
+    @property
+    def related_tables(self):
+        return self.__related_tables
 
     @property
     def field_types(self):
@@ -603,6 +613,14 @@ class Job(object):
                     sys.stderr.write('Config Error: A table cannot have a query and a constraint.')
                     sys.stderr.flush()
                     sys.exit(1)
+            except KeyError:
+                pass
+            try:
+                self.__format = table['format']
+            except KeyError:
+                pass
+            try:
+                self.__related_tables = table['related_tables']
             except KeyError:
                 pass
             try:

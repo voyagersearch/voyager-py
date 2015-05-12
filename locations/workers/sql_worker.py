@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import random
+import re
 import decimal
 import json
 from utils import status
@@ -50,9 +52,8 @@ def get_tables(job):
     return tables
 
 
-def run_job(sql_job):
+def run_job(job):
     """Worker function to index each row in each table in the database."""
-    job = sql_job
     job.connect_to_zmq()
     job.connect_to_database()
     tables = get_tables(job)
@@ -61,114 +62,200 @@ def run_job(sql_job):
         geo = {}
         has_shape = False
         is_point = False
+        shape_field_name = ''
 
-        query = job.get_table_query(tbl)
-        constraint = job.get_table_constraint(tbl)
-        if query and constraint:
-            expression = """{0} AND {1}""".format(query, constraint)
-        else:
-            if query:
-                expression = query
-            else:
-                expression = constraint
-
+        # --------------------------------
+        # Get the list of columns to keep.
+        # --------------------------------
         if not job.fields_to_keep == ['*']:
             columns = []
             column_types = {}
+
             for col in job.fields_to_keep:
-                qry = "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
+                qry = "select column_name, data_type from INFORMATION_SCHEMA.columns where table_name = '{0}' and column_name like '{1}'".format(tbl, col)
                 for c in job.execute_query(qry).fetchall():
-                    columns.append(c[0])
-                    column_types[c[0]] = c[1]
+                    if not c.type_name == 'geometry':
+                        columns.append("{0}.{1}".format(tbl, c[0]))
+                        column_types[c[0]] = c[1]
+                    else:
+                        shape_field_name = c.column_name
         else:
             columns = []
             column_types = {}
             for c in job.db_cursor.columns(table=tbl).fetchall():
-                columns.append(c.column_name)
-                column_types[c.column_name] = c.type_name
+                if not c.type_name == 'geometry':
+                    columns.append("{0}.{1}".format(tbl, c.column_name))
+                    column_types[c.column_name] = c.type_name
+                else:
+                    shape_field_name = c.column_name
 
         if job.fields_to_skip:
             for col in job.fields_to_skip:
-                qry = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = '{0}' AND column_name LIKE '{1}'".format(tbl, col)
-                [columns.remove(c[0]) for c in job.execute_query(qry).fetchall()]
+                qry = "select column_name from INFORMATION_SCHEMA.columns where table_name = '{0}' and column_name like '{1}'".format(tbl, col)
+                [columns.remove("{0}.{1}".format(tbl, c[0])) for c in job.execute_query(qry).fetchall()]
 
+        # --------------------------------------------------------------------------------------------------------
+        # Get the column names and types from the related tables.
+        # --------------------------------------------------------------------------------------------------------
+        related_columns = []
+        if job.related_tables:
+            for related_table in job.related_tables:
+                for c in job.db_cursor.columns(table=related_table):
+                    if not c.type_name == 'geometry':
+                        related_columns.append("{0}.{1}".format(related_table, c.column_name))
+                        # related_column_types["{0}.{1}".format(related_table, c.column_name)] = c.type_name
+
+        # --------------------------------------------------------------------------------------------------------
         # Check for a geometry column and pull out X,Y for points and extent coordinates for other geometry types.
+        # --------------------------------------------------------------------------------------------------------
         geom_type = ''
-        for c in job.db_cursor.columns(table=tbl).fetchall():
-            if c.type_name == 'geometry':
-                has_shape = True
-                srid = job.db_cursor.execute("select {0}.STSrid from {1}".format(c.column_name, tbl)).fetchone()[0]
-                geo['code'] = srid
-                geom_type = job.db_cursor.execute("select {0}.STGeometryType() from {1}".format(c.column_name, tbl)).fetchone()[0]
-                if geom_type == 'Point':
-                    is_point = True
-                    columns.insert(0, "{0}.STPointN(1).STX".format(c.column_name))
-                    columns.insert(0, "{0}.STPointN(1).STY".format(c.column_name))
-                    columns.insert(0, "{0}.STAsText() as WKT".format(c.column_name))
-                else:
-                    columns.insert(0, "{0}.STEnvelope().STPointN((3)).STY".format(c.column_name))
-                    columns.insert(0, "{0}.STEnvelope().STPointN((3)).STX".format(c.column_name))
-                    columns.insert(0, "{0}.STEnvelope().STPointN((1)).STY".format(c.column_name))
-                    columns.insert(0, "{0}.STEnvelope().STPointN((1)).STX".format(c.column_name))
-                    columns.insert(0, "{0}.STAsText() as WKT".format(c.column_name))
-                columns.remove(c.column_name)
-                break
+        if shape_field_name:
+            has_shape = True
+            srid = job.db_cursor.execute("select {0}.STSrid from {1}".format(shape_field_name, tbl)).fetchone()[0]
+            geo['code'] = srid
+            geom_type = job.db_cursor.execute("select {0}.STGeometryType() from {1}".format(shape_field_name, tbl)).fetchone()[0]
+            if geom_type == 'Point':
+                is_point = True
+                columns.insert(0, "{0}.{1}.STPointN(1).STX as X".format(tbl, shape_field_name))
+                columns.insert(0, "{0}.{1}.STPointN(1).STY as Y".format(tbl, shape_field_name))
+            else:
+                columns.insert(0, "{0}.{1}.STEnvelope().STPointN((3)).STY as YMAX".format(tbl, shape_field_name))
+                columns.insert(0, "{0}.{1}.STEnvelope().STPointN((3)).STX as XMAX".format(tbl, shape_field_name))
+                columns.insert(0, "{0}.{1}.STEnvelope().STPointN((1)).STY as YMIN".format(tbl, shape_field_name))
+                columns.insert(0, "{0}.{1}.STEnvelope().STPointN((1)).STX as XMIN".format(tbl, shape_field_name))
+                columns.insert(0, "{0}.{1}.STAsText() as WKT".format(tbl, shape_field_name))
 
+        # -----------------------------
         # Query the table for the rows.
-        if not expression:
+        # -----------------------------
+        sql_query = job.get_table_query(tbl)
+        if not sql_query:
             row_count = float(job.db_cursor.execute("select Count(*) from {0}".format(tbl)).fetchone()[0])
             rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), tbl))
         else:
-            row_count = float(job.db_cursor.execute("select Count(*) from {0} where {1}".format(tbl, expression)).fetchone()[0])
-            rows = job.db_cursor.execute("select {0} from {1} where {2}".format(','.join(columns), tbl, expression))
+            q = re.search('FROM(.*)', sql_query, re.IGNORECASE).group(0)
+            try:
+                row_count = float(job.db_cursor.execute("select Count(*) {0}".format(q)).fetchone()[0])
+            except Exception:
+                row_count = float(job.db_cursor.execute("select Count(*) {0}".format(q.split('ORDER BY')[0])).fetchone()[0])
+            rows = job.execute_query("select {0} {1}".format(','.join(columns + related_columns), q))
 
-        # Index each row in the table.
+        # -----------------------------------------------------------------------------
+        # Index each row in the table. If there are relates, index the related records.
+        # -----------------------------------------------------------------------------
+        cur_id = -1
         entry = {}
+        link = {}
         action_type = job.action_type
         discovery_id = job.discovery_id
         location_id = job.location_id
-        if job.field_mapping:
-            mapped_fields = job.map_fields(tbl, columns, column_types)
-        else:
-            mapped_fields = columns
-
+        columns = [c.split('.')[1] for c in columns]
+        mapped_fields = job.map_fields(tbl, columns, column_types)
         increment = job.get_increment(row_count)
         geometry_ops = worker_utils.GeometryOps()
         generalize_value = job.generalize_value
         for i, row in enumerate(rows):
-            if has_shape:
-                if is_point:
-                    if job.include_wkt:
-                        geo['wkt'] = row[0]
-                    geo['lon'] = row[2]
-                    geo['lat'] = row[1]
-                    mapped_cols = dict(zip(mapped_fields[3:], row[3:]))
-                    mapped_cols['geometry_type'] = 'Point'
-                else:
-                    if job.include_wkt:
-                        if generalize_value == 0:
+            if not cur_id == row[0]:
+                if entry:
+                    job.send_entry(entry)
+                    entry = {}
+                if has_shape:
+                    if is_point:
+                        geo['lon'] = row[1]
+                        geo['lat'] = row[0]
+                        mapped_cols = dict(zip(mapped_fields[2:], row[2:]))
+                        mapped_cols['geometry_type'] = 'Point'
+                    else:
+                        if generalize_value == 0 or generalize_value == 0.0:
                             geo['wkt'] = row[0]
+                        elif generalize_value > 0.9:
+                            geo['xmin'] = row[1]
+                            geo['ymin'] = row[2]
+                            geo['xmax'] = row[3]
+                            geo['ymax'] = row[4]
                         else:
                             geo['wkt'] = geometry_ops.generalize_geometry(str(row[0]), generalize_value)
-                    geo['xmin'] = row[1]
-                    geo['ymin'] = row[2]
-                    geo['xmax'] = row[3]
-                    geo['ymax'] = row[4]
-                    mapped_cols = dict(zip(mapped_fields[5:], row[5:]))
-                    if 'Polygon' in geom_type:
-                        mapped_cols['geometry_type'] = 'Polygon'
-                    else:
-                        mapped_cols['geometry_type'] = 'Polyline'
-            else:
-                mapped_cols = dict(zip(mapped_fields, row))
 
-            # Create an entry to send to ZMQ for indexing.
-            mapped_cols['title'] = tbl
-            entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
-            entry['location'] = location_id
-            entry['action'] = action_type
-            entry['entry'] = {'geo': geo, 'fields': mapped_cols}
-            entry['entry']['fields']['_discoveryID'] = discovery_id
-            job.send_entry(entry)
+                        mapped_cols = dict(zip(mapped_fields[5:], row[5:]))
+                        if 'Polygon' in geom_type:
+                            mapped_cols['geometry_type'] = 'Polygon'
+                        else:
+                            mapped_cols['geometry_type'] = 'Polyline'
+                else:
+                    mapped_cols = dict(zip(mapped_fields, row))
+
+                # Create an entry to send to ZMQ for indexing.
+                if 'id' in mapped_cols:
+                    mapped_cols['id'] = '{0}{1}'.format(random.randint(0, 1000000), mapped_cols['id'])
+                else:
+                    mapped_cols['id'] = "{0}{1}".format(random.randint(0, 1000000), i)
+                mapped_cols['title'] = tbl
+                mapped_cols['meta_testid'] = i
+                entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
+                entry['location'] = location_id
+                entry['action'] = action_type
+
+                # If the table supports relates/joins, handle them and add them as links.
+                if job.related_tables:
+                    links = []
+                    related_field_names = [d[0] for d in row.cursor_description[len(columns):]]
+                    related_field_types = dict(zip(related_field_names, [d[1] for d in row.cursor_description[len(columns):]]))
+                    mapped_related_fields = []
+                    for related_table in job.related_tables:
+                        mapped_related_fields += job.map_fields(related_table, related_field_names, related_field_types)
+                    link['relation'] = 'contains'
+                    link = dict(zip(mapped_related_fields, row[len(columns):]))
+                    try:
+                        link['id'] = "{0}{1}".format(random.randint(0, 1000000), link['id'])
+                    except KeyError:
+                        link['id'] = "{0}{1}".format(random.randint(0, 1000000), i)
+
+                    # Send this link as an entry and set extract to true.
+                    link_entry = {}
+                    link_entry['id'] = "{0}{1}".format(link['id'], location_id)
+                    link_entry['action'] = action_type
+                    link_entry['entry'] = {"fields": link}
+                    if job.format:
+                        link_entry['entry']['fields']['__to_extract'] = True
+                        link_entry['entry']['fields']['format'] = job.format
+                    job.send_entry(link_entry)
+                    # Append the link to a list that will be part of the main entry.
+                    links.append(link)
+                    if geo:
+                        entry['entry'] = {'geo': geo, 'fields': mapped_cols, 'links': links}
+                    else:
+                        entry['entry'] = {'fields': mapped_cols, 'links': links}
+                else:
+                    if geo:
+                        entry['entry'] = {'geo': geo, 'fields': mapped_cols}
+                    else:
+                        entry['entry'] = {'fields': mapped_cols}
+                    entry['entry']['fields']['_discoveryID'] = discovery_id
+                entry['entry']['fields']['_discoveryID'] = discovery_id
+                cur_id = row[0]
+            else:
+                link['relation'] = 'contains'
+                link = dict(zip(mapped_related_fields, row[len(columns):]))
+                try:
+                    link['id'] = "{0}{1}".format(random.randint(0, 1000000), link['id'])
+                except KeyError:
+                    link['id'] = "{0}{1}".format('0000', i)
+                link_entry = {}
+                link_entry['id'] = "{0}{1}".format(link['id'], location_id)
+                link_entry['action'] = action_type
+                link_entry['entry'] = {"fields": link}
+                if job.format:
+                    link_entry['entry']['fields']['__to_extract'] = True
+                    link_entry['entry']['fields']['format'] = job.format
+                job.send_entry(link_entry)
+
+                links.append(link)
+                entry['entry']['links'] = entry['entry'].pop('links', links)
+
+            # Report status percentage.
             if (i % increment) == 0:
                 status_writer.send_percent(i / row_count, '{0}: {1:%}'.format(tbl, i / row_count), 'sql_server')
+
+        # Send final entry.
+        job.send_entry(entry)
+        status_writer.send_percent(1, '{0}: {1:%}'.format(tbl, 1), 'sql_server')
