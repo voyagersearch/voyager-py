@@ -255,7 +255,7 @@ def execute(request):
         groups = task_utils.grouper(list(ids), chunk_size, '')
         i = 0
         for group in groups:
-            i += len(group)
+            i += len([v for v in group if not v == ''])
             results = urllib2.urlopen(query + '&ids={0}'.format(','.join(group)))
             jobs = eval(results.read())['response']['docs']
             if out_format == 'CSV':
