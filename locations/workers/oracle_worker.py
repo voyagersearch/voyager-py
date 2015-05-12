@@ -235,11 +235,11 @@ def run_job(oracle_job):
         if geometry_field:
             columns.remove(geometry_field)
 
-            if job.db_cursor.execute("select SHAPE from {0}".format(tbl)).fetchone() is None:
+            if job.db_cursor.execute("select {0} from {1}".format(geometry_field, tbl)).fetchone() is None:
                 status_writer.send_status("Skipping {0} - no records.".format(tbl))
                 continue
             else:
-                schema = job.db_cursor.execute("select SHAPE from {0}".format(tbl)).fetchone()[0].type.schema
+                schema = job.db_cursor.execute("select {0} from {1}".format(geometry_field, tbl)).fetchone()[0].type.schema
 
             # Figure out if geometry type is ST or SDO.
             if geometry_type == 'SDO_GEOMETRY':
