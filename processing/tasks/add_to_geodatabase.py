@@ -85,6 +85,7 @@ def execute(request):
                                                            os.path.basename(os.path.dirname(out_gdb)))
                     arcpy.CreateFeatureDataset_management(os.path.dirname(out_gdb), os.path.basename(out_gdb))
 
+
     status_writer.send_status(_('Setting the output workspace...'))
     arcpy.env.workspace = out_gdb
 
@@ -110,6 +111,9 @@ def execute(request):
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
             input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            if not input_items:
+                status_writer.send_state(status.STAT_FAILED, _('No items to process. Check if items exist.'))
+                return
             result = add_to_geodatabase(input_items, out_gdb, is_fds)
             added += result[0]
             errors += result[1]
@@ -117,6 +121,9 @@ def execute(request):
             status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'add_to_geodatabase')
     else:
         input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
+        if not input_items:
+            status_writer.send_state(status.STAT_FAILED, _('No items to process. Check if items exist.'))
+            return
         added, errors, skipped = add_to_geodatabase(input_items, out_gdb, is_fds, True)
 
     # Copy the default thumbnail and create a report in the task folder..
