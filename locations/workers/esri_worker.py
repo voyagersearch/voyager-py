@@ -266,7 +266,10 @@ def worker(data_path, esri_service=False):
         except ImportError:
             geometry_ops = None
 
-        global_id_field = dsc.globalIDFieldName
+        try:
+            global_id_field = dsc.globalIDFieldName
+        except AttributeError:
+            global_id_field = None
 
         if dsc.dataType == 'Table':
             # Get join information.
@@ -305,7 +308,6 @@ def worker(data_path, esri_service=False):
                         row = update_row(dsc.fields, rows, list(row))
                     mapped_fields = dict(zip(ordered_fields.keys(), row))
                     mapped_fields['_discoveryID'] = job.discovery_id
-                    # mapped_fields['title'] = dsc.name
                     mapped_fields['meta_table_name'] = dsc.name
                     for nf in new_fields:
                         if nf['name'] == '*' or nf['name'] == dsc.name:
@@ -374,7 +376,6 @@ def worker(data_path, esri_service=False):
                         geo['lat'] = row[0].firstPoint.Y
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
-                        # mapped_fields['title'] = dsc.name
                         mapped_fields['meta_table_name'] = dsc.name
                         mapped_fields['geometry_type'] = 'Point'
                         for nf in new_fields:
@@ -418,7 +419,6 @@ def worker(data_path, esri_service=False):
                                 geo['ymax'] = row[0].extent.YMax
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
-                        # mapped_fields['title'] = dsc.name
                         mapped_fields['meta_table_name'] = dsc.name
                         for nf in new_fields:
                             if nf['name'] == '*' or nf['name'] == dsc.name:
@@ -427,7 +427,7 @@ def worker(data_path, esri_service=False):
                         if global_id_field:
                             mapped_fields['meta_{0}'.format(global_id_field)] = mapped_fields.pop('fi_{0}'.format(global_id_field))
                         mapped_fields['geometry_type'] = dsc.shapeType
-                        entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
+                        entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.splitext(os.path.basename(data_path))[0], i)
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
                         entry['entry'] = {'geo': geo, 'fields': mapped_fields}
