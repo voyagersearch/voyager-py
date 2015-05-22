@@ -93,7 +93,7 @@ def execute(request):
             else:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'], True, True)
+            input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'], True, True)
             result = move_files(input_items, target_folder, flatten_results)
             moved += result[0]
             errors += result[1]

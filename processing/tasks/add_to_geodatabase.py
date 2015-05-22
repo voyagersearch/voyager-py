@@ -95,6 +95,7 @@ def execute(request):
         query_index = task_utils.QueryIndex(parameters[response_index])
         fl = query_index.fl
         query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+        # query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
         fq = query_index.get_fq()
         if fq:
             groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
@@ -110,7 +111,7 @@ def execute(request):
             else:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
             if not input_items:
                 status_writer.send_state(status.STAT_FAILED, _('No items to process. Check if items exist.'))
                 return

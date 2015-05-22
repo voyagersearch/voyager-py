@@ -65,7 +65,7 @@ def execute(request):
             else:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
             result = zip_files(zipper, input_items, zip_file_location, flatten_results)
             zipped += result[0]
             skipped += result[1]
@@ -79,7 +79,7 @@ def execute(request):
     if zipped == 0:
         status_writer.send_state(status.STAT_FAILED, _('No results were zipped.'))
         return
-    
+
     try:
         shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
     except IOError:

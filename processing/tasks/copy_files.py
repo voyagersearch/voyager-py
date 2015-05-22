@@ -74,7 +74,7 @@ def execute(request):
             else:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'], list_components=True)
+            input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'], list_components=True)
             result = copy_files(input_items, target_folder, flatten_results, target_dirs)
             copied += result[0]
             errors += result[1]

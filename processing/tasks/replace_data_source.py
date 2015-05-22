@@ -30,7 +30,6 @@ def index_item(id):
     :param id: Item's index ID
     """
     solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
-    status_writer.send_status(solr_url)
     request = urllib2.Request(solr_url)
     urllib2.urlopen(request)
 
@@ -115,7 +114,7 @@ def execute(request):
             results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
         results_str = results.read().replace('false', 'False')
         results_str = results_str.replace('true', 'True')
-        input_items = task_utils.get_input_items(eval(results_str)['response']['docs'], True)
+        input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'], True)
         result = replace_data_source(input_items, old_data_source, new_workspace, new_dataset, wks_type, backup)
         updated += result[0]
         skipped += result[1]
