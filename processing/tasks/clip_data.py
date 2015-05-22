@@ -279,7 +279,7 @@ def execute(request):
             else:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
             result = clip_data(input_items, out_workspace, out_coordinate_system,
                                clip_feature_class, where_statement, gcs_sr, gcs_clip_poly, out_format)
             clipped += result[0]

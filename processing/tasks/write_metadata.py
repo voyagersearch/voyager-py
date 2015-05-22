@@ -72,8 +72,6 @@ def execute(request):
         # Query the index for results in groups of 25.
         query_index = task_utils.QueryIndex(parameters[response_index])
         fl = query_index.fl
-
-        #query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
         query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
         fq = query_index.get_fq()
         if fq:
@@ -91,7 +89,7 @@ def execute(request):
             else:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'], True)
+            input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'], True)
             result = write_metadata(input_items, template_xml, xslt_file, summary, description, tags, overwrite)
             updated += result[0]
             errors += result[1]
@@ -184,7 +182,6 @@ def write_metadata(input_items, template_xml, xslt_file, summary, description, t
                 elif not overwrite:
                     # Still add any new tags.
                     for search_element in search_keys:
-                        #keyword_elements = search_element.findall('.//keyword')
                         if tags:
                             for tag in tags:
                                 new_tag = eTree.SubElement(search_keys[0], "keyword")
@@ -212,7 +209,8 @@ def write_metadata(input_items, template_xml, xslt_file, summary, description, t
 
                 try:
                     index_item(input_items[item][1])
-                except (IndexError, urllib2.HTTPError, urllib2.URLError):
+                except (IndexError, urllib2.HTTPError, urllib2.URLError) as e:
+                    status_writer.send_status(e)
                     pass
                 updated += 1
             else:

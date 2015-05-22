@@ -78,7 +78,7 @@ def execute(request):
             else:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-            input_items = task_utils.get_input_items(eval(results.read())['response']['docs'])
+            input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
             result = calculate_raster_statistics(input_items, extent,
                                                  horizontal_skip_factor, vertical_skip_factor, ignore_pixel_values)
             processed += result[0]
