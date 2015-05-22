@@ -249,6 +249,9 @@ def execute(request):
         gcs_clip_poly = task_utils.from_wkt(clip_area, gcs_sr)
         if not gcs_clip_poly.area > 0:
             gcs_clip_poly = task_utils.from_wkt('POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))', gcs_sr)
+    else:
+        gcs_sr = ""
+        gcs_clip_poly = None
 
     status_writer.send_status(_('Setting the output workspace...'))
     if not out_format == 'SHP':
@@ -361,6 +364,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system,
             # If a file, no need to project the clip area.
             if dsc.dataType not in ('File', 'TextFile'):
                 if clip_feature_class:
+                    arcpy.env.overwriteOutput = True
                     clip_poly = clip_feature_class
                     if where_statement:
                         clip_poly = arcpy.MakeFeatureLayer_management(clip_poly, 'clip_polygons', where_statement)
