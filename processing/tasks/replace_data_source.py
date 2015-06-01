@@ -114,7 +114,7 @@ def execute(request):
             results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
         results_str = results.read().replace('false', 'False')
         results_str = results_str.replace('true', 'True')
-        input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'], True)
+        input_items = task_utils.get_input_items(eval(results_str)['response']['docs'], True)
         result = replace_data_source(input_items, old_data_source, new_workspace, new_dataset, wks_type, backup)
         updated += result[0]
         skipped += result[1]
