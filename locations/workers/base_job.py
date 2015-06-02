@@ -255,6 +255,14 @@ class Job(object):
             return ''
 
     @property
+    def service_connection(self):
+        """ArcGIS Server url Portal url."""
+        if 'service_connection' in self.job['location']['config']:
+            return self.job['location']['config']['service_connection']
+        else:
+            return ''
+
+    @property
     def url(self):
         """URL for GDAL/OGR dataset."""
         try:

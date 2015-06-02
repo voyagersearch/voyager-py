@@ -12,8 +12,139 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
+import json
 import sys
+import itertools
+import urllib
 import ogr
+
+
+class ArcGISServiceHelper(object):
+    """ArcGIS Server and Portal helper class."""
+    def __init__(self, portal_url, username, password, referer='', token_expiration=60):
+        self._username = username
+        self._password = password
+        self._portal_url = portal_url
+        self._token_expiration = token_expiration
+        if referer:
+            self._referer = referer
+        else:
+            self._referer = self._portal_url
+        self._service_types = {"Map Service": "MapServer", "Feature Service": "FeatureServer"}
+        self._http = "{0}/sharing/rest".format(self._portal_url)
+        self.oid_field_name = 'objectid'
+        self.token = self._generate_token()
+
+    def _generate_token(self):
+        """Generates a token required for ArcGIS Online authentication."""
+        try:
+            query_dict = {'username': self._username,
+                          'password': self._password,
+                          'referer': self._referer,
+                          'expiration': str(self._token_expiration)}
+
+            query_string = urllib.urlencode(query_dict)
+            url = "{0}/sharing/rest/generateToken".format(self._portal_url)
+            token = json.loads(urllib.urlopen(url + "?f=json", query_string).read())
+
+            if "token" not in token:
+               return None
+            return token['token']
+        except ValueError:
+            return ''
+
+    def find_item_url(self, service_name, service_type, folder_name='', token=''):
+        """Return the layer or table view url.
+        :param service_name: service name
+        :param service_type: service type (i.e Feature Server)
+        :param folder_name: folder name service is located in
+        :param token: token value
+        """
+        service_url = None
+        if token:
+            search_url = self._http + "/search"
+            query_dict = {'f': 'json',
+                          'token': token,
+                          'q': '''title:"{0}" AND owner:"{1}" AND type:"{2}"'''.format(service_name, self._username, service_type)}
+            response = urllib.urlopen(search_url, urllib.urlencode(query_dict))
+            data = json.loads(response.read())
+            if 'results' in data:
+                if data['results']:
+                    result = data['results'][0]
+                    service_url = result['url']
+                else:
+                    raise IndexError
+        else:
+            if folder_name:
+                search_url = self._portal_url + '/arcgis/rest/services/{0}/{1}/{2}'.format(folder_name, service_name, self._service_types[service_type])
+            else:
+                search_url = self._portal_url + '/arcgis/rest/services/{0}/{1}'.format(service_name, self._service_types[service_type])
+
+        if not service_url:
+            service_url = search_url
+        if self.token:
+            r = urllib.urlopen(service_url, urllib.urlencode({'f': 'json', 'token': self.token, 'referer': self._referer}))
+        else:
+            r = urllib.urlopen(service_url, urllib.urlencode({'f': 'json'}))
+        items = json.loads(r.read())
+        return service_url, items
+
+
+    def get_item_row_count(self, url, layer_id, token):
+        """Returns the row count of a service layer or table.
+        :param url: Service url
+        :param layer_id: service layer/table ID
+        :param token: token value
+        """
+        if self.token:
+            query = {'where': '1=1', 'returnIdsOnly':True, 'token': token, 'f': 'json'}
+        else:
+            query = {'where': '1=1', 'returnIdsOnly':True, 'f': 'json'}
+        response = urllib.urlopen('{0}/{1}/query?'.format(url, layer_id), urllib.urlencode(query))
+        data = json.loads(response.read())
+        objectids = data['objectIds']
+        self.oid_field_name = data['objectIdFieldName']
+        if not objectids:
+            return None, None
+        args = [iter(objectids)] * 100
+        id_groups = itertools.izip_longest(fillvalue=None, *args)
+        return id_groups, len(objectids)
+
+    def get_item_fields(self, url, layer_id, token):
+        """Return the fields of a service layer or table.
+        :param url: service url
+        :param layer_id: service layer/table ID
+        :param token: token value
+        """
+        if self.token:
+            query = {'where': '1=1', 'outFields': '*', 'returnGeomery':False, 'token': token, 'f': 'json'}
+        else:
+            query = {'where': '1=1', 'outFields': '*', 'returnGeomery':False, 'f': 'json'}
+        response = urllib.urlopen('{0}/{1}/query?'.format(url, layer_id), urllib.urlencode(query))
+        data = json.loads(response.read())
+        fields = data['fields']
+        return fields
+
+    def get_item_rows(self, url, layer_id, token, spatial_rel='esriSpatialRelIntersects',
+                 where='1=1', out_fields='*', out_sr=4326, return_geometry=True):
+        """Return the rows for a service layer or table.
+        :param url: service url
+        :param layer_id: service layer/table ID
+        :param token: token value
+        :param spatial_rel: spatial relationship (default is esriSpatialRelIntersects)
+        :param where: where clause
+        :param out_fields: output fields (default is *)
+        :param out_sr: output spatial reference WKID
+        :param return_geometry: boolean to return geometry
+        """
+        if self.token:
+            query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr, 'token': token, 'f': 'json'}
+        else:
+            query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr, 'f': 'json'}
+        response = urllib.urlopen('{0}/{1}/query?'.format(url, layer_id), urllib.urlencode(query))
+        data = json.loads(response.read())
+        return data
+
 
 class GeoJSONConverter(object):
     """
@@ -148,20 +279,17 @@ class GeometryOps(object):
                 return gen_geometry
 
             else:
-                if tolerance > 0.9:
-                    gen_geometry = geometry.ConvexHull()
+                factor = self.approximate_radius(geometry)
+                if not 'LINESTRING' in geometry.GetGeometryName():
+                    factor /= max((geometry.GetArea(), 10))
                 else:
-                    factor = self.approximate_radius(geometry)
-                    if not 'LINESTRING' in geometry.GetGeometryName():
-                        factor /= max((geometry.GetArea(), 10))
-                    else:
-                        factor /= 10
-                    factor *= math.pow(1 + tolerance, tolerance * 10) - 1
-                    gen_geometry = geometry.SimplifyPreserveTopology(factor)
+                    factor /= 10
+                factor *= math.pow(1 + tolerance, tolerance * 10) - 1
+                gen_geometry = geometry.SimplifyPreserveTopology(factor)
+                wkt = gen_geometry.ExportToWkt()
+                if sys.getsizeof(wkt) > 32766:
+                    gen_geometry = geometry.Simplify(factor)
                     wkt = gen_geometry.ExportToWkt()
-                    if sys.getsizeof(wkt) > 32766:
-                        gen_geometry = geometry.Simplify(factor)
-                        wkt = gen_geometry.ExportToWkt()
-                    return wkt
+                return wkt
         except AttributeError:
             return None
