@@ -1,8 +1,7 @@
 {
   "name": "mosaic",
   "runner": "python",
-  "categories": ["download"],
-  "group": "Managing Raster",
+  "categories": ["Managing Raster"],
   "params": [
     {
       "type": "VoyagerResults",

@@ -1,8 +1,8 @@
 {
   "name": "convert_to_kml",
   "runner": "python",
-  "categories": ["download"],
-  "group": "Extracting Data",
+  "categories": ["Extracting Data"],
+  "group": "",
   "params": [
     {
       "type": "Geometry",

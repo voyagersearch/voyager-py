@@ -1,8 +1,7 @@
 {
   "name": "create_esri_package",
   "runner": "python",
-  "categories": ["download"],
-  "group": "Extracting Data",
+  "categories": ["Extracting Data"],
   "params": [
     {
       "type": "VoyagerResults",

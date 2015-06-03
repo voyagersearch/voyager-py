@@ -1,8 +1,7 @@
 {
   "name": "calculate_raster_statistics",
   "runner": "python",
-  "categories": ["download"],
-  "group": "Managing Raster",
+  "categories": ["Managing Raster"],
   "params": [
     {
       "type": "Geometry",

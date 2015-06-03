@@ -1,8 +1,7 @@
 {
   "name": "build_raster_pyramids",
   "runner": "python",
-  "categories": ["download"],
-  "group": "Managing Raster",
+  "categories": ["Managing Raster"],
   "params": [
     {
       "type": "VoyagerResults",

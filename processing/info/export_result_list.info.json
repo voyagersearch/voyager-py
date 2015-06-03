@@ -1,8 +1,8 @@
 {
   "name": "export_result_list",
   "runner": "python",
-  "categories": ["download"],
-  "group": "Managing Data and Files",
+  "categories": ["Extracting Data"],
+  "group": "",
   "params": [
     {
       "type": "VoyagerResults",

@@ -1,8 +1,7 @@
 {
   "name": "add_to_geodatabase",
   "runner": "python",
-  "categories": ["download"],
-  "group": "Managing Data and Files",
+  "categories": ["Managing Data and Files"],
   "params": [
     {
       "type": "VoyagerResults",

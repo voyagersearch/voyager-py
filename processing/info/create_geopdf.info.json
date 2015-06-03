@@ -1,8 +1,7 @@
 {
   "name": "create_geopdf",
   "runner": "python",
-  "categories": ["PDF", "Download"],
-  "group": "Extracting Data",
+  "categories": ["Extracting Data"],
   "params": [
     {
       "type": "VoyagerResults",

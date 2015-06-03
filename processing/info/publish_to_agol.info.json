@@ -1,8 +1,7 @@
 {
   "name": "publish_to_agol",
   "runner": "python",
-  "categories": ["download"],
-  "group": "Publishing Services",
+  "categories": ["Publishing Services"],
   "params": [
     {
       "type": "VoyagerResults",

@@ -1,8 +1,7 @@
 {
   "name": "delete_files",
   "runner": "python",
-  "categories": ["download"],
-  "group": "Managing Data and Files",
+  "categories": ["Managing Data and Files"],
   "security": ["_ADMIN"],
   "params": [
     {

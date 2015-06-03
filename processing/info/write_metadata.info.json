@@ -1,8 +1,8 @@
 {
   "name": "write_metadata",
   "runner": "python",
-  "categories": ["metadata"],
-  "group": "Managing Data and Files",
+  "categories": ["Managing Data and Files"],
+  "fields": "location",
   "params": [
       {
       "type": "VoyagerResults",
