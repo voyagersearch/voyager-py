@@ -250,12 +250,10 @@ def execute(request):
     arcpy.env.workspace = out_workspace
 
     result_count, response_index = task_utils.get_result_count(parameters)
-    # if result_count > task_utils.CHUNK_SIZE:
     # Query the index for results in groups of 25.
     query_index = task_utils.QueryIndex(parameters[response_index])
     fl = query_index.fl
-    # query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
-    query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
+    query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
     fq = query_index.get_fq()
     if fq:
         groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
@@ -263,10 +261,8 @@ def execute(request):
     else:
         groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
 
-    # i = 0.
     status_writer.send_percent(0.0, _('Starting to process...'), 'clip_data')
     for group in groups:
-        # i += len(group) - group.count('')
         if fq:
             results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
         else:
@@ -274,16 +270,9 @@ def execute(request):
 
         input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
         result = clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_clip_poly, out_format)
-        # result = clip_data(input_items, out_workspace, out_coordinate_system,
-        #                    clip_feature_class, where_statement, gcs_sr, gcs_clip_poly, out_format)
         clipped += result[0]
         errors += result[1]
         skipped += result[2]
-        # status_writer.send_percent(i / result_count, '{0}: {1:%}'.format("Processed", i / result_count), 'clip_data')
-    # else:
-    #     input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
-    #     clipped, errors, skipped = clip_data(input_items, out_workspace, out_coordinate_system, clip_feature_class,
-    #                                          where_statement, gcs_sr, gcs_clip_poly, out_format, True)
 
     if arcpy.env.workspace.endswith('.gdb'):
         out_workspace = os.path.dirname(arcpy.env.workspace)
