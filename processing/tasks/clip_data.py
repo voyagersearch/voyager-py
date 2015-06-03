@@ -25,6 +25,8 @@ from tasks import _
 status_writer = status.Writer()
 import arcpy
 
+result_count = 0
+processed_count = 0.
 files_to_package = list()
 
 
@@ -136,6 +138,7 @@ def create_lpk(data_location, additional_files):
     task_utils.save_to_layer_file(data_location, False)
 
     # Package all layer files.
+    status_writer.send_status("Packaging results...")
     layer_files = glob.glob(os.path.join(data_location, '*.lyr'))
     arcpy.PackageLayer_management(layer_files,
                                   os.path.join(os.path.dirname(data_location), 'output.lpk'),
@@ -185,16 +188,9 @@ def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
         elif ds.endswith('.lyr'):
             # Add all layer files to the mxd template.
             arcpy.mapping.AddLayer(df, arcpy.mapping.Layer(ds))
-        # elif ds.endswith('.mxd') and not ds == mxd.filePath:
-        #     # Add all layers from all map documents to the map template.
-        #     temp_mxd = arcpy.mapping.MapDocument(ds)
-        #     layers = arcpy.mapping.ListLayers(temp_mxd)
-        #     for layer in layers:
-        #         arcpy.mapping.AddLayer(df, layer)
-        #     del temp_mxd
-
     mxd.save()
     if mpk:
+        status_writer.send_status(_("Packaging results..."))
         # Package the map template.
         arcpy.PackageMap_management(mxd.filePath,
                                     mxd.filePath.replace('.mxd', '.mpk'),
@@ -213,6 +209,7 @@ def execute(request):
     clipped = 0
     errors = 0
     skipped = 0
+    global result_count
     parameters = request['params']
 
     # Retrieve clip geometry.
@@ -226,13 +223,8 @@ def execute(request):
     # Retrieve the coordinate system code.
     out_coordinate_system = int(task_utils.get_parameter_value(parameters, 'output_projection', 'code'))
 
-    # Retrieve the output format type.
+    # Retrieve the output format and create mxd parameter values.
     out_format = task_utils.get_parameter_value(parameters, 'output_format', 'value')
-
-    # Retrieve the clip features and where statement.
-    clip_feature_class = task_utils.get_parameter_value(parameters, 'clip_features', 'value')
-    where_statement = task_utils.get_parameter_value(parameters, 'where_statement', 'value')
-
     create_mxd = task_utils.get_parameter_value(parameters, 'create_mxd', 'value')
 
     # Create the temporary workspace if clip_feature_class:
@@ -240,56 +232,58 @@ def execute(request):
     if not os.path.exists(out_workspace):
         os.makedirs(out_workspace)
 
+    # Set the output coordinate system.
     if not out_coordinate_system == 0:  # Same as Input
         out_sr = task_utils.get_spatial_reference(out_coordinate_system)
         arcpy.env.outputCoordinateSystem = out_sr
 
-    if not clip_feature_class:
-        gcs_sr = task_utils.get_spatial_reference(4326)
-        gcs_clip_poly = task_utils.from_wkt(clip_area, gcs_sr)
-        if not gcs_clip_poly.area > 0:
-            gcs_clip_poly = task_utils.from_wkt('POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))', gcs_sr)
-    else:
-        gcs_sr = ""
-        gcs_clip_poly = None
+    # Create the clip polygon geometry object in WGS84 projection.
+    gcs_sr = task_utils.get_spatial_reference(4326)
+    gcs_clip_poly = task_utils.from_wkt(clip_area, gcs_sr)
+    if not gcs_clip_poly.area > 0:
+        gcs_clip_poly = task_utils.from_wkt('POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))', gcs_sr)
 
+    # Set the output workspace.
     status_writer.send_status(_('Setting the output workspace...'))
     if not out_format == 'SHP':
         out_workspace = arcpy.CreateFileGDB_management(out_workspace, 'output.gdb').getOutput(0)
     arcpy.env.workspace = out_workspace
 
-    num_results, response_index = task_utils.get_result_count(parameters)
-    if num_results > task_utils.CHUNK_SIZE:
-        # Query the index for results in groups of 25.
-        query_index = task_utils.QueryIndex(parameters[response_index])
-        fl = query_index.fl
-        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
-        fq = query_index.get_fq()
-        if fq:
-            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
-            query += fq
-        else:
-            groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
-
-        i = 0.
-        for group in groups:
-            i += len(group) - group.count('')
-            if fq:
-                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
-            else:
-                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
-
-            input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
-            result = clip_data(input_items, out_workspace, out_coordinate_system,
-                               clip_feature_class, where_statement, gcs_sr, gcs_clip_poly, out_format)
-            clipped += result[0]
-            errors += result[1]
-            skipped += result[2]
-            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'clip_data')
+    result_count, response_index = task_utils.get_result_count(parameters)
+    # if result_count > task_utils.CHUNK_SIZE:
+    # Query the index for results in groups of 25.
+    query_index = task_utils.QueryIndex(parameters[response_index])
+    fl = query_index.fl
+    # query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+    query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
+    fq = query_index.get_fq()
+    if fq:
+        groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
+        query += fq
     else:
-        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
-        clipped, errors, skipped = clip_data(input_items, out_workspace, out_coordinate_system, clip_feature_class,
-                                             where_statement, gcs_sr, gcs_clip_poly, out_format, True)
+        groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
+
+    # i = 0.
+    status_writer.send_percent(0.0, _('Starting to process...'), 'clip_data')
+    for group in groups:
+        # i += len(group) - group.count('')
+        if fq:
+            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+        else:
+            results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+
+        input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
+        result = clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_clip_poly, out_format)
+        # result = clip_data(input_items, out_workspace, out_coordinate_system,
+        #                    clip_feature_class, where_statement, gcs_sr, gcs_clip_poly, out_format)
+        clipped += result[0]
+        errors += result[1]
+        skipped += result[2]
+        # status_writer.send_percent(i / result_count, '{0}: {1:%}'.format("Processed", i / result_count), 'clip_data')
+    # else:
+    #     input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
+    #     clipped, errors, skipped = clip_data(input_items, out_workspace, out_coordinate_system, clip_feature_class,
+    #                                          where_statement, gcs_sr, gcs_clip_poly, out_format, True)
 
     if arcpy.env.workspace.endswith('.gdb'):
         out_workspace = os.path.dirname(arcpy.env.workspace)
@@ -318,19 +312,13 @@ def execute(request):
     task_utils.report(os.path.join(request['folder'], '_report.json'), clipped, skipped, errors)
 
 
-def clip_data(input_items, out_workspace, out_coordinate_system,
-              clip_feature_class, where_statement, gcs_sr,
-              gcs_clip_poly, out_format, show_progress=False):
+def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_clip_poly, out_format):
     """Clips input results."""
     clipped = 0
     errors = 0
     skipped = 0
     fds = None
-
-    if show_progress:
-        i = 1.
-        count = len(input_items)
-        status_writer.send_percent(0.0, _('Starting to process...'), 'clip_data')
+    global processed_count
 
     for ds, out_name in input_items.iteritems():
         try:
@@ -363,27 +351,20 @@ def clip_data(input_items, out_workspace, out_coordinate_system,
 
             # If a file, no need to project the clip area.
             if dsc.dataType not in ('File', 'TextFile'):
-                if clip_feature_class:
-                    arcpy.env.overwriteOutput = True
-                    clip_poly = clip_feature_class
-                    if where_statement:
-                        clip_poly = arcpy.MakeFeatureLayer_management(clip_poly, 'clip_polygons', where_statement)
-                    extent = arcpy.Describe(clip_poly).extent
-                else:
-                    if not out_sr.name == gcs_sr.name:
+                if not out_sr.name == gcs_sr.name:
+                    try:
+                        geo_transformation = arcpy.ListTransformations(gcs_sr, out_sr)[0]
+                        clip_poly = gcs_clip_poly.projectAs(out_sr, geo_transformation)
+                    except (AttributeError, IndexError):
                         try:
-                            geo_transformation = arcpy.ListTransformations(gcs_sr, out_sr)[0]
-                            clip_poly = gcs_clip_poly.projectAs(out_sr, geo_transformation)
-                        except (AttributeError, IndexError):
-                            try:
-                                clip_poly = gcs_clip_poly.projectAs(out_sr)
-                            except AttributeError:
-                                clip_poly = gcs_clip_poly
-                        except ValueError:
+                            clip_poly = gcs_clip_poly.projectAs(out_sr)
+                        except AttributeError:
                             clip_poly = gcs_clip_poly
-                    else:
+                    except ValueError:
                         clip_poly = gcs_clip_poly
-                    extent = clip_poly.extent
+                else:
+                    clip_poly = gcs_clip_poly
+                extent = clip_poly.extent
             # Feature class
             if dsc.dataType == 'FeatureClass':
                 if out_name == '':
@@ -460,9 +441,8 @@ def clip_data(input_items, out_workspace, out_coordinate_system,
                         f = arcpy.Copy_management(ds, os.path.join(os.path.dirname(out_workspace), out_name))
                     else:
                         f = arcpy.Copy_management(ds, os.path.join(out_workspace, out_name))
-                    if show_progress:
-                        status_writer.send_percent(i / count, _('Copied file: {0}').format(dsc.name), 'clip_data')
-                        i += 1.
+                    processed_count += 1.
+                    status_writer.send_percent(processed_count / result_count, _('Copied file: {0}').format(dsc.name), 'clip_data')
                     status_writer.send_state(_('Copied file: {0}').format(dsc.name))
                     clipped += 1
                     if out_format in ('LPK', 'MPK'):
@@ -473,24 +453,21 @@ def clip_data(input_items, out_workspace, out_coordinate_system,
             elif dsc.dataType == 'MapDocument':
                 clip_mxd_layers(dsc.catalogPath, clip_poly, map_frame_name)
             else:
-                if show_progress:
-                    status_writer.send_percent(i / count, _('Invalid input type: {0}').format(ds), 'clip_data')
-                    i += 1.
+                processed_count += 1.
+                status_writer.send_percent(processed_count / result_count, _('Invalid input type: {0}').format(ds), 'clip_data')
                 status_writer.send_state(_('Invalid input type: {0}').format(ds))
                 skipped += 1
                 continue
 
-            if show_progress:
-                status_writer.send_percent(i / count, _('Clipped: {0}').format(dsc.name), 'clip_data')
-                i += 1.
+            processed_count += 1.
+            status_writer.send_percent(processed_count / result_count, _('Clipped: {0}').format(dsc.name), 'clip_data')
             status_writer.send_status(_('Clipped: {0}').format(dsc.name))
             clipped += 1
         # Continue. Process as many as possible.
         except Exception as ex:
-            if show_progress:
-                status_writer.send_percent(i / count, _('Skipped: {0}').format(os.path.basename(ds)), 'clip_data')
+            processed_count += 1.
+            status_writer.send_percent(processed_count / result_count, _('Skipped: {0}').format(os.path.basename(ds)), 'clip_data')
             status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
-            i += 1.
             errors += 1
             pass
     return clipped, errors, skipped

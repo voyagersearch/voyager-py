@@ -80,6 +80,37 @@ class QueryIndex(object):
         return self._fq
 
 
+class ResultInfo(object):
+    def __init__(self, parameters):
+        self._location_id = None
+        self._result_count = 0
+        self._result_format = None
+        self._extractor = None
+        for self.i, parameter in enumerate(parameters):
+            if 'response' in parameter:
+                self._result_count = parameter['response']['numFound']
+                self._location_id = parameter['response']['docs'][0]['location']
+                self._result_format = parameter['response']['docs'][0]['format']
+                self._extractor = parameter['response']['docs'][0]['extractor']
+                break
+
+    @property
+    def result_count(self):
+        return self._result_count
+
+    @property
+    def location_id(self):
+        return self._location_id
+
+    @property
+    def result_format(self):
+        return self._result_format
+
+    @property
+    def extractor(self):
+        return self._extractor
+
+
 def time_it(func):
     """A timer decorator - use this to time a function."""
     def timed(*args, **kwargs):
@@ -99,8 +130,11 @@ def create_unique_name(name, gdb):
     :rtype : str
     """
     import arcpy
-    valid_name = arcpy.ValidateTableName(name, gdb)
-    unique_name = arcpy.CreateUniqueName(valid_name, gdb)
+    if gdb.endswith('.gdb'):
+        valid_name = arcpy.ValidateTableName(name, gdb)
+        unique_name = arcpy.CreateUniqueName(valid_name, gdb)
+    else:
+        unique_name = arcpy.CreateUniqueName(name + '.shp', gdb)
     return unique_name
 
 
@@ -159,6 +193,7 @@ def get_result_count(parameters):
             count = parameter['response']['numFound']
             break
     return count, i
+
 
 def grouper(iterable, n, fill_value=None):
     """Collect data into fixed-length chunks or blocks.

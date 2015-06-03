@@ -1,25 +1,17 @@
 {
   "name": "clip_data",
   "runner": "python",
-  "categories": ["download"],
-  "group": "Extracting Data",
+  "categories": ["Extracting Data"],
   "params": [
     {
       "type": "VoyagerResults",
       "name": "input_items",
       "required": true
     },
-	{
-	  "type": "CatalogPath",
-	  "name": "clip_features"
-	},
-	{
-	  "type": "String",
-	  "name": "where_statement"
-	},
     {
-      "type": "Projection",
-      "name": "output_projection"
+      "type": "Geometry",
+      "name": "clip_geometry",
+      "initWithResultsExtent": true
     },
     {
       "type": "StringChoice",
@@ -33,18 +25,17 @@
       ]
     },
     {
-      "type": "CheckBox",
-      "name": "create_mxd"
+      "type": "Projection",
+      "name": "output_projection"
     },
     {
-      "type": "Geometry",
-      "name": "clip_geometry",
-      "initWithResultsExtent": true
+      "type": "CheckBox",
+      "name": "create_mxd"
     }
   ],
   "display": {
     "en": {
-      "display": "Clip Data",
+      "display": "Clip Data by Polygon",
       "description": "Clips selected search results using the clip geometry",
       "helpURL": "https://voyagersearch.zendesk.com/entries/93829566-Clip-Data",
       "params": {
@@ -52,14 +43,6 @@
           "display": "Clip Geometry",
           "description": "Draw a geographic extent or polygon to clip the data"
         },
-		"clip_features": {
-		  "display": "Clip Feature Class",
-		  "description": "Enter a clip feature class"
-		},
-		"where_statement": {
-		  "display": "Where Statement",
-		  "description": "Enter a where statement to select a subset of of clip polygons"
-		},
         "output_projection": {
           "display": "Projection",
           "description": "Choose an output projection"
