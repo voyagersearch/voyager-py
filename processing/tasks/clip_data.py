@@ -17,14 +17,12 @@ import sys
 import glob
 import shutil
 import urllib2
-from tasks.utils import status
-from tasks.utils import task_utils
-from tasks import _
+import arcpy
+from utils import status
+from utils import task_utils
 
 
 status_writer = status.Writer()
-import arcpy
-
 result_count = 0
 processed_count = 0.
 files_to_package = list()

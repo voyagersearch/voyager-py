@@ -46,6 +46,7 @@ class ZipFileManager(zipfile.ZipFile):
 
 
 class QueryIndex(object):
+    """Helper class for querying the Voyager index."""
     def __init__(self, items):
         self._items = items
         self._fq = ''
@@ -77,38 +78,11 @@ class QueryIndex(object):
                 else:
                     self._fq += '&q={0}'.format(self._items['query']['q'].replace("\\", ""))
                     self._fq = self._fq.replace(' ', '%20')
+        elif 'ids' in self._items:
+            ids = self._items['ids']
+            self._fq += '&fq=({0})'.format(','.join(ids))
+            self._fq = self._fq.replace(' ', '%20')
         return self._fq
-
-
-class ResultInfo(object):
-    def __init__(self, parameters):
-        self._location_id = None
-        self._result_count = 0
-        self._result_format = None
-        self._extractor = None
-        for self.i, parameter in enumerate(parameters):
-            if 'response' in parameter:
-                self._result_count = parameter['response']['numFound']
-                self._location_id = parameter['response']['docs'][0]['location']
-                self._result_format = parameter['response']['docs'][0]['format']
-                self._extractor = parameter['response']['docs'][0]['extractor']
-                break
-
-    @property
-    def result_count(self):
-        return self._result_count
-
-    @property
-    def location_id(self):
-        return self._location_id
-
-    @property
-    def result_format(self):
-        return self._result_format
-
-    @property
-    def extractor(self):
-        return self._extractor
 
 
 def time_it(func):
@@ -186,7 +160,7 @@ def get_clip_region(clip_area_wkt, out_coordinate_system=None):
 
 
 def get_result_count(parameters):
-    """Returns the number of results and the reponse index."""
+    """Returns the number of results and the response index."""
     count, i = 0, 0
     for i, parameter in enumerate(parameters):
         if 'response' in parameter:
