@@ -17,12 +17,13 @@ import sys
 import shutil
 import tempfile
 import urllib2
-from tasks.utils import status
-from tasks.utils import task_utils
-from tasks import _
+from utils import status
+from utils import task_utils
 
 
 status_writer = status.Writer()
+result_count = 0
+processed_count = 0.
 import arcpy
 
 
@@ -37,125 +38,54 @@ def is_feature_dataset(workspace):
     return False
 
 
-def execute(request):
-    """Copies data to an existing geodatabase or feature dataset.
-    :param request: json as a dict.
-    """
-    added = 0
-    errors = 0
-    skipped = 0
-    parameters = request['params']
-
-    # Get the target workspace location.
-    out_gdb = task_utils.get_parameter_value(parameters, 'target_workspace', 'value')
-
-    # Retrieve the coordinate system code.
-    out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
-    if not out_coordinate_system == '0':  # Same as Input
-        arcpy.env.outputCoordinateSystem = task_utils.get_spatial_reference(out_coordinate_system)
-
-    task_folder = request['folder']
-    if not os.path.exists(task_folder):
-        os.makedirs(task_folder)
-
-    # Check if the geodatabase exists or if it is a feature dataset.
-    is_fds = False
-    if not os.path.exists(out_gdb):
-        if out_gdb.endswith('.gdb'):
-            arcpy.CreateFileGDB_management(os.path.dirname(out_gdb), os.path.basename(out_gdb))
-            status_writer.send_status(_('Created output workspace: {0}').format(out_gdb))
-        elif out_gdb.endswith('.mdb'):
-            arcpy.CreatePersonalGDB_management(os.path.dirname(out_gdb), os.path.basename(out_gdb))
-            status_writer.send_status(_('Created output workspace: {0}').format(out_gdb))
-        elif out_gdb.endswith('.sde'):
-            status_writer.send_state(status.STAT_FAILED, _('{0} does not exist').format(out_gdb))
-            return
-        else:
-            # Possible feature dataset.
-            is_fds = is_feature_dataset(out_gdb)
-            if not is_fds:
-                if os.path.dirname(out_gdb).endswith('.gdb'):
-                    if not os.path.exists(os.path.dirname(out_gdb)):
-                        arcpy.CreateFileGDB_management(os.path.dirname(os.path.dirname(out_gdb)),
-                                                       os.path.basename(os.path.dirname(out_gdb)))
-                    arcpy.CreateFeatureDataset_management(os.path.dirname(out_gdb), os.path.basename(out_gdb))
-                elif os.path.dirname(out_gdb).endswith('.mdb'):
-                    if not os.path.exists(os.path.dirname(out_gdb)):
-                        arcpy.CreatePersonalGDB_management(os.path.dirname(os.path.dirname(out_gdb)),
-                                                           os.path.basename(os.path.dirname(out_gdb)))
-                    arcpy.CreateFeatureDataset_management(os.path.dirname(out_gdb), os.path.basename(out_gdb))
-
-
-    status_writer.send_status(_('Setting the output workspace...'))
-    arcpy.env.workspace = out_gdb
-
-    num_results, response_index = task_utils.get_result_count(parameters)
-    if num_results > task_utils.CHUNK_SIZE:
-        # Query the index for results in groups of 25.
-        query_index = task_utils.QueryIndex(parameters[response_index])
-        fl = query_index.fl
-        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
-        # query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
-        fq = query_index.get_fq()
-        if fq:
-            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
-            query += fq
-        else:
-            groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
-
-        i = 0.
-        for group in groups:
-            i += len(group) - group.count('')
-            if fq:
-                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
-            else:
-                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
-
-            input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
-            if not input_items:
-                status_writer.send_state(status.STAT_FAILED, _('No items to process. Check if items exist.'))
-                return
-            result = add_to_geodatabase(input_items, out_gdb, is_fds)
-            added += result[0]
-            errors += result[1]
-            skipped += result[2]
-            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'add_to_geodatabase')
-    else:
-        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
-        if not input_items:
-            status_writer.send_state(status.STAT_FAILED, _('No items to process. Check if items exist.'))
-            return
-        added, errors, skipped = add_to_geodatabase(input_items, out_gdb, is_fds, True)
-
-    # Copy the default thumbnail and create a report in the task folder..
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
-    except IOError:
-        pass
-
-    # Update state if necessary.
-    if skipped > 0 or errors > 0:
-        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
-    task_utils.report(os.path.join(task_folder, '_report.json'), added, skipped, errors)
-
-
 def add_to_geodatabase(input_items, out_gdb, is_fds, show_progress=False):
+    """Adds items to a geodatabase."""
     added = 0
     skipped = 0
     errors = 0
-
-    if show_progress:
-        i = 1.
-        count = len(input_items)
-        status_writer.send_percent(0.0, _('Starting to process...'), 'add_to_geodatabase')
+    global processed_count
 
     for ds, out_name in input_items.iteritems():
         try:
+            # -----------------------------------------------
+            # If the item is a service layer, process and continue.
+            # -----------------------------------------------
+            if ds.startswith('http'):
+                try:
+                    service_layer = task_utils.ServiceLayer(ds)
+                    arcpy.env.overwriteOutput = True
+                    oid_groups = service_layer.object_ids
+                    out_features = None
+                    for group in oid_groups:
+                        group = [oid for oid in group if not oid == None]
+                        where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
+                        url = ds + "/query?where={}&outFields={}&returnGeometry=true&geometryType=esriGeometryPolygon&f=json&token={}".format(where, '*', '')
+                        feature_set = arcpy.FeatureSet()
+                        feature_set.load(url)
+                        if not out_features:
+                            out_features = arcpy.CopyFeatures_management(feature_set, task_utils.create_unique_name(out_name, out_gdb))
+                        else:
+                            features = arcpy.CopyFeatures_management(feature_set, task_utils.create_unique_name(out_name, out_gdb))
+                            arcpy.Append_management(features, out_features, 'NO_TEST')
+                    processed_count += 1.
+                    added += 1
+                    status_writer.send_percent(processed_count / result_count, _('Added: {0}').format(ds), 'add_to_geodatabase')
+                    continue
+                except Exception as ex:
+                    status_writer.send_state(status.STAT_WARNING, str(ex))
+                    errors += 1
+                    continue
+
+            # ------------------------------
             # Is the input a mxd data frame.
+            # ------------------------------
             map_frame_name = task_utils.get_data_frame_name(ds)
             if map_frame_name:
                 ds = ds.split('|')[0].strip()
 
+            # -----------------------------
+            # Check the data type and clip.
+            # -----------------------------
             dsc = arcpy.Describe(ds)
             if dsc.dataType == 'FeatureClass':
                 if out_name == '':
@@ -239,9 +169,8 @@ def add_to_geodatabase(input_items, out_gdb, is_fds, show_progress=False):
                     arcpy.Delete_management(os.path.join(temp_dir, '{}.lyr'.format(name)))
                     arcpy.Delete_management(kml_layer)
                 else:
-                    if show_progress:
-                        status_writer.send_percent(i / count, _('Invalid input type: {0}').format(dsc.name), 'add_to_geodatabase')
-                        i += 1.
+                    processed_count += 1
+                    status_writer.send_percent(processed_count / result_count, _('Invalid input type: {0}').format(dsc.name), 'add_to_geodatabase')
                     skipped += 1
                     continue
 
@@ -284,17 +213,110 @@ def add_to_geodatabase(input_items, out_gdb, is_fds, show_progress=False):
                 arcpy.Copy_management(ds, task_utils.create_unique_name(dsc.name, out_gdb))
 
             out_gdb = arcpy.env.workspace
-            if show_progress:
-                i += 1.
-                status_writer.send_percent(i / count, _('Added: {0}').format(ds), 'add_to_geodatabase')
+            processed_count += 1.
+            status_writer.send_percent(processed_count / result_count, _('Added: {0}').format(ds), 'add_to_geodatabase')
             status_writer.send_status(_('Added: {0}').format(ds))
             added += 1
         # Continue if an error. Process as many as possible.
         except Exception as ex:
-            if show_progress:
-                status_writer.send_percent(i / count, _('Skipped: {0}').format(ds), 'add_to_geodatabase')
+            processed_count += 1
+            status_writer.send_percent(processed_count / result_count, _('Skipped: {0}').format(ds), 'add_to_geodatabase')
             status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
             errors += 1
             continue
 
     return added, errors, skipped
+
+
+def execute(request):
+    """Copies data to an existing geodatabase or feature dataset.
+    :param request: json as a dict.
+    """
+    added = 0
+    errors = 0
+    skipped = 0
+    global result_count
+    parameters = request['params']
+
+    # Get the target workspace location.
+    out_gdb = task_utils.get_parameter_value(parameters, 'target_workspace', 'value')
+
+    # Retrieve the coordinate system code.
+    out_coordinate_system = task_utils.get_parameter_value(parameters, 'output_projection', 'code')
+    if not out_coordinate_system == '0':  # Same as Input
+        arcpy.env.outputCoordinateSystem = task_utils.get_spatial_reference(out_coordinate_system)
+
+    task_folder = request['folder']
+    if not os.path.exists(task_folder):
+        os.makedirs(task_folder)
+
+    # Check if the geodatabase exists or if it is a feature dataset.
+    is_fds = False
+    if not os.path.exists(out_gdb):
+        if out_gdb.endswith('.gdb'):
+            arcpy.CreateFileGDB_management(os.path.dirname(out_gdb), os.path.basename(out_gdb))
+            status_writer.send_status(_('Created output workspace: {0}').format(out_gdb))
+        elif out_gdb.endswith('.mdb'):
+            arcpy.CreatePersonalGDB_management(os.path.dirname(out_gdb), os.path.basename(out_gdb))
+            status_writer.send_status(_('Created output workspace: {0}').format(out_gdb))
+        elif out_gdb.endswith('.sde'):
+            status_writer.send_state(status.STAT_FAILED, _('{0} does not exist').format(out_gdb))
+            return
+        else:
+            # Possible feature dataset.
+            is_fds = is_feature_dataset(out_gdb)
+            if not is_fds:
+                if os.path.dirname(out_gdb).endswith('.gdb'):
+                    if not os.path.exists(os.path.dirname(out_gdb)):
+                        arcpy.CreateFileGDB_management(os.path.dirname(os.path.dirname(out_gdb)),
+                                                       os.path.basename(os.path.dirname(out_gdb)))
+                    arcpy.CreateFeatureDataset_management(os.path.dirname(out_gdb), os.path.basename(out_gdb))
+                elif os.path.dirname(out_gdb).endswith('.mdb'):
+                    if not os.path.exists(os.path.dirname(out_gdb)):
+                        arcpy.CreatePersonalGDB_management(os.path.dirname(os.path.dirname(out_gdb)),
+                                                           os.path.basename(os.path.dirname(out_gdb)))
+                    arcpy.CreateFeatureDataset_management(os.path.dirname(out_gdb), os.path.basename(out_gdb))
+
+
+    status_writer.send_status(_('Setting the output workspace...'))
+    arcpy.env.workspace = out_gdb
+
+    result_count, response_index = task_utils.get_result_count(parameters)
+    # Query the index for results in groups of 25.
+    query_index = task_utils.QueryIndex(parameters[response_index])
+    fl = query_index.fl
+    query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+    # query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
+    fq = query_index.get_fq()
+    if fq:
+        groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
+        query += fq
+    else:
+        groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
+
+    status_writer.send_percent(0.0, _('Starting to process...'), 'add_to_geodatabase')
+    for group in groups:
+        if fq:
+            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+        else:
+            results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+
+        input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
+        if not input_items:
+            status_writer.send_state(status.STAT_FAILED, _('No items to process. Check if items exist.'))
+            return
+        result = add_to_geodatabase(input_items, out_gdb, is_fds)
+        added += result[0]
+        errors += result[1]
+        skipped += result[2]
+
+    # Copy the default thumbnail and create a report in the task folder..
+    try:
+        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
+    except IOError:
+        pass
+
+    # Update state if necessary.
+    if skipped > 0 or errors > 0:
+        status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
+    task_utils.report(os.path.join(task_folder, '_report.json'), added, skipped, errors)
