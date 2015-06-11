@@ -64,13 +64,71 @@ def run_job(job):
         is_point = False
         shape_field_name = ''
 
+        # --------------------------------------------------------------------------------------------------
+        # Get the table schema.
+        # --------------------------------------------------------------------------------------------------
+        schema = {}
+        schema['name'] = tbl
+
+        # Get the primary key.
+        qry = "SELECT K.COLUMN_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS C JOIN " \
+              "INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS K ON " \
+              "C.TABLE_NAME = K.TABLE_NAME AND C.CONSTRAINT_NAME = K.CONSTRAINT_NAME WHERE " \
+              "C.CONSTRAINT_TYPE = 'PRIMARY KEY' AND K.TABLE_NAME = '{0}'".format(tbl)
+        cols = job.execute_query(qry).fetchall()
+        primary_key = ''
+        if cols:
+            primary_key = cols[0][0]
+
+        # Get the foreign key.
+        qry = "SELECT K.COLUMN_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS C JOIN " \
+              "INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS K ON " \
+              "C.TABLE_NAME = K.TABLE_NAME AND C.CONSTRAINT_NAME = K.CONSTRAINT_NAME WHERE " \
+              "C.CONSTRAINT_TYPE = 'FOREIGN KEY' AND K.TABLE_NAME = '{0}'".format(tbl)
+        cols = job.execute_query(qry).fetchall()
+        foreign_key = ''
+        if cols:
+            foreign_key = cols[0][0]
+
+        # Get the columns that have indexes.
+        qry = "SELECT COL_NAME(ic.object_id,ic.column_id) AS column_name " \
+              "FROM sys.indexes AS i INNER JOIN sys.index_columns AS ic ON i.object_id = ic.object_id " \
+              "AND i.index_id = ic.index_id WHERE i.object_id = OBJECT_ID('STATES')"
+        cols = job.execute_query(qry).fetchall()
+        indexed_cols = []
+        if cols:
+            for col in cols:
+                indexed_cols.append(col[0])
+
+        schema_columns = []
+        for col in job.db_cursor.columns(table=tbl).fetchall():
+            column = {}
+            props = []
+            column['name'] = col.column_name
+            column['type'] = col.type_name
+            if col.type_name == 'geometry':
+                column['isGeo'] = True
+                column['crs'] = job.db_cursor.execute("select {0}.STSrid from {1}".format(col.column_name, tbl)).fetchone()[0]
+            if col.column_name == primary_key:
+                props.append('PRIMARY KEY')
+            if col.column_name == foreign_key:
+                props.append('FOREIGN KEY')
+            if col.column_name in indexed_cols:
+                props.append('INDEXED')
+            if col.is_nullable == 'YES':
+                props.append('NULLABLE')
+            else:
+                props.append('NOTNULLABLE')
+            column['properties'] = props
+            schema_columns.append(column)
+        schema['fields'] = schema_columns
+
         # --------------------------------
         # Get the list of columns to keep.
         # --------------------------------
         if not job.fields_to_keep == ['*']:
             columns = []
             column_types = {}
-
             for col in job.fields_to_keep:
                 qry = "select column_name, data_type from INFORMATION_SCHEMA.columns where table_name = '{0}' and column_name like '{1}'".format(tbl, col)
                 for c in job.execute_query(qry).fetchall():
@@ -103,7 +161,6 @@ def run_job(job):
                 for c in job.db_cursor.columns(table=related_table):
                     if not c.type_name == 'geometry':
                         related_columns.append("{0}.{1}".format(related_table, c.column_name))
-                        # related_column_types["{0}.{1}".format(related_table, c.column_name)] = c.type_name
 
         # --------------------------------------------------------------------------------------------------------
         # Check for a geometry column and pull out X,Y for points and extent coordinates for other geometry types.
@@ -154,6 +211,20 @@ def run_job(job):
         increment = job.get_increment(row_count)
         geometry_ops = worker_utils.GeometryOps()
         generalize_value = job.generalize_value
+
+
+        # -----------------------------------------------
+        # Add an entry for the table itself with schema.
+        # -----------------------------------------------
+        schema['rows'] = row_count
+        table_entry = {}
+        table_entry['id'] = '{0}_{1}'.format(location_id, tbl)
+        table_entry['location'] = location_id
+        table_entry['action'] = action_type
+        table_entry['entry'] = {'fields': {'_discoveryID': discovery_id, 'name': tbl, 'path': job.sql_server_connection_str}}
+        table_entry['entry']['fields']['schema'] = schema
+        job.send_entry(table_entry)
+
         for i, row in enumerate(rows):
             if not cur_id == row[0]:
                 if entry:
@@ -189,8 +260,6 @@ def run_job(job):
                     mapped_cols['id'] = '{0}{1}'.format(random.randint(0, 1000000), mapped_cols['id'])
                 else:
                     mapped_cols['id'] = "{0}{1}".format(random.randint(0, 1000000), i)
-                mapped_cols['title'] = tbl
-                mapped_cols['meta_testid'] = i
                 entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
                 entry['location'] = location_id
                 entry['action'] = action_type
@@ -217,7 +286,6 @@ def run_job(job):
                     link_entry['entry'] = {"fields": link}
                     if job.format:
                         link_entry['entry']['fields']['__to_extract'] = True
-                        link_entry['entry']['fields']['format'] = job.format
                     job.send_entry(link_entry)
                     # Append the link to a list that will be part of the main entry.
                     links.append(link)
@@ -246,7 +314,6 @@ def run_job(job):
                 link_entry['entry'] = {"fields": link}
                 if job.format:
                     link_entry['entry']['fields']['__to_extract'] = True
-                    link_entry['entry']['fields']['format'] = job.format
                 job.send_entry(link_entry)
 
                 links.append(link)

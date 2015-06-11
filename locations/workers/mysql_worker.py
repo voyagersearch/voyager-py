@@ -57,23 +57,62 @@ def run_job(mysql_job):
     job.connect_to_zmq()
     job.connect_to_database()
     tables = get_tables(job)
-
+    processed = 0
     for table in tables:
         geo = {}
         is_point = False
         has_shape = False
+
+        # --------------------------------------------------------------------------------------------------
+        # Get the table schema.
+        # --------------------------------------------------------------------------------------------------
+        schema = {}
+        # Get the primary key.
+        qry = "SELECT column_name FROM information_schema.table_constraints JOIN information_schema.key_column_usage USING (CONSTRAINT_NAME, TABLE_NAME) WHERE CONSTRAINT_TYPE = 'PRIMARY KEY' AND table_name = '{0}'".format(table)
+        cols = job.execute_query(qry).fetchall()
+        primary_key = ''
+        if cols:
+            primary_key = cols[0][0]
+
+        # Get the columns which are indexed.
+        qry = "SELECT *  FROM information_schema.statistics WHERE table_name = '{0}'".format(table)
+        cols = job.execute_query(qry).fetchall()
+        indexed_cols = []
+        if cols:
+            for col in cols:
+                indexed_cols.append(col.COLUMN_NAME)
+
+        schema_columns = []
+        for col in job.db_cursor.columns(table=table).fetchall():
+            column = {}
+            props = []
+            column['name'] = col.column_name
+            column['type'] = col.type_name
+            if col.column_name == primary_key:
+                props.append('PRIMARY KEY')
+            if col.column_name in indexed_cols:
+                props.append('INDEXED')
+            if col.is_nullable == 'YES':
+                props.append('NULLABLE')
+            else:
+                props.append('NOTNULLABLE')
+            column['properties'] = props
+            schema_columns.append(column)
+        schema['fields'] = schema_columns
+        schema['name'] = table
+
+        # --------------------------------------------------------------------------------------------------
+        # Set up the fields to index.
+        # --------------------------------------------------------------------------------------------------
+        columns = []
+        column_types = {}
         if not job.fields_to_keep == ['*']:
-            columns = []
-            column_types = {}
-            geo = {}
             for col in job.fields_to_keep:
                 qry = "select column_name, data_type from information_schema.columns where table_name = '{0}' and column_name like '{1}'".format(table, col)
                 for col in job.execute_query(qry).fetchall():
                     columns.append(col[0])
                     column_types[col[0]] = col[1]
         else:
-            columns = []
-            column_types = {}
             for col in job.db_cursor.columns(table=table).fetchall():
                 columns.append(col.column_name)
                 column_types[col.column_name] = col.type_name
@@ -83,6 +122,9 @@ def run_job(mysql_job):
                 qry = "select column_name from information_schema.columns where table_name = '{0}' AND column_name like '{1}'".format(table, col)
                 [columns.remove(col[0]) for col in job.execute_query(qry).fetchall()]
 
+        # ------------------------------------------------------------------------------------------------
+        # Get the query information.
+        # ------------------------------------------------------------------------------------------------
         query = job.get_table_query(table)
         constraint = job.get_table_constraint(table)
         if query and constraint:
@@ -93,7 +135,9 @@ def run_job(mysql_job):
             else:
                 expression = constraint
 
+        # --------------------------------------------------------------------------------------------------------
         # Check for a geometry column and pull out X,Y for points and extent coordinates for other geometry types.
+        # --------------------------------------------------------------------------------------------------------
         for col in job.db_cursor.columns(table=table).fetchall():
             if col.type_name == 'geometry':
                 has_shape = True
@@ -111,29 +155,48 @@ def run_job(mysql_job):
                 column_types.pop(col.column_name)
                 break
 
+
+        # ------------------------------
         # Query the table for the rows.
+        # ------------------------------
         if not expression:
             rows = job.db_cursor.execute("select {0} from {1}".format(','.join(columns), table))
         else:
             rows = job.db_cursor.execute("select {0} from {1} where {2}".format(','.join(columns), table, expression))
 
+        # --------------------------------------
         # Remove shape columns from field list.
+        # --------------------------------------
         for x in ("X({0})".format(col.column_name), "Y({0})".format(col.column_name), "AsText({0})".format(col.column_name)):
             try:
                 columns.remove(x)
             except ValueError:
                 continue
 
+        # -----------------------------
         # Index each row in the table.
+        # -----------------------------
         entry = {}
         location_id = job.location_id
         discovery_id = job.discovery_id
         action_type = job.action_type
         mapped_fields = job.map_fields(table, columns, column_types)
+        new_fields = job.new_fields
         row_count = float(rows.rowcount)
+        schema['rows'] = row_count
         increment = job.get_increment(row_count)
         geometry_ops = worker_utils.GeometryOps()
         generalize_value = job.generalize_value
+
+        # Add an entry for the table itself with schema.
+        table_entry = {}
+        table_entry['id'] = '{0}_{1}'.format(location_id, table)
+        table_entry['location'] = location_id
+        table_entry['action'] = action_type
+        table_entry['entry'] = {'fields': {'_discoveryID': discovery_id, 'name': table, 'path': job.sql_server_connection_str}}
+        table_entry['entry']['fields']['schema'] = schema
+        job.send_entry(table_entry)
+
         for i, row in enumerate(rows):
             if has_shape:
                 if is_point:
@@ -143,6 +206,10 @@ def run_job(mysql_job):
                     geo['lat'] = row[1]
                     mapped_cols = dict(zip(mapped_fields[3:], row[3:]))
                     mapped_cols['geometry_type'] = 'Point'
+                    for nf in new_fields:
+                        if nf['name'] == '*' or nf['name'] == table:
+                            for k, v in nf['new_fields'].iteritems():
+                                mapped_fields[k] = v
                 else:
                     if job.include_wkt:
                         if generalize_value == 0:
@@ -155,12 +222,20 @@ def run_job(mysql_job):
                     geo['xmax'] = float(nums[4])
                     geo['ymax'] = float(nums[5])
                     mapped_cols = dict(zip(mapped_fields[1:], row[1:]))
+                    for nf in new_fields:
+                        if nf['name'] == '*' or nf['name'] == table:
+                            for k, v in nf['new_fields'].iteritems():
+                                mapped_fields[k] = v
                     if 'POLYGON' in geom_type:
                         mapped_cols['geometry_type'] = 'Polygon'
                     else:
                         mapped_cols['geometry_type'] = 'Polyline'
             else:
                 mapped_cols = dict(zip(mapped_fields, row))
+                for nf in new_fields:
+                        if nf['name'] == '*' or nf['name'] == table:
+                            for k, v in nf['new_fields'].iteritems():
+                                mapped_fields[k] = v
 
             # Create an entry to send to ZMQ for indexing.
             mapped_cols['title'] = table
@@ -172,3 +247,5 @@ def run_job(mysql_job):
             job.send_entry(entry)
             if (i % increment) == 0:
                 status_writer.send_percent(i / row_count, '{0}: {1:%}'.format(table, i / row_count), 'MySql')
+        processed += i
+    status_writer.send_status("Processed: {0}".format(processed))

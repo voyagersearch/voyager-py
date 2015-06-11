@@ -185,7 +185,9 @@ def run_job(oracle_job):
         geometry_field = None
         shape_type = None
 
+        # ----------------------------------------------------------------------------
         # Check if the table is a layer/view and set name as "owner.table".
+        # ----------------------------------------------------------------------------
         if isinstance(tbl, tuple):
             column_query = "select column_name, data_type from all_tab_cols where " \
                            "table_name = '{0}' and column_name like".format(tbl[0])
@@ -196,7 +198,69 @@ def run_job(oracle_job):
             column_query = "select column_name, data_type from all_tab_cols where " \
                            "table_name = '{0}' and column_name like".format(tbl)
 
+        # -----------------------------------------------------------------------------------------------------
+        # Get the table schema.
+        # -----------------------------------------------------------------------------------------------------
+        table_schema = {}
+        schema_columns = []
+        table_schema['name'] = tbl
+
+        # Get primary key and foreign keys
+        primary_key_col = ''
+        foreign_key_col = ''
+        primary_key_qry = "select c.table_name, c.column_name from all_constraints cons, all_cons_columns c " \
+            "where c.table_name = '{0}' and cons.constraint_type like 'P%' " \
+            "and cons.constraint_name = c.constraint_name".format(tbl)
+        primary_cols = job.execute_query(primary_key_qry).fetchone()
+        if primary_cols:
+            primary_key_col = primary_cols[1]
+        foreign_key_qry = "select c.table_name, c.column_name from all_constraints cons, all_cons_columns c " \
+            "where c.table_name = '{0}' and cons.constraint_type like 'F%' " \
+            "and cons.constraint_name = c.constraint_name".format(tbl)
+        foreign_cols = job.execute_query(foreign_key_qry).fetchone()
+        if foreign_cols:
+            foreign_key_col = foreign_cols[1]
+
+        # Get columns that are indexed.
+        if "." in tbl:
+            owner, table = tbl.split('.')
+            index_query = "select column_name from all_ind_columns where table_name = '{0}' and index_owner = '{1}'".format(table, owner)
+        else:
+            index_query = "select column_name from all_ind_columns where table_name = '{0}'".format(tbl)
+        index_columns = [c[0] for c in job.execute_query(index_query).fetchall()]
+
+        for i, c in enumerate(job.execute_query("select * from {0}".format(tbl)).description):
+            schema_col = {}
+            schema_props = []
+            schema_col['name'] = c[0]
+            schema_col['type'] = c[1]
+            try:
+                if c[1] in ('SDO_GEOMETRY', 'ST_GEOMETRY'):
+                    schema_col['isGeo'] = True
+                elif job.db_cursor.fetchvars[i].type.name == 'ST_GEOMETRY':
+                    schema_col['isGeo'] = True
+                elif job.db_cursor.fetchvars[i].type.name == 'SDO_GEOMETRY':
+                    schema_col['isGeo'] = True
+            except AttributeError:
+                pass
+            if c[6] == 1:
+                schema_props.append('NULLABLE')
+            else:
+                schema_props.append('NOTNULLABLE')
+            if c[0] == primary_key_col:
+                schema_props.append('PRIMARY KEY')
+            if c[0] == foreign_key_col:
+                schema_props.append('FOREIGN KEY')
+            if c[0] in index_columns:
+                schema_props.append('INDEXED')
+            if schema_props:
+                schema_col['properties'] = schema_props
+            schema_columns.append(schema_col)
+        table_schema['fields'] = schema_columns
+
+        # ---------------------------------------------------------------------------------------
         # Create the list of columns and column types to include in the index.
+        # ---------------------------------------------------------------------------------------
         if not job.fields_to_keep == ['*']:
             for col in job.fields_to_keep:
                 for c in job.db_cursor.execute("{0} '{1}'".format(column_query, col)).fetchall():
@@ -226,12 +290,16 @@ def run_job(oracle_job):
                 except AttributeError:
                     continue
 
+        # -----------------------------------
         # Remove fields meant to be excluded.
+        # -----------------------------------
         if job.fields_to_skip:
             for col in job.fields_to_skip:
                 [columns.remove(c[0]) for c in job.execute_query("{0} '{1}'".format(column_query, col)).fetchall()]
 
+        # -----------------------------------------------------------
         # If there is a shape column, get the geographic information.
+        # -----------------------------------------------------------
         if geometry_field:
             columns.remove(geometry_field)
 
@@ -278,12 +346,16 @@ def run_job(oracle_job):
                             for x in ('maxy', 'maxx', 'miny', 'minx', 'astext'):
                                 columns.insert(0, '{0}.st_{1}({2})'.format(schema, x, geometry_field))
 
+        # -------------------------------------------------
         # Drop astext from columns if WKT is not requested.
+        # -------------------------------------------------
         include_wkt = job.include_wkt
         if not include_wkt and not geometry_type == 'SDO_GEOMETRY':
             columns.pop(0)
 
+        # ------------------------------------------------------------
         # Get the count of all the rows to use for reporting progress.
+        # ------------------------------------------------------------
         if query:
             row_count = job.db_cursor.execute("select count(*) from {0} where {1}".format(tbl, query)).fetchall()[0][0]
         else:
@@ -293,7 +365,9 @@ def run_job(oracle_job):
         else:
             row_count = float(row_count)
 
-        # Get the rows.
+        # ---------------------------
+        # Get the rows to be indexed.
+        # ---------------------------
         try:
             if geometry_type == 'SDO_GEOMETRY':
                 rows = job.db_cursor.execute("select {0} from {1} {2}".format(','.join(columns), tbl, schema))
@@ -319,13 +393,26 @@ def run_job(oracle_job):
             status_writer.send_status("Skipping {0} - no records.".format(tbl))
             continue
 
+        # ---------------------------------------------------------
         # Index each row.
+        # ---------------------------------------------------------
         mapped_fields = job.map_fields(tbl, columns, column_types)
         increment = job.get_increment(row_count)
         location_id = job.location_id
         action_type = job.action_type
         discovery_id = job.discovery_id
         entry = {}
+
+        # First, add an entry for the table itself with schema.
+        table_schema['rows'] = row_count
+        table_entry = {}
+        table_entry['id'] = '{0}_{1}'.format(location_id, tbl)
+        table_entry['location'] = location_id
+        table_entry['action'] = action_type
+        table_entry['entry'] = {'fields': {'_discoveryID': discovery_id, 'name': tbl, 'path': rows.connection.dsn}}
+        table_entry['entry']['fields']['schema'] = table_schema
+        job.send_entry(table_entry)
+
         if not has_shape:
             for i, row in enumerate(rows):
                 try:
