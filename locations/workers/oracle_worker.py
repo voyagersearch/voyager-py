@@ -17,9 +17,19 @@ from itertools import izip
 import json
 from utils import status
 from utils import worker_utils
+import cx_Oracle
 
 
 status_writer = status.Writer()
+
+field_types =  {cx_Oracle.STRING: 'STRING',
+                cx_Oracle.FIXED_CHAR: 'CHAR',
+                cx_Oracle.NUMBER: 'NUMBER',
+                cx_Oracle.DATETIME: 'DATE',
+                cx_Oracle.TIMESTAMP: 'TIMESTAMP',
+                cx_Oracle.UNICODE: 'STRING',
+                cx_Oracle.CLOB: 'CLOB',
+                cx_Oracle.BLOB: 'BLOB'}
 
 
 class ComplexEncoder(json.JSONEncoder):
@@ -233,7 +243,10 @@ def run_job(oracle_job):
             schema_col = {}
             schema_props = []
             schema_col['name'] = c[0]
-            schema_col['type'] = c[1]
+            try:
+                schema_col['type'] = field_types[c[1]]
+            except (AttributeError, KeyError):
+                schema_col['type'] = 'OBJECTVAR'
             try:
                 if c[1] in ('SDO_GEOMETRY', 'ST_GEOMETRY'):
                     schema_col['isGeo'] = True
