@@ -121,6 +121,17 @@ def clip_mxd_layers(mxd_path, aoi, map_frame=None):
     del mxd
 
 
+def convert_to_kml(geodatabase):
+    """Convert the contents of a geodatabase to KML."""
+    arcpy.env.workspace = geodatabase
+    arcpy.env.overwriteOutput = True
+    for i, fc in enumerate(arcpy.ListFeatureClasses(), 1):
+        arcpy.MakeFeatureLayer_management(fc, "temp_layer")
+        arcpy.LayerToKML_conversion("temp_layer", '{0}.kmz'.format(os.path.join(os.path.dirname(geodatabase), fc)), 1)
+        status_writer.send_percent(float(i) / processed_count, _('Converted: {0}').format(fc), 'convert_to_kml')
+    arcpy.Delete_management("temp_layer")
+
+
 def create_lpk(data_location, additional_files):
     """Creates a layer package (.lpk) for all datasets in the data location."""
 
@@ -464,8 +475,7 @@ def execute(request):
     # Query the index for results in groups of 25.
     query_index = task_utils.QueryIndex(parameters[response_index])
     fl = query_index.fl
-    # query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
-    query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
+    query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
     fq = query_index.get_fq()
     if fq:
         groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
@@ -496,6 +506,12 @@ def execute(request):
                             os.path.join(os.path.dirname(out_workspace), 'output.mpk'))
             elif out_format == 'LPK':
                 create_lpk(out_workspace, files_to_package)
+            elif out_format == 'KML':
+                convert_to_kml(os.path.join(out_workspace, "output.gdb"))
+                arcpy.env.workspace = ''
+                arcpy.Delete_management(os.path.join(out_workspace, "output.gdb"))
+                zip_file = task_utils.zip_data(out_workspace, 'output.zip')
+                shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
             else:
                 if create_mxd:
                     create_mxd_or_mpk(out_workspace)
