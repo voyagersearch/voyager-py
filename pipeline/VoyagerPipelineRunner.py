@@ -16,8 +16,8 @@ import collections
 import json
 import os
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), 'pipelines'))
-import pipelines
+sys.path.append(os.path.join(os.path.dirname(__file__), 'steps'))
+import steps
 
 
 def run_pipeline_step(pipeline_name, entry_file):
@@ -34,7 +34,7 @@ def run_pipeline_step(pipeline_name, entry_file):
 if __name__ == '__main__':
     if sys.argv[1] == '--info':
         pipeline_info = collections.defaultdict(list)
-        for pipeline in pipelines.__all__:
+        for pipeline in steps.__all__:
             try:
                 __import__(pipeline)
                 pipeline_info['pipeline'].append({'name': pipeline, 'available': True})
