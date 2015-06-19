@@ -13,7 +13,6 @@
 # limitations under the License.
 import os
 import re
-import sys
 import glob
 import json
 import math
@@ -27,6 +26,15 @@ import status
 
 # Constants
 CHUNK_SIZE = 25
+
+
+# Custom Exceptions
+class AnalyzeServiceException(Exception):
+    pass
+
+
+class PublishException(Exception):
+    pass
 
 
 class ZipFileManager(zipfile.ZipFile):
@@ -46,6 +54,7 @@ class ZipFileManager(zipfile.ZipFile):
 
 
 class QueryIndex(object):
+    """Helper class for querying the Voyager index."""
     def __init__(self, items):
         self._items = items
         self._fq = ''
@@ -61,6 +70,7 @@ class QueryIndex(object):
         if 'query' in self._items:
             if 'voyager.list' in self._items['query']:
                 self._fq = "&voyager.list={0}".format(self._items['query']['voyager.list'])
+
             if 'fq' in self._items['query']:
                 if isinstance(self._items['query']['fq'], list):
                     self._fq += '&fq={0}'.format('&fq='.join(self._items['query']['fq']).replace('\\', ''))
@@ -69,7 +79,8 @@ class QueryIndex(object):
                     # Replace spaces with %20 & remove \\ to avoid HTTP Error 400.
                     self._fq += '&fq={0}'.format(self._items['query']['fq'].replace("\\", ""))
                     self._fq = self._fq.replace(' ', '%20')
-            elif 'q' in self._items['query']:
+
+            if 'q' in self._items['query']:
                 if self._items['query']['q'].startswith('id:'):
                     ids = self._items['query']['q']
                     self._fq += '&q={0}'.format(ids)
@@ -77,19 +88,76 @@ class QueryIndex(object):
                 else:
                     self._fq += '&q={0}'.format(self._items['query']['q'].replace("\\", ""))
                     self._fq = self._fq.replace(' ', '%20')
+
+            if 'place' in self._items['query']:
+                self._fq += '&place={0}'.format(self._items['place'].replace("\\", ""))
+                self._fq = self._fq.replace(' ', '%20')
+            if 'place.op' in self._items['query']:
+                self._fq += '&place.op={0}'.format(self._items['place.op'])
+
+        elif 'ids' in self._items:
+            ids = self._items['ids']
+            self._fq += '&fq=({0})'.format(','.join(ids))
+            self._fq = self._fq.replace(' ', '%20')
         return self._fq
 
 
-def time_it(func):
-    """A timer decorator - use this to time a function."""
-    def timed(*args, **kwargs):
-        ts = time.time()
-        result = func(*args, **kwargs)
-        te = time.time()
-        status_writer = status.Writer()
-        status_writer.send_status('func:{} args:[{}, {}] took: {:.2f} sec'.format(func.__name__, args, kwargs, te-ts))
-        return result
-    return timed
+class ServiceLayer(object):
+    """Helper class for working with ArcGIS services."""
+    def __init__(self, service_layer_url, token=''):
+        self._service_layer_url = service_layer_url
+        self._token = token
+        self._wkid = self.__get_wkid()
+        self._oid_field_name = ''
+        self._object_ids = self.__get_object_ids()
+
+    @property
+    def service_layer_url(self):
+        return self._service_layer_url
+
+    @property
+    def oid_field_name(self):
+        return self._oid_field_name
+
+    @property
+    def object_ids(self):
+        return self._object_ids
+
+    @property
+    def token(self):
+        return self._token
+
+    @property
+    def wkid (self):
+        return self._wkid
+
+    def __get_wkid(self):
+        """Returns the spatial reference wkid for the service layer."""
+        if self._token:
+            query = {'where': '1=1', 'returnExtentOnly':True, 'token': self._token, 'f': 'json'}
+        else:
+            query = {'where': '1=1', 'returnExtentOnly':True, 'f': 'json'}
+        response = urllib.urlopen('{0}/query?'.format(self._service_layer_url), urllib.urlencode(query))
+        data = json.loads(response.read())
+        if 'extent' in data:
+            return data['extent']['spatialReference']['wkid']
+        else:
+            return 4326
+
+    def __get_object_ids(self):
+        """Returns groups of OIDs/FIDs for the service layer as an iterator (groups of 100)."""
+        if self._token:
+            query = {'where': '1=1', 'returnIdsOnly':True, 'token': self._token, 'f': 'json'}
+        else:
+            query = {'where': '1=1', 'returnIdsOnly':True, 'f': 'json'}
+        response = urllib.urlopen('{0}/query?'.format(self._service_layer_url), urllib.urlencode(query))
+        data = json.loads(response.read())
+        objectids = data['objectIds']
+        if not objectids:
+            return None
+        self._oid_field_name = data['objectIdFieldName']
+        args = [iter(objectids)] * 100
+        return itertools.izip_longest(fillvalue=None, *args)
 
 
 def create_unique_name(name, gdb):
@@ -99,8 +167,11 @@ def create_unique_name(name, gdb):
     :rtype : str
     """
     import arcpy
-    valid_name = arcpy.ValidateTableName(name, gdb)
-    unique_name = arcpy.CreateUniqueName(valid_name, gdb)
+    if gdb.endswith('.gdb'):
+        valid_name = arcpy.ValidateTableName(name, gdb)
+        unique_name = arcpy.CreateUniqueName(valid_name, gdb)
+    else:
+        unique_name = arcpy.CreateUniqueName(name + '.shp', gdb)
     return unique_name
 
 
@@ -152,13 +223,14 @@ def get_clip_region(clip_area_wkt, out_coordinate_system=None):
 
 
 def get_result_count(parameters):
-    """Returns the number of results and the reponse index."""
+    """Returns the number of results and the response index."""
     count, i = 0, 0
     for i, parameter in enumerate(parameters):
         if 'response' in parameter:
             count = parameter['response']['numFound']
             break
     return count, i
+
 
 def grouper(iterable, n, fill_value=None):
     """Collect data into fixed-length chunks or blocks.
@@ -257,6 +329,8 @@ def get_data_path(item):
                 return item['path']
 
         if os.path.exists(item['path']):
+            return item['path']
+        elif item['path'].startswith('http'):
             return item['path']
         elif item['format'] == 'format:application/vnd.esri.lyr':
             return item['[absolute]']
@@ -440,6 +514,18 @@ def save_to_layer_file(data_location, include_mxd_layers=True):
                 if layer.description == '':
                     layer.description = layer.name
                 arcpy.management.SaveToLayerFile(layer, os.path.join(data_location, '{0}.lyr'.format(layer.name)))
+
+
+def time_it(func):
+    """A timer decorator - use this to time a function."""
+    def timed(*args, **kwargs):
+        ts = time.time()
+        result = func(*args, **kwargs)
+        te = time.time()
+        status_writer = status.Writer()
+        status_writer.send_status('func:{} args:[{}, {}] took: {:.2f} sec'.format(func.__name__, args, kwargs, te-ts))
+        return result
+    return timed
 
 
 def zip_data(data_location, name):
