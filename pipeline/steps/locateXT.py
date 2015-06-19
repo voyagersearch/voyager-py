@@ -14,8 +14,8 @@ def run(entry):
     new_entry = deepcopy(orig_entry)
     geo = {}
 
-    text_field = orig_entry['entry']['fields']['text']
-    if text_field:
+    if 'fields' in orig_entry and 'text' in orig_entry['fields']:
+        text_field = orig_entry['fields']['text']
         print (text_field)
         # command = 'C:/Program Files (x86)/ClearTerra/License Server/LocateXT_API_CLI32.exe -t "{0}"'.format(''.join(text_field))
         # process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=134217728)
@@ -45,12 +45,12 @@ def run(entry):
             wkt_point = 'POINT ({0} {1})'.format(x_coordinates[0], y_coordinates[0])
             geo['wkt'] = wkt_point
 
-        new_entry['entry']['geo'] = geo
-        new_entry['entry']['fields']['fs_processed_by'] = 'LocateXT'
+        new_entry['geo'] = geo
+        new_entry['fields']['fs_processed_by'] = 'LocateXT'
         sys.stdout.write(json.dumps(new_entry, ensure_ascii=False))
         sys.stdout.flush()
     else:
-        sys.stderr.write("No text to process for: {0}".format(orig_entry['id']))
+        sys.stderr.write("No text to process for: {0}".format(orig_entry['fields']['id']))
         sys.stderr.flush()
         return
 
