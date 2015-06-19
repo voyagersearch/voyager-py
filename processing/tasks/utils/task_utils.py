@@ -70,6 +70,7 @@ class QueryIndex(object):
         if 'query' in self._items:
             if 'voyager.list' in self._items['query']:
                 self._fq = "&voyager.list={0}".format(self._items['query']['voyager.list'])
+
             if 'fq' in self._items['query']:
                 if isinstance(self._items['query']['fq'], list):
                     self._fq += '&fq={0}'.format('&fq='.join(self._items['query']['fq']).replace('\\', ''))
@@ -78,7 +79,8 @@ class QueryIndex(object):
                     # Replace spaces with %20 & remove \\ to avoid HTTP Error 400.
                     self._fq += '&fq={0}'.format(self._items['query']['fq'].replace("\\", ""))
                     self._fq = self._fq.replace(' ', '%20')
-            elif 'q' in self._items['query']:
+
+            if 'q' in self._items['query']:
                 if self._items['query']['q'].startswith('id:'):
                     ids = self._items['query']['q']
                     self._fq += '&q={0}'.format(ids)
@@ -86,6 +88,13 @@ class QueryIndex(object):
                 else:
                     self._fq += '&q={0}'.format(self._items['query']['q'].replace("\\", ""))
                     self._fq = self._fq.replace(' ', '%20')
+
+            if 'place' in self._items['query']:
+                self._fq += '&place={0}'.format(self._items['place'].replace("\\", ""))
+                self._fq = self._fq.replace(' ', '%20')
+            if 'place.op' in self._items['query']:
+                self._fq += '&place.op={0}'.format(self._items['place.op'])
+
         elif 'ids' in self._items:
             ids = self._items['ids']
             self._fq += '&fq=({0})'.format(','.join(ids))
