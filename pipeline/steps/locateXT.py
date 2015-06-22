@@ -16,7 +16,6 @@ def run(entry):
 
     if 'fields' in orig_entry and 'text' in orig_entry['fields']:
         text_field = orig_entry['fields']['text']
-        print (text_field)
         # command = 'C:/Program Files (x86)/ClearTerra/License Server/LocateXT_API_CLI32.exe -t "{0}"'.format(''.join(text_field))
         # process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=134217728)
         # process.wait()
