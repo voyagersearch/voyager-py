@@ -221,7 +221,7 @@ def execute(request):
                 request_qry = p['query']
                 break
         if 'voyager.list' in request_qry:
-            query += '&{0}'.format(request_qry['voyager.list'])
+            query += '&voyager.list={0}'.format(request_qry['voyager.list'])
 
         # Replace spaces with %20 & remove \\ to avoid HTTP Error 400.
         if 'fq' in request_qry:
