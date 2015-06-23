@@ -25,7 +25,7 @@ def send_job(file_location, url, username, password):
     # Sample discovery job.
     data = {"path": file_location,
             "action": "ADD",
-            "entry": {"fields": {"name": os.path.basename(file_location)}}}
+            "entry": {"fields": {"__to_extract":"true", "name": os.path.basename(file_location)}}}
 
     # Build the request and post.
     try:
