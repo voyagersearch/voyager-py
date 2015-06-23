@@ -17,11 +17,12 @@ import sys
 import glob
 import shutil
 import urllib2
-from tasks.utils import status
-from tasks.utils import task_utils
-from tasks import _
+from utils import status
+from utils import task_utils
 
 
+result_count = 0
+processed_count = 0.
 status_writer = status.Writer()
 import arcpy
 
@@ -33,6 +34,7 @@ def execute(request):
     converted = 0
     skipped = 0
     errors = 0
+    global result_count
     parameters = request['params']
 
     out_workspace = os.path.join(request['folder'], 'temp')
@@ -54,37 +56,30 @@ def execute(request):
     except KeyError:
         pass
 
-    num_results, response_index = task_utils.get_result_count(parameters)
-    if num_results > task_utils.CHUNK_SIZE:
-        # Query the index for results in groups of 25.
-        query_index = task_utils.QueryIndex(parameters[response_index])
-        fl = query_index.fl
-        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
-        fq = query_index.get_fq()
-        if fq:
-            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
-            query += fq
-        else:
-            groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
-
-        status_writer.send_percent(0.0, _('Starting to process...'), 'convert_to_kml')
-        i = 0.
-        for group in groups:
-            i += len(group) - group.count('')
-            if fq:
-                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
-            else:
-                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
-
-            input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
-            result = convert_to_kml(input_items, out_workspace, extent)
-            converted += result[0]
-            errors += result[1]
-            skipped += result[2]
-            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'convert_to_kml')
+    result_count, response_index = task_utils.get_result_count(parameters)
+    # Query the index for results in groups of 25.
+    query_index = task_utils.QueryIndex(parameters[response_index])
+    fl = query_index.fl
+    query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+    fq = query_index.get_fq()
+    if fq:
+        groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
+        query += fq
     else:
-        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
-        converted, errors, skipped = convert_to_kml(input_items, out_workspace, extent, True)
+        groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
+
+    status_writer.send_percent(0.0, _('Starting to process...'), 'convert_to_kml')
+    for group in groups:
+        if fq:
+            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+        else:
+            results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+
+        input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
+        result = convert_to_kml(input_items, out_workspace, extent)
+        converted += result[0]
+        errors += result[1]
+        skipped += result[2]
 
     # Zip up kmz files if more than one.
     if converted > 1:
@@ -108,13 +103,47 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
     converted = 0
     errors = 0
     skipped = 0
-    if show_progress:
-        count = len(input_items)
-        i = 1.
-        status_writer.send_percent(0.0, _('Starting to process...'), 'convert_to_kml')
+    global processed_count
+
     arcpy.env.overwriteOutput = True
     for ds, out_name in input_items.iteritems():
         try:
+            # -----------------------------------------------
+            # If the item is a service layer, process and continue.
+            # -----------------------------------------------
+            if ds.startswith('http'):
+                try:
+                    service_layer = task_utils.ServiceLayer(ds)
+                    arcpy.env.overwriteOutput = True
+                    oid_groups = service_layer.object_ids
+                    out_features = None
+                    if not arcpy.Exists(os.path.join(out_workspace, 'temp.gdb')):
+                        temp_gdb = arcpy.CreateFileGDB_management(out_workspace, 'temp.gdb')
+                        temp_gdb = temp_gdb[0]
+                    else:
+                        temp_gdb = os.path.join(out_workspace, 'temp.gdb')
+                    for group in oid_groups:
+                        group = [oid for oid in group if not oid == None]
+                        where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
+                        url = ds + "/query?where={}&outFields={}&returnGeometry=true&geometryType=esriGeometryPolygon&f=json&token={}".format(where, '*', '')
+                        feature_set = arcpy.FeatureSet()
+                        feature_set.load(url)
+                        if not out_features:
+                            out_features = arcpy.CopyFeatures_management(feature_set, task_utils.create_unique_name(out_name, temp_gdb))
+                        else:
+                            features = arcpy.CopyFeatures_management(feature_set, task_utils.create_unique_name(out_name, temp_gdb))
+                            arcpy.Append_management(features, out_features, 'NO_TEST')
+                    arcpy.MakeFeatureLayer_management(out_features, out_name)
+                    arcpy.LayerToKML_conversion(out_name, '{0}.kmz'.format(os.path.join(out_workspace, out_name)), 1, boundary_box_extent=extent)
+                    processed_count += 1.
+                    converted += 1
+                    status_writer.send_percent(processed_count / result_count, _('Converted: {0}').format(ds), 'convert_to_kml')
+                    continue
+                except Exception as ex:
+                    status_writer.send_state(status.STAT_WARNING, str(ex))
+                    errors += 1
+                    continue
+
             # Is the input a mxd data frame.
             map_frame_name = task_utils.get_data_frame_name(ds)
             if map_frame_name:
@@ -221,20 +250,16 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
                 converted += 1
 
             else:
-                if show_progress:
-                    status_writer.send_percent(i / count, _('Invalid input type: {0}').format(dsc.name), 'convert_to_kml')
-                    i += 1
+                processed_count += 1
+                status_writer.send_percent(processed_count / result_count, _('Invalid input type: {0}').format(dsc.name), 'convert_to_kml')
                 skipped += 1
                 continue
-            if show_progress:
-                status_writer.send_percent(i / count, _('Converted: {0}').format(ds), 'convert_to_kml')
-                i += 1
-            else:
-                status_writer.send_status(_('Converted: {0}').format(ds))
+            processed_count += 1
+            status_writer.send_percent(processed_count / result_count, _('Converted: {0}').format(ds), 'convert_to_kml')
+            status_writer.send_status(_('Converted: {0}').format(ds))
         except Exception as ex:
-            if show_progress:
-                status_writer.send_percent(i / count, _('Skipped: {0}').format(ds), 'convert_to_kml')
-                i += 1
+            processed_count += 1
+            status_writer.send_percent(processed_count / result_count, _('Skipped: {0}').format(ds), 'convert_to_kml')
             status_writer.send_status(_('WARNING: {0}').format(repr(ex)))
             errors += 1
             pass

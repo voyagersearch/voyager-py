@@ -18,25 +18,13 @@ import glob
 import json
 import shutil
 import urllib
-try:
-    import requests
-except ImportError:
-    pass
-from tasks.utils import status
-from tasks.utils import task_utils
-from tasks import _
+import requests
+from utils import status
+from utils import task_utils
+
 
 status_writer = status.Writer()
 import arcpy
-
-
-# Custom Exceptions
-class AnalyzeServiceException(Exception):
-    pass
-
-
-class PublishException(Exception):
-    pass
 
 
 class AGOLHandler(object):
@@ -84,7 +72,7 @@ class AGOLHandler(object):
             json_output = json.loads(json_response.read())
             word_test = ["success", "results", "services", "notSharedWith"]
             if not any(word in json_output for word in word_test):
-                raise PublishException('Failed to publish: {0}'.format(json_output))
+                raise task_utils.PublishException('Failed to publish: {0}'.format(json_output))
         else:
             raise requests.RequestException("sd file not uploaded. Errors: {0}.\n".format(items))
 
@@ -128,7 +116,7 @@ def create_service(temp_folder, map_document, portal_url, username, password, se
             errors = 'Cannot publish results. One or more inputs is missing a spatial reference.'
         else:
             errors = analysis['errors']
-        raise AnalyzeServiceException(errors)
+        raise task_utils.AnalyzeServiceException(errors)
 
     # Upload/publish the service.
     status_writer.send_status(_('Publishing the map service to: {0}...').format(portal_url))
@@ -204,13 +192,13 @@ def execute(request):
                     arcpy.mapping.AddLayer(data_frame, layer)
                     mxd.save()
                     create_service(request_folder, mxd, url, username, password,  service_name, folder_name)
-        except AnalyzeServiceException as ase:
+        except task_utils.AnalyzeServiceException as ase:
             status_writer.send_state(status.STAT_FAILED, _(ase))
             return
         except requests.RequestException as re:
             status_writer.send_state(status.STAT_FAILED, _(re))
             return
-        except PublishException as pe:
+        except task_utils.PublishException as pe:
             status_writer.send_state(status.STAT_FAILED, _(pe))
             return
         except arcpy.ExecuteError as ee:

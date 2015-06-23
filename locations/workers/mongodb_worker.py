@@ -132,3 +132,42 @@ def run_job(mongodb_job):
                 status_writer.send_percent(float(i) / documents.count(),
                                            '{0}: {1:%}'.format(collection_name, float(i)/documents.count()),
                                            'MongoDB')
+
+        schema = {}
+        schema['name'] = col.full_name
+        schema['name'] = collection_name
+        schema['rows'] = documents.count()
+        schema_columns = []
+        index_info = col.index_information()
+        indexes = []
+        for v in index_info.values():
+            indexes.append(v['key'][0][0])
+        for n, t in dict(zip(fields, field_types.values())).items():
+            column = {}
+            props = []
+            column['name'] = n
+            column['type'] = t
+            if n in indexes:
+                props.append('INDEXED')
+            if 'ObjectId' in str(t) or n == '_id':
+                props.append('NOTNULLABLE')
+                props.append('PRIMARY KEY')
+            else:
+                props.append('NULLABLE')
+            column['properties'] = props
+            schema_columns.append(column)
+        if geo:
+            props = []
+            if 'loc' in indexes:
+                props.append('INDEXED')
+            schema_columns.append({'name': 'loc', 'isGeo': True, 'properties': props})
+        schema['fields'] = schema_columns
+
+        # Add an entry for the table itself with schema.
+        table_entry = {}
+        table_entry['id'] = '{0}_{1}'.format(job.location_id, collection_name)
+        table_entry['location'] = job.location_id
+        table_entry['action'] = job.action_type
+        table_entry['entry'] = {'fields': {'_discoveryID': job.discovery_id, 'name': collection_name, 'path': job.mongodb_client_info}}
+        table_entry['entry']['fields']['schema'] = schema
+        job.send_entry(table_entry)

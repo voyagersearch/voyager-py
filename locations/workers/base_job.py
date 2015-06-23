@@ -77,6 +77,7 @@ class Job(object):
         self.db_query = None
         self.zmq_socket = None
 
+        self.__sql_server_connection_str = ''
         self.__field_mapping = []
         self.__new_fields = []
         self.__joins = []
@@ -337,6 +338,10 @@ class Job(object):
         except KeyError:
             return None
 
+    @property
+    def sql_server_connection_str(self):
+       return self.__sql_server_connection_str
+
     #
     # Public methods
     #
@@ -367,15 +372,17 @@ class Job(object):
                 self.db_cursor = self.db_connection.cursor()
             elif self.drvr == 'SQL Server':
                 import pyodbc
-                sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(self.drvr, srvr, db, un, pw)
-                self.db_connection = pyodbc.connect(sql_server_str)
+                self.__sql_server_connection_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(self.drvr, srvr, db, un, pw)
+                self.db_connection = pyodbc.connect(self.__sql_server_connection_str)
                 self.db_cursor = self.db_connection.cursor()
+                self.__sql_server_connection_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4};OPTION=3".format(self.drvr, srvr, db, '', '')
             elif 'MySQL' in self.drvr:
                 import pyodbc
                 # Ex. "DRIVER={MySQL ODBC 5.3 ANSI Driver}; SERVER=localhost; DATABASE=test; UID=root;OPTION=3"
-                sql_server_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4};OPTION=3".format(self.drvr, srvr, db, un, pw)
-                self.db_connection = pyodbc.connect(sql_server_str)
+                self.__sql_server_connection_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4};OPTION=3".format(self.drvr, srvr, db, un, pw)
+                self.db_connection = pyodbc.connect(self.__sql_server_connection_str)
                 self.db_cursor = self.db_connection.cursor()
+                self.__sql_server_connection_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4};OPTION=3".format(self.drvr, srvr, db, '', '')
 
     def layers_to_keep(self):
         """List of layers to keep."""

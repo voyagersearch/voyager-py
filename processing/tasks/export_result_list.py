@@ -112,6 +112,10 @@ def export_to_csv(jobs, file_name, output_folder, fields):
     if os.path.exists(os.path.join(output_folder, '{0}.csv'.format(file_name))):
         write_keys = False
     with open(os.path.join(output_folder, '{0}.csv'.format(file_name)), 'ab') as csv_file:
+        if 'location:[localize]' in fields:
+            i = fields.index('location:[localize]')
+            fields.remove('location:[localize]')
+            fields.insert(i, 'location')
         writer = csv.DictWriter(csv_file, fieldnames=fields)
         if write_keys:
             writer.writeheader()
@@ -195,6 +199,8 @@ def execute(request):
     """Exports search results a CSV, shapefile or XML document.
     :param request: json as a dict.
     """
+    import time
+    time.sleep(8)
     chunk_size = task_utils.CHUNK_SIZE
     file_name = task_utils.get_parameter_value(request['params'], 'file_name', 'value')
     fields = task_utils.get_parameter_value(request['params'], 'fields', 'value')
@@ -206,12 +212,8 @@ def execute(request):
         os.makedirs(task_folder)
 
     num_results, response_index = task_utils.get_result_count(request['params'])
-    if out_format in ('CSV', 'XML'):
-        query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
-        # query = '{0}/select?&wt=json&fl={1}'.format('http://localhost:8888/solr/v0', ','.join(fields))
-    else:
-        query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
-        # query = '{0}/select?&wt=json&fl={1}'.format('http://localhost:8888/solr/v0', ','.join(fields))
+    query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
+    # query = '{0}/select?&wt=json&fl={1}'.format('http://localhost:8888/solr/v0', ','.join(fields))
     if 'query' in request['params'][response_index]:
         # Voyager Search Traditional UI
         for p in request['params']:
@@ -219,20 +221,26 @@ def execute(request):
                 request_qry = p['query']
                 break
         if 'voyager.list' in request_qry:
-            query += '&{0}'.format(request_qry['voyager.list'])
+            query += '&voyager.list={0}'.format(request_qry['voyager.list'])
+
+        # Replace spaces with %20 & remove \\ to avoid HTTP Error 400.
         if 'fq' in request_qry:
-            if isinstance(request_qry['fq'], list):
-                query += '&fq={0}'.format('&fq='.join(request_qry['fq']).replace('\\', ''))
-                query = query.replace(' ', '%20')
-            else:
-                # Replace spaces with %20 & remove \\ to avoid HTTP Error 400.
-                query += '&fq={0}'.format(request_qry['fq'].replace("\\", ""))
-                query = query.replace(' ', '%20')
+            query += '&fq={0}'.format(request_qry['fq'].replace("\\", ""))
+            query = query.replace(' ', '%20')
+        if 'q' in request_qry:
+            query += '&q={0}'.format(request_qry['q'].replace("\\", ""))
+            query = query.replace(' ', '%20')
+        if 'place' in request_qry:
+            query += '&place={0}'.format(request_qry['place'].replace("\\", ""))
+            query = query.replace(' ', '%20')
+        if 'place.op' in request_qry:
+            query += '&place.op={0}'.format(request_qry['place.op'])
+
         query += '&rows={0}&start={1}'
         exported_cnt = 0.
         for i in xrange(0, num_results, chunk_size):
             for n in urllib2.urlopen(query.format(chunk_size, i)):
-                jobs = eval(n)['response']['docs']
+                jobs = eval(n.replace('null', '"null"'))['response']['docs']
                 if out_format == 'CSV':
                     export_to_csv(jobs, file_name, task_folder, fields)
                 elif out_format == 'XML':

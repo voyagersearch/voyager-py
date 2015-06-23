@@ -15,17 +15,12 @@
 import os
 import glob
 import shutil
-from tasks.utils import status
-from tasks.utils import task_utils
-from tasks import _
+from utils import status
+from utils import task_utils
+
 
 status_writer = status.Writer()
 import arcpy
-
-
-# Custom Exceptions
-class AnalyzeServiceException(Exception):
-    pass
 
 
 def create_service(temp_folder, map_document, server_path, service_name,  folder_name=''):
@@ -63,7 +58,7 @@ def create_service(temp_folder, map_document, server_path, service_name,  folder
             errors = 'Cannot publish results. One or more inputs is missing a spatial reference.'
         else:
             errors = analysis['errors']
-        raise AnalyzeServiceException(errors)
+        raise task_utils.AnalyzeServiceException(errors)
 
     # Upload/publish the service.
     status_writer.send_status(_('Publishing the map service to: {0}...').format(server_path))
@@ -139,7 +134,7 @@ def execute(request):
                     arcpy.mapping.AddLayer(data_frame, layer)
                     mxd.save()
                     create_service(request_folder, mxd, server_conn, service_name, folder_name)
-        except AnalyzeServiceException as ase:
+        except task_utils.AnalyzeServiceException as ase:
             status_writer.send_state(status.STAT_FAILED, _(ase))
             return
         except arcpy.ExecuteError as ee:
