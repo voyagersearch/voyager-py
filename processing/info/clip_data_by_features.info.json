@@ -1,0 +1,62 @@
+{
+  "name": "clip_data_by_features",
+  "runner": "python",
+  "categories": ["Extracting Data"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "IndexItem",
+      "name": "clip_features",
+      "required": true
+    },
+    {
+      "type": "StringChoice",
+      "name": "output_format",
+      "value": "FileGDB",
+      "choices": [
+        "FileGDB",
+        "SHP",
+        "KML",
+        "MPK",
+        "LPK"
+      ]
+    },
+    {
+      "type": "Projection",
+      "name": "output_projection"
+    },
+    {
+      "type": "CheckBox",
+      "name": "create_mxd"
+    }
+  ],
+  "display": {
+    "en": {
+      "display": "Clip Data by Features",
+      "description": "Clips selected search results using a polygon item within the index",
+      "helpURL": "https://voyagersearch.zendesk.com/entries/93829566-Clip-Data",
+      "params": {
+        "clip_features": {
+          "display": "Clip Features",
+          "description": "Select an item from the index to use as the clip features"
+        },
+        "output_projection": {
+          "display": "Projection",
+          "description": "Choose an output projection"
+        },
+        "output_format": {
+          "display": "Output Format",
+          "description": "Choose the output format"
+        },
+        "create_mxd": {
+          "display": "Create Map Document",
+          "description": "Add clip results to a new map document (.mxd)"
+        }
+      }
+    }
+  }
+}
