@@ -43,28 +43,6 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
             if ds.startswith('http'):
                 try:
                     service_layer = task_utils.ServiceLayer(ds)
-                    # if out_coordinate_system == 0:
-                    #     wkid = service_layer.wkid
-                    #     out_sr = arcpy.SpatialReference(wkid)
-                    #     arcpy.env.outputCoordinateSystem = out_sr
-                    # else:
-                    #     out_sr = task_utils.get_spatial_reference(out_coordinate_system)
-                    #     arcpy.env.outputCoordinateSystem = out_sr
-                    #
-                    # if not out_sr.name == gcs_sr.name:
-                    #     try:
-                    #         geo_transformation = arcpy.ListTransformations(gcs_sr, out_sr)[0]
-                    #         clip_poly = gcs_clip_poly.projectAs(out_sr, geo_transformation)
-                    #     except (AttributeError, IndexError):
-                    #         try:
-                    #             clip_poly = gcs_clip_poly.projectAs(out_sr)
-                    #         except AttributeError:
-                    #             clip_poly = gcs_clip_poly
-                    #     except ValueError:
-                    #         clip_poly = gcs_clip_poly
-                    # else:
-                    #     clip_poly = gcs_clip_poly
-
                     arcpy.env.overwriteOutput = True
                     oid_groups = service_layer.object_ids
                     out_features = None
@@ -102,40 +80,6 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
             except AttributeError:
                 pass
 
-            # # --------------------------------------------------------------------
-            # # If no output coord. system, get output spatial reference from input.
-            # # --------------------------------------------------------------------
-            # if out_coordinate_system == 0:
-            #     try:
-            #         out_sr = dsc.spatialReference
-            #         arcpy.env.outputCoordinateSystem = out_sr
-            #     except AttributeError:
-            #         out_sr = task_utils.get_spatial_reference(4326)
-            #         arcpy.env.outputCoordinateSystem = out_sr
-            # else:
-            #     out_sr = task_utils.get_spatial_reference(out_coordinate_system)
-            #     arcpy.env.outputCoordinateSystem = out_sr
-            #
-            # # -------------------------------------------------
-            # # If the item is not a file, project the clip area.
-            # # -------------------------------------------------
-            # if dsc.dataType not in ('File', 'TextFile'):
-            #     if not out_sr.name == gcs_sr.name:
-            #         try:
-            #             geo_transformation = arcpy.ListTransformations(gcs_sr, out_sr)[0]
-            #             clip_poly = gcs_clip_poly.projectAs(out_sr, geo_transformation)
-            #         except (AttributeError, IndexError):
-            #             try:
-            #                 clip_poly = gcs_clip_poly.projectAs(out_sr)
-            #             except AttributeError:
-            #                 clip_poly = gcs_clip_poly
-            #         except ValueError:
-            #             clip_poly = gcs_clip_poly
-            #     else:
-            #         clip_poly = gcs_clip_poly
-            #     extent = clip_poly.extent
-
-
             # -----------------------------
             # Check the data type and clip.
             # -----------------------------
@@ -170,7 +114,6 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
                     name = task_utils.create_unique_name(dsc.name, out_workspace)
                 else:
                     name = task_utils.create_unique_name(out_name, out_workspace)
-                # ext = '{0} {1} {2} {3}'.format(extent.XMin, extent.YMin, extent.XMax, extent.YMax)
                 extent = arcpy.Describe(clip_polygons).extent
                 ext = '{0} {1} {2} {3}'.format(extent.XMin, extent.YMin, extent.XMax, extent.YMax)
                 arcpy.Clip_management(ds, ext, name, in_template_dataset=clip_polygons, clipping_geometry="ClippingGeometry")
@@ -255,6 +198,8 @@ def execute(request):
     # Retrieve the clip features.
     clip_features = task_utils.get_parameter_value(parameters, 'clip_features', 'value')
 
+    #TODO: if clip features is a polygon feature (not a feature class or layer), create a in_memory feature class
+
     # Retrieve the coordinate system code.
     out_coordinate_system = int(task_utils.get_parameter_value(parameters, 'output_projection', 'code'))
 
@@ -271,12 +216,6 @@ def execute(request):
     if not out_coordinate_system == 0:  # Same as Input
         out_sr = task_utils.get_spatial_reference(out_coordinate_system)
         arcpy.env.outputCoordinateSystem = out_sr
-
-    # Create the clip polygon geometry object in WGS84 projection.
-    # gcs_sr = task_utils.get_spatial_reference(4326)
-    # gcs_clip_poly = task_utils.from_wkt(clip_area, gcs_sr)
-    # if not gcs_clip_poly.area > 0:
-    #     gcs_clip_poly = task_utils.from_wkt('POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))', gcs_sr)
 
     # Set the output workspace.
     status_writer.send_status(_('Setting the output workspace...'))
