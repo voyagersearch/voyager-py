@@ -17,6 +17,7 @@ import glob
 import json
 import math
 import locale
+import shutil
 import datetime
 import itertools
 import urllib
@@ -173,6 +174,203 @@ def create_unique_name(name, gdb):
     else:
         unique_name = arcpy.CreateUniqueName(name + '.shp', gdb)
     return unique_name
+
+
+def create_lpk(data_location, additional_files=None):
+    """Creates a layer package (.lpk) for all datasets in the data location.
+    :param data_location: location of data to packaged
+    :param additional_files: list of additional files to include in the package
+    """
+    import arcpy
+    # Ensure existing layer files have a description.
+    lyr_files = glob.glob(os.path.join(data_location, '*.lyr'))
+    for lyr in lyr_files:
+        layer = arcpy.mapping.Layer(lyr)
+        if layer.description == '':
+            layer.description = layer.name
+            layer.save()
+
+    # Save data to layer files.
+    save_to_layer_file(data_location, False)
+
+    # Package all layer files.
+    layer_files = glob.glob(os.path.join(data_location, '*.lyr'))
+    arcpy.PackageLayer_management(layer_files, os.path.join(os.path.dirname(data_location), 'output.lpk'),
+                                  'PRESERVE', version='10', additional_files=additional_files)
+    make_thumbnail(layer_files[0], os.path.join(os.path.dirname(data_location), '_thumb.png'))
+
+
+def create_mpk(data_location, mxd, additional_files=None):
+    """Creates a map package (.mpk) for all the datasets in the data location.
+    :param data_location: location of data to be packaged
+    :param mxd: existing map document template (mxd path)
+    :param additional_files: list of additional files to include in the package
+    """
+    import arcpy
+    arcpy.PackageMap_management(mxd, mxd.replace('.mxd', '.mpk'),
+                                'PRESERVE', version='10', additional_files=additional_files)
+    make_thumbnail(mxd, os.path.join(os.path.dirname(data_location), '_thumb.png'))
+
+
+def create_mxd(data_location, map_template, output_name):
+    """Creates a map document (.mxd) for all the datasets in the data locaton.
+    :param data_location: location of data to be packaged
+    :param map_template:
+    :param output_name:
+    """
+    import arcpy
+    shutil.copyfile(map_template, os.path.join(data_location, "{0}.mxd".format(output_name)))
+    mxd = arcpy.mapping.MapDocument(os.path.join(data_location, "{0}.mxd".format(output_name)))
+    if mxd.description == '':
+        mxd.description = os.path.basename(mxd.filePath)
+    df = arcpy.mapping.ListDataFrames(mxd)[0]
+
+    types = ('*.shp', '*.gdb', '*.mxd', '*.lyr')
+    all_data = []
+    for files in types:
+        all_data.extend(glob.glob(os.path.join(data_location, files)))
+    for ds in all_data:
+        if ds.endswith('.shp'):
+            # Add all shapefiles to the mxd template.
+            layer = arcpy.MakeFeatureLayer_management(ds, '{0}_'.format(os.path.basename(ds)[:-3]))
+            arcpy.mapping.AddLayer(df, layer.getOutput(0))
+        elif ds.endswith('.gdb'):
+            # Add all feature classes to the mxd template.
+            arcpy.env.workspace = ds
+            feature_datasets = arcpy.ListDatasets('*', 'Feature')
+            if feature_datasets:
+                for fds in feature_datasets:
+                    arcpy.env.workspace = fds
+                    for fc in arcpy.ListFeatureClasses():
+                        layer = arcpy.MakeFeatureLayer_management(fc, '{0}_'.format(fc))
+                        arcpy.mapping.AddLayer(df, layer.getOutput(0))
+                arcpy.env.workspace = ds
+            for fc in arcpy.ListFeatureClasses():
+                layer = arcpy.MakeFeatureLayer_management(fc, '{0}_'.format(fc))
+                arcpy.mapping.AddLayer(df, layer.getOutput(0))
+            for raster in arcpy.ListRasters():
+                layer = arcpy.MakeRasterLayer_management(raster, '{0}_'.format(raster))
+                arcpy.mapping.AddLayer(df, layer.getOutput(0))
+        elif ds.endswith('.lyr'):
+            # Add all layer files to the mxd template.
+            arcpy.mapping.AddLayer(df, arcpy.mapping.Layer(ds))
+    mxd.save()
+    return  mxd.filePath
+
+
+def convert_to_kml(geodatabase):
+    """Convert the contents of a geodatabase to KML.
+    :param geodatabase: path to a geodatabase
+    """
+    import arcpy
+    status_writer = status.Writer()
+    arcpy.env.workspace = geodatabase
+    arcpy.env.overwriteOutput = True
+    feature_classes = arcpy.ListFeatureClasses()
+    count = len(feature_classes)
+    for i, fc in enumerate(feature_classes, 1):
+        arcpy.MakeFeatureLayer_management(fc, "temp_layer")
+        arcpy.LayerToKML_conversion("temp_layer", '{0}.kmz'.format(os.path.join(os.path.dirname(geodatabase), fc)), 1)
+        status_writer.send_percent(float(i) / count, _('Converted: {0}').format(fc), 'convert_to_kml')
+    arcpy.Delete_management("temp_layer")
+
+
+def clip_layer_file(layer_file, aoi, workspace):
+    """Clips each layer in the layer file to the output workspace and re-sources each layer and saves a copy.
+    :param layer_file: path to the layer file
+    :param aoi: area of interest (as a polygon object of feature class)
+    :param workspace: output workspace path
+    """
+    import arcpy
+    arcpy.env.workspace = workspace
+    if workspace.endswith('.gdb'):
+        layer_path = os.path.join(os.path.dirname(workspace), os.path.basename(layer_file))
+    else:
+        layer_path = os.path.join(workspace, os.path.basename(layer_file))
+    shutil.copyfile(layer_file, layer_path)
+    layer_from_file = arcpy.mapping.Layer(layer_path)
+    layers = arcpy.mapping.ListLayers(layer_from_file)
+    for layer in layers:
+        if layer.isFeatureLayer:
+            name = create_unique_name(layer.name, workspace)
+            arcpy.Clip_analysis(layer.dataSource, aoi, name)
+            if workspace.endswith('.gdb'):
+                layer.replaceDataSource(workspace, 'FILEGDB_WORKSPACE',
+                                        os.path.splitext(os.path.basename(name))[0], False)
+            else:
+                layer.replaceDataSource(workspace, 'SHAPEFILE_WORKSPACE', os.path.basename(name), False)
+        elif layer.isRasterLayer:
+            if isinstance(aoi, arcpy.Polygon):
+                extent = aoi.extent
+            else:
+                extent = arcpy.Describe(aoi).extent
+            ext = '{0} {1} {2} {3}'.format(extent.XMin, extent.YMin, extent.XMax, extent.YMax)
+            name = create_unique_name(layer.name, workspace)
+            arcpy.Clip_management(layer.dataSource, ext, name)
+            if workspace.endswith('.gdb'):
+                layer.replaceDataSource(workspace, 'FILEGDB_WORKSPACE',
+                                        os.path.splitext(os.path.basename(name))[0], False)
+            else:
+                layer.replaceDataSource(workspace, 'RASTER_WORKSPACE',
+                                        os.path.splitext(os.path.basename(name))[0], False)
+        if layer.description == '':
+            layer.description = layer.name
+        # Catch assertion error if a group layer.
+        try:
+            layer.save()
+        except AssertionError:
+            layers[0].save()
+            pass
+
+
+def clip_mxd_layers(mxd_path, aoi, workspace, map_frame=None):
+    """Clips each layer in the map document to output workspace
+    and re-sources each layer and saves a copy of the mxd.
+    :param mxd_path: path to the input map document
+    :param aoi: area of interest as a polygon object or feature class
+    :param workspace: output workspace
+    :param map_frame: name of the mxd's map frame/data frame
+    """
+    import arcpy
+    arcpy.env.workspace = workspace
+    status_writer = status.Writer()
+    mxd = arcpy.mapping.MapDocument(mxd_path)
+    layers = arcpy.mapping.ListLayers(mxd)
+    if map_frame:
+        df = arcpy.mapping.ListDataFrames(mxd, map_frame)[0]
+        df_layers = arcpy.mapping.ListLayers(mxd, data_frame=df)
+        [[arcpy.mapping.RemoveLayer(d, l) for l in arcpy.mapping.ListLayers(mxd)] for d in arcpy.mapping.ListDataFrames(mxd)]
+        [arcpy.mapping.AddLayer(df, l) for l in df_layers]
+        layers = df_layers
+    for layer in layers:
+        try:
+            out_name = arcpy.CreateUniqueName(layer.datasetName, arcpy.env.workspace)
+            if layer.isFeatureLayer:
+                arcpy.Clip_analysis(layer.dataSource, aoi, out_name)
+                if arcpy.env.workspace.endswith('.gdb'):
+                    layer.replaceDataSource(arcpy.env.workspace, 'FILEGDB_WORKSPACE', out_name, False)
+                else:
+                    layer.replaceDataSource(arcpy.env.workspace, 'SHAPEFILE_WORKSPACE', out_name, False)
+
+            elif layer.isRasterLayer:
+                ext = '{0} {1} {2} {3}'.format(aoi.extent.XMin, aoi.extent.YMin, aoi.extent.XMax, aoi.extent.YMax)
+                arcpy.Clip_management(layer.dataSource, ext, out_name)
+                if arcpy.env.workspace.endswith('.gdb'):
+                    layer.replaceDataSource(arcpy.env.workspace, 'FILEGDB_WORKSPACE', out_name, False)
+                else:
+                    layer.replaceDataSource(arcpy.env.workspace, 'RASTER_WORKSPACE', out_name, False)
+        except arcpy.ExecuteError:
+            status_writer.send_state(status.STAT_WARNING, arcpy.GetMessages(2))
+
+    # Save a new copy of the mxd with all layers clipped and re-sourced.
+    if mxd.description == '':
+        mxd.description = os.path.basename(mxd.filePath)
+    if arcpy.env.workspace.endswith('.gdb'):
+        new_mxd = os.path.join(os.path.dirname(arcpy.env.workspace), os.path.basename(mxd.filePath))
+    else:
+        new_mxd = os.path.join(arcpy.env.workspace, os.path.basename(mxd.filePath))
+    mxd.saveACopy(new_mxd)
+    del mxd
 
 
 def dd_to_dms(dd):

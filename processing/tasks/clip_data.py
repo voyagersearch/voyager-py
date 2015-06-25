@@ -14,7 +14,6 @@
 # limitations under the License.
 import os
 import sys
-import glob
 import shutil
 import urllib2
 import arcpy
@@ -26,189 +25,6 @@ status_writer = status.Writer()
 result_count = 0
 processed_count = 0.
 files_to_package = list()
-
-
-def clip_layer_file(layer_file, aoi):
-    """Clips each layer in the layer file to the output workspace
-    and re-sources each layer and saves a copy of the layer file."""
-    if arcpy.env.workspace.endswith('.gdb'):
-        layer_path = os.path.join(os.path.dirname(arcpy.env.workspace), os.path.basename(layer_file))
-    else:
-        layer_path = os.path.join(arcpy.env.workspace, os.path.basename(layer_file))
-    shutil.copyfile(layer_file, layer_path)
-    layer_from_file = arcpy.mapping.Layer(layer_path)
-    layers = arcpy.mapping.ListLayers(layer_from_file)
-    for layer in layers:
-        if layer.isFeatureLayer:
-            name = task_utils.create_unique_name(layer.name, arcpy.env.workspace)
-            arcpy.Clip_analysis(layer.dataSource, aoi, name)
-            if arcpy.env.workspace.endswith('.gdb'):
-                layer.replaceDataSource(arcpy.env.workspace,
-                                        'FILEGDB_WORKSPACE',
-                                        os.path.splitext(os.path.basename(name))[0],
-                                        False)
-            else:
-                layer.replaceDataSource(arcpy.env.workspace, 'SHAPEFILE_WORKSPACE', os.path.basename(name), False)
-        elif layer.isRasterLayer:
-            if isinstance(aoi, arcpy.Polygon):
-                extent = aoi.extent
-            else:
-                extent = arcpy.Describe(aoi).extent
-            ext = '{0} {1} {2} {3}'.format(extent.XMin, extent.YMin, extent.XMax, extent.YMax)
-            name = task_utils.create_unique_name(layer.name, arcpy.env.workspace)
-            arcpy.Clip_management(layer.dataSource, ext, name)
-            if arcpy.env.workspace.endswith('.gdb'):
-                layer.replaceDataSource(arcpy.env.workspace,
-                                        'FILEGDB_WORKSPACE',
-                                        os.path.splitext(os.path.basename(name))[0],
-                                        False)
-            else:
-                layer.replaceDataSource(arcpy.env.workspace,
-                                        'RASTER_WORKSPACE',
-                                        os.path.splitext(os.path.basename(name))[0],
-                                        False)
-
-        if layer.description == '':
-            layer.description == layer.name
-        # Catch assertion error if a group layer.
-        try:
-            layer.save()
-        except AssertionError:
-            layers[0].save()
-            pass
-
-
-def clip_mxd_layers(mxd_path, aoi, map_frame=None):
-    """Clips each layer in the map document to output workspace
-    and re-sources each layer and saves a copy of the mxd.
-    """
-    mxd = arcpy.mapping.MapDocument(mxd_path)
-    layers = arcpy.mapping.ListLayers(mxd)
-    if map_frame:
-        df = arcpy.mapping.ListDataFrames(mxd, map_frame)[0]
-        df_layers = arcpy.mapping.ListLayers(mxd, data_frame=df)
-        [[arcpy.mapping.RemoveLayer(d, l) for l in arcpy.mapping.ListLayers(mxd)] for d in arcpy.mapping.ListDataFrames(mxd)]
-        [arcpy.mapping.AddLayer(df, l) for l in df_layers]
-        layers = df_layers
-    for layer in layers:
-        try:
-            out_name = arcpy.CreateUniqueName(layer.datasetName, arcpy.env.workspace)
-            if layer.isFeatureLayer:
-                arcpy.Clip_analysis(layer.dataSource, aoi, out_name)
-                if arcpy.env.workspace.endswith('.gdb'):
-                    layer.replaceDataSource(arcpy.env.workspace, 'FILEGDB_WORKSPACE', out_name, False)
-                else:
-                    layer.replaceDataSource(arcpy.env.workspace, 'SHAPEFILE_WORKSPACE', out_name, False)
-
-            elif layer.isRasterLayer:
-                ext = '{0} {1} {2} {3}'.format(aoi.extent.XMin, aoi.extent.YMin, aoi.extent.XMax, aoi.extent.YMax)
-                arcpy.Clip_management(layer.dataSource, ext, out_name)
-                if arcpy.env.workspace.endswith('.gdb'):
-                    layer.replaceDataSource(arcpy.env.workspace, 'FILEGDB_WORKSPACE', out_name, False)
-                else:
-                    layer.replaceDataSource(arcpy.env.workspace, 'RASTER_WORKSPACE', out_name, False)
-        except arcpy.ExecuteError:
-            status_writer.send_state(status.STAT_WARNING, _(arcpy.GetMessages(2)))
-
-    # Save a new copy of the mxd with all layers clipped and re-sourced.
-    if mxd.description == '':
-        mxd.description = os.path.basename(mxd.filePath)
-    if arcpy.env.workspace.endswith('.gdb'):
-        new_mxd = os.path.join(os.path.dirname(arcpy.env.workspace), os.path.basename(mxd.filePath))
-    else:
-        new_mxd = os.path.join(arcpy.env.workspace, os.path.basename(mxd.filePath))
-    mxd.saveACopy(new_mxd)
-    del mxd
-
-
-def convert_to_kml(geodatabase):
-    """Convert the contents of a geodatabase to KML."""
-    arcpy.env.workspace = geodatabase
-    arcpy.env.overwriteOutput = True
-    for i, fc in enumerate(arcpy.ListFeatureClasses(), 1):
-        arcpy.MakeFeatureLayer_management(fc, "temp_layer")
-        arcpy.LayerToKML_conversion("temp_layer", '{0}.kmz'.format(os.path.join(os.path.dirname(geodatabase), fc)), 1)
-        status_writer.send_percent(float(i) / processed_count, _('Converted: {0}').format(fc), 'convert_to_kml')
-    arcpy.Delete_management("temp_layer")
-
-
-def create_lpk(data_location, additional_files):
-    """Creates a layer package (.lpk) for all datasets in the data location."""
-
-    # Ensure existing layer files have a description.
-    lyr_files = glob.glob(os.path.join(data_location, '*.lyr'))
-    for lyr in lyr_files:
-        layer = arcpy.mapping.Layer(lyr)
-        if layer.description == '':
-            layer.description = layer.name
-            layer.save()
-
-    # Save data to layer files.
-    task_utils.save_to_layer_file(data_location, False)
-
-    # Package all layer files.
-    status_writer.send_status("Packaging results...")
-    layer_files = glob.glob(os.path.join(data_location, '*.lyr'))
-    arcpy.PackageLayer_management(layer_files,
-                                  os.path.join(os.path.dirname(data_location), 'output.lpk'),
-                                  'PRESERVE',
-                                  version='10',
-                                  additional_files=additional_files)
-    task_utils.make_thumbnail(layer_files[0], os.path.join(os.path.dirname(data_location), '_thumb.png'))
-
-
-def create_mxd_or_mpk(data_location, additional_files=None, mpk=False):
-    """Creates a map document (.mxd) or map package (.mpk) for all the clipped datasets."""
-    shutil.copyfile(
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'MapTemplate.mxd'),
-        os.path.join(data_location, 'output.mxd')
-    )
-    mxd = arcpy.mapping.MapDocument(os.path.join(data_location, 'output.mxd'))
-    if mxd.description == '':
-        mxd.description = os.path.basename(mxd.filePath)
-    df = arcpy.mapping.ListDataFrames(mxd)[0]
-
-    types = ('*.shp', '*.gdb', '*.mxd', '*.lyr')
-    all_data = []
-    for files in types:
-        all_data.extend(glob.glob(os.path.join(data_location, files)))
-    for ds in all_data:
-        if ds.endswith('.shp'):
-            # Add all shapefiles to the mxd template.
-            layer = arcpy.MakeFeatureLayer_management(ds, '{0}_'.format(os.path.basename(ds)[:-3]))
-            arcpy.mapping.AddLayer(df, layer.getOutput(0))
-        elif ds.endswith('.gdb'):
-            # Add all feature classes to the mxd template.
-            arcpy.env.workspace = ds
-            feature_datasets = arcpy.ListDatasets('*', 'Feature')
-            if feature_datasets:
-                for fds in feature_datasets:
-                    arcpy.env.workspace = fds
-                    for fc in arcpy.ListFeatureClasses():
-                        layer = arcpy.MakeFeatureLayer_management(fc, '{0}_'.format(fc))
-                        arcpy.mapping.AddLayer(df, layer.getOutput(0))
-                arcpy.env.workspace = ds
-            for fc in arcpy.ListFeatureClasses():
-                layer = arcpy.MakeFeatureLayer_management(fc, '{0}_'.format(fc))
-                arcpy.mapping.AddLayer(df, layer.getOutput(0))
-            for raster in arcpy.ListRasters():
-                layer = arcpy.MakeRasterLayer_management(raster, '{0}_'.format(raster))
-                arcpy.mapping.AddLayer(df, layer.getOutput(0))
-        elif ds.endswith('.lyr'):
-            # Add all layer files to the mxd template.
-            arcpy.mapping.AddLayer(df, arcpy.mapping.Layer(ds))
-    mxd.save()
-    if mpk:
-        status_writer.send_status(_("Packaging results..."))
-        # Package the map template.
-        arcpy.PackageMap_management(mxd.filePath,
-                                    mxd.filePath.replace('.mxd', '.mpk'),
-                                    'PRESERVE',
-                                    version='10',
-                                    additional_files=additional_files)
-
-    task_utils.make_thumbnail(mxd.filePath, os.path.join(os.path.dirname(data_location), '_thumb.png'))
-    del mxd
 
 
 def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_clip_poly, out_format):
@@ -359,7 +175,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
 
             # Layer file
             elif dsc.dataType == 'Layer':
-                clip_layer_file(dsc.catalogPath, clip_poly)
+                task_utils.clip_layer_file(dsc.catalogPath, clip_poly, arcpy.env.workspace)
 
             # Cad drawing dataset
             elif dsc.dataType == 'CadDrawingDataset':
@@ -402,7 +218,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
 
             # Map document
             elif dsc.dataType == 'MapDocument':
-                clip_mxd_layers(dsc.catalogPath, clip_poly, map_frame_name)
+                task_utils.clip_mxd_layers(dsc.catalogPath, clip_poly, arcpy.env.workspace, map_frame_name)
             else:
                 processed_count += 1.
                 status_writer.send_percent(processed_count / result_count, _('Invalid input type: {0}').format(ds), 'clip_data')
@@ -471,8 +287,8 @@ def execute(request):
         out_workspace = arcpy.CreateFileGDB_management(out_workspace, 'output.gdb').getOutput(0)
     arcpy.env.workspace = out_workspace
 
-    result_count, response_index = task_utils.get_result_count(parameters)
     # Query the index for results in groups of 25.
+    result_count, response_index = task_utils.get_result_count(parameters)
     query_index = task_utils.QueryIndex(parameters[response_index])
     fl = query_index.fl
     query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
@@ -501,20 +317,25 @@ def execute(request):
     if clipped > 0:
         try:
             if out_format == 'MPK':
-                create_mxd_or_mpk(out_workspace, files_to_package, True)
+                mxd_template = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'MapTemplate.mxd')
+                mxd = task_utils.create_mxd(out_workspace, mxd_template, 'output')
+                status_writer.send_status(_("Packaging results..."))
+                task_utils.create_mpk(out_workspace, mxd, files_to_package)
                 shutil.move(os.path.join(out_workspace, 'output.mpk'),
                             os.path.join(os.path.dirname(out_workspace), 'output.mpk'))
             elif out_format == 'LPK':
-                create_lpk(out_workspace, files_to_package)
+                status_writer.send_status(_("Packaging results..."))
+                task_utils.create_lpk(out_workspace, files_to_package)
             elif out_format == 'KML':
-                convert_to_kml(os.path.join(out_workspace, "output.gdb"))
+                task_utils.convert_to_kml(os.path.join(out_workspace, "output.gdb"))
                 arcpy.env.workspace = ''
                 arcpy.Delete_management(os.path.join(out_workspace, "output.gdb"))
                 zip_file = task_utils.zip_data(out_workspace, 'output.zip')
                 shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
             else:
                 if create_mxd:
-                    create_mxd_or_mpk(out_workspace)
+                    mxd_template = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'MapTemplate.mxd')
+                    task_utils.create_mxd(out_workspace, mxd_template, 'output')
                 zip_file = task_utils.zip_data(out_workspace, 'output.zip')
                 shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
         except arcpy.ExecuteError as ee:
