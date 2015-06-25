@@ -300,13 +300,15 @@ def clip_layer_file(layer_file, aoi, workspace):
             else:
                 layer.replaceDataSource(workspace, 'SHAPEFILE_WORKSPACE', os.path.basename(name), False)
         elif layer.isRasterLayer:
+            name = create_unique_name(layer.name, workspace)
             if isinstance(aoi, arcpy.Polygon):
                 extent = aoi.extent
             else:
                 extent = arcpy.Describe(aoi).extent
             ext = '{0} {1} {2} {3}'.format(extent.XMin, extent.YMin, extent.XMax, extent.YMax)
-            name = create_unique_name(layer.name, workspace)
-            arcpy.Clip_management(layer.dataSource, ext, name)
+            arcpy.Clip_management(layer.dataSource, ext, os.path.splitext(os.path.basename(name))[0],
+                                  in_template_dataset=aoi, clipping_geometry="ClippingGeometry")
+
             if workspace.endswith('.gdb'):
                 layer.replaceDataSource(workspace, 'FILEGDB_WORKSPACE',
                                         os.path.splitext(os.path.basename(name))[0], False)
