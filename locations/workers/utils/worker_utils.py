@@ -242,17 +242,51 @@ class GeoJSONConverter(object):
 
 class GeometryOps(object):
     """Geometry operators."""
+    def __init__(self):
+        self.__max_precision = 25
+        self.__hash_len_to_lat_height = []
+        self.__hash_len_to_lon_width = []
+        self.__hash_len_to_lat_height.append(90.0*2)
+        self.__hash_len_to_lon_width.append(180.0*2)
+        even = False
+        for i in range(1, self.__max_precision + 1):
+            self.__hash_len_to_lat_height.append(self.__hash_len_to_lat_height[-1] / (8 if even else 4))
+            self.__hash_len_to_lon_width.append(self.__hash_len_to_lon_width[-1] / (4 if even else 8))
+            even = not even
+
     def __str__(self):
         return "GeometryOps"
 
-    def approximate_radius(self, geometry):
+    def __approximate_radius(self, geometry):
         """Return the approximate radius of a polygon geometry.
         :param geometry: an OGR geometry
         """
         corners = geometry.GetEnvelope()
         centroid = geometry.Centroid()
-        corner_point = ogr.CreateGeometryFromWkt('POINT({0} {1})'.format(corners[0], corners[1]))
+        corner_point = ogr.CreateGeometryFromWkt('POINT({0} {1})'.format(corners[0], corners[2]))
         return centroid.Distance(corner_point)
+
+    def __compute_distance(self, geometry, tolerance):
+        """Return a distance (in DD) based on
+        :param geometry:
+        :param tolerance:
+        :return:
+        """
+        radius = self.__approximate_radius(geometry) * 0.1
+        level = self.__lookup_hashLen_for_width_height(radius, radius)
+        distance = self.__lookup_degrees_size_for_hash_len(level)[1] * tolerance
+        return distance
+
+    def __lookup_hashLen_for_width_height(self, lonErr, latErr):
+        for i in range(1, self.__max_precision):
+            latHeight = self.__hash_len_to_lat_height[i]
+            lonWidth = self.__hash_len_to_lon_width[i]
+            if latHeight < latErr and lonWidth < lonErr:
+                return i
+        return self.__max_precision
+
+    def __lookup_degrees_size_for_hash_len(self, hash_length):
+        return (self.__hash_len_to_lat_height[hash_length], self.__hash_len_to_lon_width[hash_length])
 
     def generalize_geometry(self, wkt, tolerance):
         """Return a generalized geometry by a given tolerance.
@@ -260,6 +294,7 @@ class GeometryOps(object):
         :param tolerance: a simplification tolerance
         """
         try:
+            # If Polyline and tolerance is 1, just get the first, mid and last points.
             geometry = ogr.CreateGeometryFromWkt(wkt)
             if geometry.GetGeometryName() == 'LINESTRING' and tolerance > 0.9:
                 first_point = "{0:.2f} {1:.2f}".format(geometry.GetPoint()[0], geometry.GetPoint()[1])
@@ -277,19 +312,47 @@ class GeometryOps(object):
                 gen_geometry += ",".join(parts)
                 gen_geometry += ')'
                 return gen_geometry
-
+            elif geometry.GetGeometryName() in ('POLYGON', 'POLYGON Z', 'POLYGON M', 'MULTIPOLYGON M', 'MULTIPOLYGON Z',) and tolerance > 0.9:
+                # Get the bbox (extent)
+                extent = geometry.GetEnvelope()
+                ring = ogr.Geometry(ogr.wkbLinearRing)
+                ring.AddPoint(extent[0],extent[2])
+                ring.AddPoint(extent[1], extent[2])
+                ring.AddPoint(extent[1], extent[3])
+                ring.AddPoint(extent[0], extent[3])
+                ring.AddPoint(extent[0],extent[2])
+                poly = ogr.Geometry(ogr.wkbPolygon)
+                poly.AddGeometry(ring)
+                return poly.ExportToWkt()
             else:
-                factor = self.approximate_radius(geometry)
-                if not 'LINESTRING' in geometry.GetGeometryName():
-                    factor /= max((geometry.GetArea(), 10))
-                else:
-                    factor /= 10
-                factor *= math.pow(1 + tolerance, tolerance * 10) - 1
+                # If number points less than threshold, return full WKT.
+                threshold = 4 + (1 - tolerance) * 50
+                num_points = 0
+                for part in geometry:
+                    if part.GetGeometryName() == 'LINESTRING':
+                        num_points += part.GetPointCount()
+                    else:
+                        geom_ref = part.GetGeometryRef(0)
+                        if geom_ref:
+                            num_points += geom_ref.GetPointCount()
+                        else:
+                            num_points += part.GetPointCount()
+                if num_points <= threshold:
+                    return geometry.ExportToWkt()
+
+                factor = self.__compute_distance(geometry, tolerance)
                 gen_geometry = geometry.SimplifyPreserveTopology(factor)
                 wkt = gen_geometry.ExportToWkt()
                 if sys.getsizeof(wkt) > 32766:
                     gen_geometry = geometry.Simplify(factor)
                     wkt = gen_geometry.ExportToWkt()
                 return wkt
+                # ##OLD METHOD##
+                # factor = self.__approximate_radius(geometry)
+                # if not 'LINESTRING' in geometry.GetGeometryName():
+                #     factor /= max((geometry.GetArea(), 10))
+                # else:
+                #     factor /= 10
+                # factor *= math.pow(1 + tolerance, tolerance * 10) - 1
         except AttributeError:
             return None

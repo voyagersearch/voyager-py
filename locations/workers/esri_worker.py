@@ -541,12 +541,7 @@ def worker(data_path, esri_service=False):
                     for i, row in enumerate(rows):
                         if job.domains:
                             row = update_row(dsc.fields, rows, list(row))
-                        if generalize_value > 0.9:
-                            geo['xmin'] = row[0].extent.XMin
-                            geo['xmax'] = row[0].extent.XMax
-                            geo['ymin'] = row[0].extent.YMin
-                            geo['ymax'] = row[0].extent.YMax
-                        elif generalize_value == 0 or generalize_value == 0.0:
+                        if generalize_value == 0 or generalize_value == 0.0:
                             geo['wkt'] = row[0].WKT
                         else:
                             if geometry_ops:

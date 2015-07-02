@@ -325,7 +325,7 @@ def run_job(oracle_job):
             # Figure out if geometry type is ST or SDO.
             if geometry_type == 'SDO_GEOMETRY':
                 geo['code'] = job.db_cursor.execute("select c.{0}.SDO_SRID from {1} c".format(geometry_field, tbl)).fetchone()[0]
-                dimension = job.db_cursor.execute("select c.shape.Get_Dims() from {0} c".format(tbl)).fetchone()[0]
+                # dimension = job.db_cursor.execute("select c.shape.Get_Dims() from {0} c".format(tbl)).fetchone()[0]
                 if not job.db_cursor.execute("select c.{0}.SDO_POINT from {1} c".format(geometry_field, tbl)).fetchone()[0] is None:
                     is_point = True
                     if geo['code'] == 4326:
@@ -362,9 +362,9 @@ def run_job(oracle_job):
         # -------------------------------------------------
         # Drop astext from columns if WKT is not requested.
         # -------------------------------------------------
-        include_wkt = job.include_wkt
-        if not include_wkt and not geometry_type == 'SDO_GEOMETRY':
-            columns.pop(0)
+        # include_wkt = job.include_wkt
+        # if not include_wkt and not geometry_type == 'SDO_GEOMETRY':
+        #     columns.pop(0)
 
         # ------------------------------------------------------------
         # Get the count of all the rows to use for reporting progress.
@@ -451,43 +451,42 @@ def run_job(oracle_job):
             generalize_value = job.generalize_value
             for i, row in enumerate(rows):
                 try:
-                    if include_wkt:
-                        try:
-                            if generalize_value == 0:
-                                geo['wkt'] = row[0]
-                            else:
-                                geo['wkt'] = geometry_ops.generalize_geometry(str(row[0]), generalize_value)
-                        except Exception:
-                            pass
-                        if is_point:
-                            geo['lon'] = row[1]
-                            geo['lat'] = row[2]
-                        else:
+                    # if include_wkt:
+                    if is_point:
+                        geo['lon'] = row[1]
+                        geo['lat'] = row[2]
+                    else:
+                        if generalize_value == 0 or generalize_value == 0.0:
+                            geo['wkt'] = row[0]
+                        elif generalize_value > 0.9:
                             geo['xmin'] = row[1]
                             geo['ymin'] = row[2]
                             geo['xmax'] = row[3]
                             geo['ymax'] = row[4]
-                    else:
-                        if is_point:
-                            geo['lon'] = row[0]
-                            geo['lat'] = row[1]
                         else:
-                            if geometry_type == 'SDO_GEOMETRY':
-                                if dimension == 3:
-                                    geo['xmin'] = row[0][0]
-                                    geo['ymin'] = row[0][1]
-                                    geo['xmax'] = row[0][3]
-                                    geo['ymax'] = row[0][4]
-                                elif dimension == 2:
-                                    geo['xmin'] = row[0][0]
-                                    geo['ymin'] = row[0][1]
-                                    geo['xmax'] = row[0][2]
-                                    geo['ymax'] = row[0][3]
-                            else:
-                                geo['xmin'] = row[0]
-                                geo['ymin'] = row[1]
-                                geo['xmax'] = row[2]
-                                geo['ymax'] = row[3]
+                            geo['wkt'] = geometry_ops.generalize_geometry(str(row[0]), generalize_value)
+
+                # else:
+                #     if is_point:
+                #         geo['lon'] = row[0]
+                #         geo['lat'] = row[1]
+                #     else:
+                #         if geometry_type == 'SDO_GEOMETRY':
+                #             if dimension == 3:
+                #                 geo['xmin'] = row[0][0]
+                #                 geo['ymin'] = row[0][1]
+                #                 geo['xmax'] = row[0][3]
+                #                 geo['ymax'] = row[0][4]
+                #             elif dimension == 2:
+                #                 geo['xmin'] = row[0][0]
+                #                 geo['ymin'] = row[0][1]
+                #                 geo['xmax'] = row[0][2]
+                #                 geo['ymax'] = row[0][3]
+                #         else:
+                #             geo['xmin'] = row[0]
+                #             geo['ymin'] = row[1]
+                #             geo['xmax'] = row[2]
+                #             geo['ymax'] = row[3]
 
                     # Map column names to Voyager fields.
                     mapped_cols = dict(izip(mapped_fields, row))
