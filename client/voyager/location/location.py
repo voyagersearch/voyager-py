@@ -1,5 +1,3 @@
-from getpass import getuser
-
 class Location(object):
 
   def __init__(self, client=None, **kwargs):
@@ -12,6 +10,9 @@ class Location(object):
     self.client = client
     for k,v in kwargs.iteritems():
       setattr(self, k, v)
+
+    if not kwargs.has_key('settings'):
+      self.settings = {}
 
   def field(name, type, dest=None):
     if not hasattr(self, 'fields'):
@@ -49,6 +50,12 @@ class Location(object):
     """
     self.client.index_location(self.id, delta)
 
+  def wipe(self):
+    """
+    Clears the contents of the location.
+    """
+    self.client.wipe_location(self.id)
+
   def remove(self):
     """
     Removes the location from Voyager.
@@ -57,26 +64,3 @@ class Location(object):
 
   def __repr__(self):
     return str(self.__dict__)
-
-class DataStore(Location):
-
-  def __init__(self, name, layer, factory, params):
-    Location.__init__(self, type='DATA_STORE', name=name, layer=layer, factory=factory)
-    self.connection = map(lambda (k,v) : {'key':k, 'val':v}, params.items())
-
-class PostGIS(DataStore):
-
-  def __init__(self, db, layer, host='localhost', port=5432, user=getuser(), passwd=None, **kwargs):
-    params = {
-      'dbtype': 'postgis',
-      'host': host,
-      'port': port,
-      'user': user,
-      'database': db
-    }
-    params.update(kwargs)
-
-    if (passwd is not None):
-      params['passwd'] = passwd
-
-    DataStore.__init__(self, db, layer, 'org.geotools.data.postgis.PostgisNGDataStoreFactory', params)

@@ -62,6 +62,14 @@ class Client(object):
     """
     self.post('discovery/location/%s/scan?delta=%s' % (id,delta))
 
+  def wipe_location(self, id):
+    """
+    Clears contents of a location.
+
+    :param id: Location id.
+    """
+    self.delete('discovery/location/%s/index' % (id))
+
   def wipe_index(self):
     """
     Wipes the solr index, removing all documents.
