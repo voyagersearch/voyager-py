@@ -17,3 +17,6 @@ class Spatial(object):
     return self.client.post('spatial/simplifyWithGrid', geom, {
       'levels': max_levels, 'disterr': err_pct
     })
+
+  def normalize(self, geom):
+    return self.client.post('spatial/normalize', geom)
