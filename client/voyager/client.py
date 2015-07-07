@@ -94,7 +94,7 @@ class Client(object):
     }
 
     if body is not None:
-      args['data'] = json.dumps(body)
+      args['data'] = json.dumps(body) if isinstance(body, dict) else body
       args['headers']={'Content-Type': 'application/json'}
 
     if params is not None:
