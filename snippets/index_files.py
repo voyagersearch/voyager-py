@@ -17,7 +17,7 @@ import urllib2
 import os
 
 
-def send_job(file_location, url, username, password):
+def send_job(file_location, url, username, password, extract):
     """Posts a discovery job to Voyager for indexing.
     :param file_location: the location of the file to be indexed.
     :param url: request url i.e. http://localhost:8888/api/rest/discovery/job/index/
@@ -25,7 +25,7 @@ def send_job(file_location, url, username, password):
     # Sample discovery job.
     data = {"path": file_location,
             "action": "ADD",
-            "entry": {"fields": {"__to_extract":"true", "name": os.path.basename(file_location)}}}
+            "entry": {"fields": {"__to_extract":extract, "name": os.path.basename(file_location)}}}
 
     # Build the request and post.
     try:
@@ -56,10 +56,15 @@ if __name__ == '__main__':
                                  default='http://localhost:8888/api/rest/discovery/job/index/')
     argument_parser.add_argument('-un', '--username', action="store", help="Voyager account username", default='admin')
     argument_parser.add_argument('-pw', '--password', action="store", help="Voyager account password", default='admin')
+    argument_parser.add_argument('-ex', '--extract', action="store", help="Option to extract files", default='true')
     arguments = argument_parser.parse_args()
 
     # For each line (path to a file), send it to be indexed.
+    files_to_skip = [".xxx", ".yyy", ".zzz"]
     with open(arguments.file_list, 'rb') as f:
         for location in f:
-            send_job(location.strip('\r\n'), arguments.request_url, arguments.username, arguments.password)
-
+            ext = os.path.splitext(location.strip('\r\n'))[1]
+            if ext in files_to_skip:
+                print ("Skipping {0}".format(location))
+            else:
+                send_job(location.strip('\r\n'), arguments.request_url, arguments.username, arguments.password, arguments.extract)
