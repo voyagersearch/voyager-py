@@ -22,6 +22,14 @@ class Client(object):
     return map(lambda obj: Location(self, **obj),
       self.get('discovery/location')['locations'])
 
+  def get_location(self, id):
+    """
+    Get a location by identifier.
+
+    :param location: The location id.
+    """
+    return Location(self, **self.get('discovery/location/%s' % id))
+
   def add_location(self, location):
     """
     Adds a new location.
