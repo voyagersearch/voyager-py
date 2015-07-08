@@ -36,7 +36,7 @@ class Client(object):
 
     :param location: The location to add, an instance of of :class:`Location`.
     """
-    return Location(self, **self.post('discovery/location', location.json()))
+    return Location(self, **self.post('discovery/location', location.json))
 
   def remove_location(self, id):
     """

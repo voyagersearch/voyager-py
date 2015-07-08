@@ -25,6 +25,7 @@ class Location(object):
     })
     return self
 
+  @property
   def json(self):
     """
     Returns the location in a representation suitable to send to the server.
