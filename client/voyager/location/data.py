@@ -19,7 +19,7 @@ class PostGIS(DataStore):
     }
     params.update(kwargs)
 
-    if (passwd is not None):
+    if passwd:
       params['passwd'] = passwd
 
     DataStore.__init__(self, db, layer, 'org.geotools.data.postgis.PostgisNGDataStoreFactory', params)
