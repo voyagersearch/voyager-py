@@ -32,7 +32,7 @@ class Location(object):
     """
     obj = dict(self.__dict__)
     if obj.has_key('client'):
-      del obj['client']
+      obj.pop('client')
 
     return obj
 
