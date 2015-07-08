@@ -3,6 +3,7 @@
 .settings/
 target/
 *.pyc
+*.class
 .idea/.name
 .idea/encodings.xml
 .idea/dictionaries/Jason.xml
