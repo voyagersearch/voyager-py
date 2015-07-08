@@ -28,7 +28,7 @@ class Client(object):
 
     :param location: The location id.
     """
-    return Location(self, **self.get('discovery/location/%s' % id))
+    return Location(self, **self.get('discovery/location/{0}'.format(id)))
 
   def add_location(self, location):
     """
@@ -44,7 +44,7 @@ class Client(object):
 
     :param id: Location id.
     """
-    self.delete('discovery/location/%s' % id)
+    self.delete('discovery/location/{0}'.format(id))
 
   def remove_locations(self):
     """
@@ -60,7 +60,7 @@ class Client(object):
     :param id: Location id.
     :param delta: Whether to index only changes or build from scratch.
     """
-    self.post('discovery/location/%s/scan?delta=%s' % (id,delta))
+    self.post('discovery/location/{0}/scan?delta={1}'.format(id,delta))
 
   def wipe_location(self, id):
     """
@@ -68,7 +68,7 @@ class Client(object):
 
     :param id: Location id.
     """
-    self.delete('discovery/location/%s/index' % (id))
+    self.delete('discovery/location/{0}/index'.format(id))
 
   def wipe_index(self):
     """
@@ -131,7 +131,7 @@ class Client(object):
     r.raise_for_status()
 
   def _path(self, path):
-    return '%s/api/rest/%s' % (self.url, path)
+    return '{0}/api/rest/{1}'.format(self.url, path)
 
 if __name__ == '__main__':
   vg = Voyager()
