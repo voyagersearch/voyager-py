@@ -16,6 +16,21 @@ import json
 import sys
 import itertools
 import urllib
+import os
+from os.path import join, dirname, abspath
+import glob
+
+
+dll_path = abspath(join(dirname(dirname(dirname(dirname(__file__)))), '..', 'arch', 'win32_x86'))
+if os.environ['PATH'].endswith(';'):
+    os.environ['PATH'] += dll_path
+else:
+    os.environ['PATH'] += os.pathsep + dll_path
+egg_path = join(dll_path, 'py')
+sys.path.append(egg_path)
+libs = glob.glob(join(egg_path, 'GDAL*.egg'))
+for lib in libs:
+    sys.path.append(lib)
 import ogr
 
 
