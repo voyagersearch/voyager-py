@@ -15,6 +15,12 @@ class Client(object):
     self.url = url;
     self.auth = (user, passwd)
 
+  def system_status(self):
+    """
+    Returns status info about the voyager server.
+    """
+    return self.get('system/status')
+
   def locations(self):
     """
     Returns list of all locations.
