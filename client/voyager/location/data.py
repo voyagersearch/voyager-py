@@ -23,3 +23,12 @@ class PostGIS(DataStore):
       params['passwd'] = passwd
 
     DataStore.__init__(self, db, layer, 'org.geotools.data.postgis.PostgisNGDataStoreFactory', params)
+class Shapefile(DataStore):
+
+  def __init__(self, shp, layer=None):
+    params = {
+      'url': 'file://' + os.path.abspath(shp)
+    }
+
+    name = os.path.splitext(os.path.basename(shp))[0]
+    DataStore.__init__(self, name, 'org.geotools.data.shapefile.ShapefileDataStoreFactory', params, layer)
