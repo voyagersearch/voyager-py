@@ -131,12 +131,10 @@
 	  "type": "QueryIndex",
 	  "name": "query_the_index",
 	  "params": {
-	      "facet":"true",
 	      "fl":"id,name,absolute:[absolute]",
 	      "indent":"true",
-	      "q":"*:*",
+	      "facet":"true",
 	      "facet.field":"format",
-	      "wt":"json",
 	      "fq":"path:[* TO *]"},
 	  "fields": [
 	    "id",
