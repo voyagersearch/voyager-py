@@ -126,6 +126,22 @@
 		"name": "readonly_string",
 		"readOnly": true,
 		"value": "You should not be able to edit this string"
+	},
+	{
+	  "type": "QueryIndex",
+	  "name": "query_the_index",
+	  "params": {
+	      "facet":"true",
+	      "fl":"id,name,absolute:[absolute]",
+	      "indent":"true",
+	      "q":"*:*",
+	      "facet.field":"format",
+	      "wt":"json",
+	      "fq":"path:[* TO *]"},
+	  "fields": [
+	    "id",
+	    "absolute"
+	  ]
 	}
   ],
   "display": {
