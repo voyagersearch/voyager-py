@@ -62,7 +62,7 @@ class QueryIndex(object):
 
     @property
     def fl(self):
-        return '&fl=id,name:[name],format,path:[absolute],[thumbURL],[lyrFile],[lyrURL],[downloadURL],[lyrURL],[geo]'
+        return '&fl=id,name:[name],format,path:[absolute],[thumbURL],[lyrFile],[lyrURL],[downloadURL],[lyrURL]'
 
     def get_fq(self):
         """Return the query request string if the results are from a

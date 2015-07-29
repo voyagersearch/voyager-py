@@ -18,17 +18,15 @@ import locale
 import gettext
 import sys
 
+
 __all__ = ['utils']
 for module in os.listdir(os.path.dirname(__file__)):
     if module == '__init__.py' or module[-3:] != '.py':
         continue
     __all__.append(module[:-3])
 
-
-dll_path = r"C:\Voyager\server_1.9.7.3416\app\arch\win32_x86"
-gdal_path = r"C:\Voyager\server_1.9.7.3416\app\gdal"
-# dll_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'arch', 'win32_x86'))
-# gdal_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'gdal'))
+dll_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'arch', 'win32_x86'))
+gdal_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'gdal'))
 ogr2ogr = os.path.join(dll_path, 'ogr2ogr.exe')
 if os.environ['PATH'].endswith(';'):
     os.environ['PATH'] += dll_path

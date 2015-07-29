@@ -20,8 +20,8 @@ import os
 from os.path import join, dirname, abspath
 import glob
 
-dll_path = r"C:\Voyager\server_1.9.7.3360\app\arch\win32_x86"
-#dll_path = abspath(join(dirname(dirname(dirname(dirname(__file__)))), '..', 'arch', 'win32_x86'))
+
+dll_path = abspath(join(dirname(dirname(dirname(dirname(__file__)))), '..', 'arch', 'win32_x86'))
 if os.environ['PATH'].endswith(';'):
     os.environ['PATH'] += dll_path
 else:
