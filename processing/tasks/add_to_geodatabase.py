@@ -14,6 +14,7 @@
 # limitations under the License.
 import os
 import sys
+import collections
 import shutil
 import tempfile
 import urllib2
@@ -25,6 +26,78 @@ status_writer = status.Writer()
 result_count = 0
 processed_count = 0.
 import arcpy
+
+
+# def export_to_shp(jobs, file_name, output_folder):
+#     """Exports results to a shapefile.
+#     :param jobs: list of jobs (a job contains the result information)
+#     :param file_name: the output file name
+#     :param output_folder: the output task folder
+#     """
+#     import ogr
+#     driver = ogr.GetDriverByName("ESRI Shapefile")
+#     for job in jobs:
+#         try:
+#             geo_json = job['[geo]']
+#             if geo_json['type'].lower() == 'polygon':
+#                 geometry_type = ogr.wkbPolygon
+#             elif geo_json['type'].lower() == 'geometrycollection':
+#                 geom = ogr.CreateGeometryFromJson("{0}".format(job['[geo]']))
+#                 if geom.GetDimension() == 0:
+#                     geometry_type = ogr.wkbPoint
+#                 elif geom.GetDimension() == 1:
+#                     geometry_type = ogr.wkbLineString
+#                 else:
+#                     geometry_type = ogr.wkbPolygon
+#             elif geo_json['type'].lower() == 'multipolygon':
+#                 geometry_type = ogr.wkbMultiPolygon
+#             elif geo_json['type'].lower() == 'linestring':
+#                 geometry_type = ogr.wkbLineString
+#             elif geo_json['type'].lower() == 'multilinestring':
+#                 geometry_type = ogr.wkbMultiLineString
+#             elif geo_json['type'].lower() == 'point':
+#                 geometry_type = ogr.wkbPoint
+#             elif geo_json['type'].lower() == 'multipoint':
+#                 geometry_type = ogr.wkbMultiPoint
+#         except KeyError:
+#             continue
+#         except TypeError:
+#             continue
+#
+#         if os.path.exists(os.path.join(output_folder, '{0}_{1}.shp'.format(file_name, geo_json['type']))):
+#             shape_file = ogr.Open(os.path.join(output_folder, '{0}_{1}.shp'.format(file_name, geo_json['type'])), 1)
+#             layer = shape_file.GetLayer()
+#         else:
+#             shape_file = driver.CreateDataSource(os.path.join(output_folder, '{0}_{1}.shp'.format(file_name, geo_json['type'])))
+#             epsg_code = 4326
+#             srs = ogr.osr.SpatialReference()
+#             srs.ImportFromEPSG(epsg_code)
+#             layer = shape_file.CreateLayer('{0}_{1}'.format(file_name, geo_json['type']), srs, geometry_type)
+#             for name in jobs[0].keys():
+#                 if not name == '[geo]':
+#                     name = str(name)
+#                     new_field = ogr.FieldDefn(name, ogr.OFTString)
+#                     layer.CreateField(new_field)
+#
+#         try:
+#             layer_def = layer.GetLayerDefn()
+#             feature = ogr.Feature(layer_def)
+#             geom = ogr.CreateGeometryFromJson("{0}".format(job['[geo]']))
+#             feature.SetGeometry(geom)
+#         except KeyError:
+#             feature.SetGeometry(None)
+#             pass
+#         try:
+#             job.pop('[geo]')
+#         except KeyError:
+#             pass
+#         for field, value in job.iteritems():
+#             field, value = str(field), str(value)
+#             i = feature.GetFieldIndex(field)
+#             feature.SetField(i, value)
+#         layer.CreateFeature(feature)
+#         shape_file.Destroy()
+#         shape_file = None
 
 
 def is_feature_dataset(workspace):
@@ -82,6 +155,43 @@ def add_to_geodatabase(input_items, out_gdb, is_fds, show_progress=False):
             map_frame_name = task_utils.get_data_frame_name(ds)
             if map_frame_name:
                 ds = ds.split('|')[0].strip()
+
+            # -------------------------------
+            # Is the input a geometry feature
+            # -------------------------------
+            if isinstance(out_name, list):
+                for row in out_name:
+                    try:
+                        name = os.path.join(out_gdb, ds)
+                        if '[geo]' in row:
+                            geo_json = row['[geo]']
+                            geom = arcpy.AsShape(geo_json)
+                            if not arcpy.Exists(name):
+                                if arcpy.env.outputCoordinateSystem:
+                                    arcpy.CreateFeatureclass_management(out_gdb, os.path.basename(name), geom.type.upper())
+                                else:
+                                    arcpy.env.outputCoordinateSystem = 4326
+                                    arcpy.CreateFeatureclass_management(out_gdb, os.path.basename(name), geom.type.upper())
+
+                                try:
+                                    row.pop('[geo]')
+                                except KeyError:
+                                    pass
+                                new_fields = []
+                                field_values = []
+                                for field, value in row.iteritems():
+                                    new_fields.append(arcpy.ValidateFieldName(field, out_gdb))
+                                    arcpy.AddField_management(name, field, 'TEXT')
+                                    field_values.append(value)
+
+                            with arcpy.da.InsertCursor(name, ["SHAPE@"] + new_fields) as icur:
+                                icur.insertRow([geom] + field_values)
+                        else:
+                            pass
+                        status_writer.send_percent(processed_count / result_count, _('Added: {0}').format(row['name']), 'add_to_geodatabase')
+                        continue
+                    except Exception as ex:
+                        continue
 
             # -----------------------------
             # Check the data type and clip.
@@ -285,8 +395,8 @@ def execute(request):
     # Query the index for results in groups of 25.
     query_index = task_utils.QueryIndex(parameters[response_index])
     fl = query_index.fl
-    query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
-    # query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
+    # query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+    query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
     fq = query_index.get_fq()
     if fq:
         groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
@@ -301,7 +411,17 @@ def execute(request):
         else:
             results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-        input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
+        docs = eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs']
+        input_items = task_utils.get_input_items(docs)
+
+        input_rows = collections.defaultdict(list)
+        for doc in docs:
+            if 'path' not in doc:
+               input_rows[doc['name']].append(doc)
+
+        if input_rows:
+            add_to_geodatabase(input_rows, out_gdb, is_fds)
+
         if not input_items:
             status_writer.send_state(status.STAT_FAILED, _('No items to process. Check if items exist.'))
             return

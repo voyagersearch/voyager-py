@@ -19,6 +19,7 @@ import workers
 
 
 if __name__ == '__main__':
+    sys.argv.append(r"C:\Voyager\data\temp\__location_T14DF7A409BA_D14E8D38A636.json")
     if sys.argv[1] == '--info':
         worker_info = collections.defaultdict(list)
         try:
