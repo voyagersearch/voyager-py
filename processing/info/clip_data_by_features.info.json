@@ -9,10 +9,22 @@
       "required": true
     },
     {
-      "type": "QueryIndex",
-      "name": "clip_features",
-      "required": true
-    },
+	  "type": "QueryIndex",
+	  "name": "clip_features",
+	  "query": {
+	      "fl":"id,name,path:[absolute]",
+	      "indent":"true",
+	      "facet":"true",
+	      "facet.field":["format"],
+	      "fq":["geometry_type:Polygon"]
+      },
+	  "fields": [
+	    "id",
+        "name",
+        "geometry_type",
+	    "path"
+	  ]
+	},
     {
       "type": "StringChoice",
       "name": "output_format",

@@ -198,8 +198,6 @@ def execute(request):
     # Retrieve the clip features.
     clip_features = task_utils.get_parameter_value(parameters, 'clip_features', 'value')
 
-    #TODO: if clip features is a polygon feature (not a feature class or layer), create a in_memory feature class
-
     # Retrieve the coordinate system code.
     out_coordinate_system = int(task_utils.get_parameter_value(parameters, 'output_projection', 'code'))
 
@@ -227,6 +225,24 @@ def execute(request):
     result_count, response_index = task_utils.get_result_count(parameters)
     query_index = task_utils.QueryIndex(parameters[response_index])
     fl = query_index.fl
+
+    # Get the Clip features by id.
+    id = clip_features['id']
+    clip_query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', "&fl=id,path:[absolute],[lyrFile],[geo]&q=id:{0}".format(id))
+    clip_result = urllib2.urlopen(clip_query)
+    clipper = eval(clip_result.read())['response']['docs'][0]
+    if 'path' in clipper:
+        clip_features = clipper['path']
+    elif '[lyrFile]' in clipper:
+        clip_features = clipper['[lyrFile]']
+    elif '[geo]' in clipper:
+        clip_features = arcpy.AsShape(clipper['[geo]']).projectAs(arcpy.SpatialReference(4326))
+    else:
+        bbox = clipper['bbox'].split()
+        extent = arcpy.Extent(*bbox)
+        pt_array = arcpy.Array([extent.lowerLeft, extent.upperLeft, extent.upperRight, extent.lowerRight])
+        clip_features = arcpy.Polygon(pt_array, 4326)
+
     query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
     fq = query_index.get_fq()
     if fq:
