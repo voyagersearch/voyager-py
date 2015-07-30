@@ -132,9 +132,9 @@ class ArcGISServiceHelper(object):
         :param token: token value
         """
         if self.token:
-            query = {'where': '1=1', 'outFields': '*', 'returnGeomery':False, 'token': token, 'f': 'json'}
+            query = {'where': '1=1', 'outFields': '*', 'returnGeometry':False, 'token': token, 'f': 'json'}
         else:
-            query = {'where': '1=1', 'outFields': '*', 'returnGeomery':False, 'f': 'json'}
+            query = {'where': '1=1', 'outFields': '*', 'returnGeometry':False, 'f': 'json'}
         response = urllib.urlopen('{0}/{1}/query?'.format(url, layer_id), urllib.urlencode(query))
         data = json.loads(response.read())
         fields = data['fields']
