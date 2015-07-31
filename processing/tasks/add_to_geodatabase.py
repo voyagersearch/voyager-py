@@ -14,6 +14,7 @@
 # limitations under the License.
 import os
 import sys
+import collections
 import shutil
 import tempfile
 import urllib2
@@ -83,6 +84,65 @@ def add_to_geodatabase(input_items, out_gdb, is_fds, show_progress=False):
             if map_frame_name:
                 ds = ds.split('|')[0].strip()
 
+            # -------------------------------
+            # Is the input a geometry feature
+            # -------------------------------
+            if isinstance(out_name, list):
+                for row in out_name:
+                    try:
+                        name = os.path.join(out_gdb, arcpy.ValidateTableName(ds, out_gdb))
+                        # Create the geometry if it exists.
+                        geom = None
+                        try:
+                            geo_json = row['[geo]']
+                            geom = arcpy.AsShape(geo_json)
+                            row.pop('[geo]')
+                        except KeyError:
+                            pass
+
+                        if geom:
+                            if not arcpy.Exists(name):
+                                if arcpy.env.outputCoordinateSystem:
+                                    arcpy.CreateFeatureclass_management(out_gdb, os.path.basename(name), geom.type.upper())
+                                else:
+                                    arcpy.env.outputCoordinateSystem = 4326
+                                    arcpy.CreateFeatureclass_management(out_gdb, os.path.basename(name), geom.type.upper())
+                            else:
+                                if not geom.type.upper() == arcpy.Describe(name).shapeType.upper():
+                                    name = arcpy.CreateUniqueName(os.path.basename(name), out_gdb)
+                                    if arcpy.env.outputCoordinateSystem:
+                                        arcpy.CreateFeatureclass_management(out_gdb, os.path.basename(name), geom.type.upper())
+                                    else:
+                                        arcpy.env.outputCoordinateSystem = 4326
+                                        arcpy.CreateFeatureclass_management(out_gdb, os.path.basename(name), geom.type.upper())
+                        else:
+                            if not arcpy.Exists(name):
+                                arcpy.CreateTable_management(out_gdb, os.path.basename(name))
+
+                        existing_fields = [f.name for f in arcpy.ListFields(name)]
+                        new_fields = []
+                        field_values = []
+                        for field, value in row.iteritems():
+                            valid_field = arcpy.ValidateFieldName(field, out_gdb)
+                            new_fields.append(valid_field)
+                            field_values.append(value)
+                            if not valid_field in existing_fields:
+                                arcpy.AddField_management(name, valid_field, 'TEXT')
+
+                        if geom:
+                            with arcpy.da.InsertCursor(name, ["SHAPE@"] + new_fields) as icur:
+                                icur.insertRow([geom] + field_values)
+                        else:
+                            with arcpy.da.InsertCursor(name, new_fields) as icur:
+                                icur.insertRow(field_values)
+
+                        status_writer.send_percent(processed_count / result_count, _('Added: {0}').format(row['name']), 'add_to_geodatabase')
+                        added += 1
+                        continue
+                    except Exception as ex:
+                        errors += 1
+                        continue
+                continue
             # -----------------------------
             # Check the data type and clip.
             # -----------------------------
@@ -285,8 +345,8 @@ def execute(request):
     # Query the index for results in groups of 25.
     query_index = task_utils.QueryIndex(parameters[response_index])
     fl = query_index.fl
-    query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
-    # query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
+    # query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+    query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
     fq = query_index.get_fq()
     if fq:
         groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
@@ -301,8 +361,18 @@ def execute(request):
         else:
             results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-        input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
-        if not input_items:
+        docs = eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs']
+        input_items = task_utils.get_input_items(docs)
+
+        input_rows = collections.defaultdict(list)
+        for doc in docs:
+            if 'path' not in doc:
+               input_rows[doc['title']].append(doc)
+
+        if input_rows:
+            add_to_geodatabase(input_rows, out_gdb, is_fds)
+
+        if not input_items and not input_rows:
             status_writer.send_state(status.STAT_FAILED, _('No items to process. Check if items exist.'))
             return
         result = add_to_geodatabase(input_items, out_gdb, is_fds)
