@@ -2,6 +2,7 @@
   "name": "create_geopdf",
   "runner": "python",
   "categories": ["Extracting Data"],
+  "fields": "[geo]",
   "params": [
     {
       "type": "VoyagerResults",

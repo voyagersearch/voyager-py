@@ -14,6 +14,7 @@
 # limitations under the License.
 import os
 import sys
+import collections
 import shutil
 import urllib2
 import arcpy
@@ -94,6 +95,60 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
             map_frame_name = task_utils.get_data_frame_name(ds)
             if map_frame_name:
                 ds = ds.split('|')[0].strip()
+
+            # -------------------------------
+            # Is the input a geometry feature
+            # -------------------------------
+            if isinstance(out_name, list):
+                for row in out_name:
+                    try:
+                        name = os.path.join(out_workspace, arcpy.ValidateTableName(ds, out_workspace))
+                        # Clip the geometry.
+                        geo_json = row['[geo]']
+                        geom = arcpy.AsShape(geo_json)
+                        row.pop('[geo]')
+                        if not arcpy.Exists(name):
+                            if arcpy.env.outputCoordinateSystem:
+                                arcpy.CreateFeatureclass_management(out_workspace, os.path.basename(name), geom.type.upper())
+                            else:
+                                arcpy.env.outputCoordinateSystem = 4326
+                                arcpy.CreateFeatureclass_management(out_workspace, os.path.basename(name), geom.type.upper())
+                        else:
+                            if not geom.type.upper() == arcpy.Describe(name).shapeType.upper():
+                                name = arcpy.CreateUniqueName(os.path.basename(name), out_workspace)
+                                if arcpy.env.outputCoordinateSystem:
+                                    arcpy.CreateFeatureclass_management(out_workspace, os.path.basename(name), geom.type.upper())
+                                else:
+                                    arcpy.env.outputCoordinateSystem = 4326
+                                    arcpy.CreateFeatureclass_management(out_workspace, os.path.basename(name), geom.type.upper())
+
+                        existing_fields = [f.name for f in arcpy.ListFields(name)]
+                        new_fields = []
+                        field_values = []
+                        for field, value in row.iteritems():
+                            valid_field = arcpy.ValidateFieldName(field, out_workspace)
+                            new_fields.append(valid_field)
+                            field_values.append(value)
+                            if not valid_field in existing_fields:
+                                arcpy.AddField_management(name, valid_field, 'TEXT')
+
+                        clipped_geometry = arcpy.Clip_analysis(geom, gcs_clip_poly, arcpy.Geometry())
+                        if clipped_geometry:
+                            with arcpy.da.InsertCursor(name, ["SHAPE@"] + new_fields) as icur:
+                                icur.insertRow([clipped_geometry[0]] + field_values)
+                        status_writer.send_percent(processed_count / result_count, _('Clipped: {0}').format(row['name']), 'clip_data')
+                        processed_count += 1
+                        clipped += 1
+                    except KeyError:
+                        processed_count += 1
+                        skipped += 1
+                        status_writer.send_state(_(status.STAT_WARNING, 'Invalid input type: {0}').format(ds))
+                    except Exception:
+                        processed_count += 1
+                        errors += 1
+                        continue
+                continue
+
 
             dsc = arcpy.Describe(ds)
             try:
@@ -222,7 +277,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
             else:
                 processed_count += 1.
                 status_writer.send_percent(processed_count / result_count, _('Invalid input type: {0}').format(ds), 'clip_data')
-                status_writer.send_state(_('Invalid input type: {0}').format(ds))
+                status_writer.send_state(_(status.STAT_WARNING, 'Invalid input type: {0}').format(ds))
                 skipped += 1
                 continue
 
@@ -306,11 +361,28 @@ def execute(request):
         else:
             results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-        input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
-        result = clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_clip_poly, out_format)
-        clipped += result[0]
-        errors += result[1]
-        skipped += result[2]
+        docs = eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs']
+        input_items = task_utils.get_input_items(docs)
+
+        input_rows = collections.defaultdict(list)
+        for doc in docs:
+            if 'path' not in doc:
+               input_rows[doc['name']].append(doc)
+        if input_rows:
+            result = clip_data(input_rows, out_workspace, out_coordinate_system, gcs_sr, gcs_clip_poly, out_format)
+            clipped += result[0]
+            errors += result[1]
+            skipped += result[2]
+
+        if input_items:
+            result = clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_clip_poly, out_format)
+            clipped += result[0]
+            errors += result[1]
+            skipped += result[2]
+
+        if not input_items and not input_rows:
+            status_writer.send_state(status.STAT_FAILED, _('No items to process. Check if items exist.'))
+            return
 
     if arcpy.env.workspace.endswith('.gdb'):
         out_workspace = os.path.dirname(arcpy.env.workspace)

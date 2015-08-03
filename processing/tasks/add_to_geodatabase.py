@@ -372,17 +372,19 @@ def execute(request):
                input_rows[doc['title']].append(doc)
         if input_rows:
             result = add_to_geodatabase(input_rows, out_gdb, is_fds)
+            added += result[0]
+            errors += result[1]
+            skipped += result[2]
 
         if input_items:
             result = add_to_geodatabase(input_items, out_gdb, is_fds)
+            added += result[0]
+            errors += result[1]
+            skipped += result[2]
 
         if not input_items and not input_rows:
             status_writer.send_state(status.STAT_FAILED, _('No items to process. Check if items exist.'))
             return
-        else:
-            added += result[0]
-            errors += result[1]
-            skipped += result[2]
 
     # Copy the default thumbnail and create a report in the task folder..
     try:

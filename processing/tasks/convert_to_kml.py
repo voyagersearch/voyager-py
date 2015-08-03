@@ -15,6 +15,7 @@
 import os
 import sys
 import glob
+import collections
 import shutil
 import urllib2
 from utils import status
@@ -75,11 +76,28 @@ def execute(request):
         else:
             results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
-        input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
-        result = convert_to_kml(input_items, out_workspace, extent)
-        converted += result[0]
-        errors += result[1]
-        skipped += result[2]
+        docs = eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs']
+        input_items = task_utils.get_input_items(docs)
+
+        input_rows = collections.defaultdict(list)
+        for doc in docs:
+            if 'path' not in doc:
+               input_rows[doc['name']].append(doc)
+        if input_rows:
+            result = convert_to_kml(input_rows, out_workspace, extent)
+            converted += result[0]
+            errors += result[1]
+            skipped += result[2]
+
+        if input_items:
+            result = convert_to_kml(input_items, out_workspace, extent)
+            converted += result[0]
+            errors += result[1]
+            skipped += result[2]
+
+        if not input_items and not input_rows:
+            status_writer.send_state(status.STAT_FAILED, _('No items to process. Check if items exist.'))
+            return
 
     # Zip up kmz files if more than one.
     if converted > 1:
@@ -149,7 +167,69 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
             if map_frame_name:
                 ds = ds.split('|')[0].strip()
 
+            # -------------------------------
+            # Is the input a geometry feature
+            # -------------------------------
+            if isinstance(out_name, list):
+                for row in out_name:
+                    try:
+                        name = arcpy.ValidateTableName(ds, 'in_memory')
+                        name = os.path.join('in_memory', name)
+                        # Clip the geometry.
+                        geo_json = row['[geo]']
+                        geom = arcpy.AsShape(geo_json)
+                        row.pop('[geo]')
+                        if not arcpy.Exists(name):
+                            if arcpy.env.outputCoordinateSystem:
+                                arcpy.CreateFeatureclass_management('in_memory', os.path.basename(name), geom.type.upper())
+                            else:
+                                arcpy.env.outputCoordinateSystem = 4326
+                                arcpy.CreateFeatureclass_management('in_memory', os.path.basename(name), geom.type.upper())
+                        else:
+                            if not geom.type.upper() == arcpy.Describe(name).shapeType.upper():
+                                name = arcpy.CreateUniqueName(os.path.basename(name), 'in_memory')
+                                if arcpy.env.outputCoordinateSystem:
+                                    arcpy.CreateFeatureclass_management('in_memory', os.path.basename(name), geom.type.upper())
+                                else:
+                                    arcpy.env.outputCoordinateSystem = 4326
+                                    arcpy.CreateFeatureclass_management('in_memory', os.path.basename(name), geom.type.upper())
+
+                        existing_fields = [f.name for f in arcpy.ListFields(name)]
+                        new_fields = []
+                        field_values = []
+                        for field, value in row.iteritems():
+                            valid_field = arcpy.ValidateFieldName(field, 'in_memory')
+                            new_fields.append(valid_field)
+                            field_values.append(value)
+                            if not valid_field in existing_fields:
+                                arcpy.AddField_management(name, valid_field, 'TEXT')
+
+                        with arcpy.da.InsertCursor(name, ["SHAPE@"] + new_fields) as icur:
+                            icur.insertRow([geom] + field_values)
+
+                        arcpy.MakeFeatureLayer_management(name, os.path.basename(name))
+                        arcpy.LayerToKML_conversion(os.path.basename(name),
+                                                    '{0}.kmz'.format(os.path.join(out_workspace, os.path.basename(name))),
+                                                    1,
+                                                    boundary_box_extent=extent)
+                        status_writer.send_percent(processed_count / result_count, _('Converted: {0}').format(row['name']), 'convert_to_kml')
+                        processed_count += 1
+                        converted += 1
+                    except KeyError:
+                        processed_count += 1
+                        skipped += 1
+                        status_writer.send_state(_(status.STAT_WARNING, 'Invalid input type: {0}').format(ds))
+                    except Exception:
+                        processed_count += 1
+                        errors += 1
+                        continue
+                continue
+
+
             dsc = arcpy.Describe(ds)
+
+            if os.path.exists(os.path.join('{0}.kmz'.format(os.path.join(out_workspace, out_name)))):
+                out_name = os.path.basename(arcpy.CreateUniqueName(out_name + '.kmz', out_workspace))[:-4]
 
             if dsc.dataType == 'FeatureClass':
                 arcpy.MakeFeatureLayer_management(ds, dsc.name)

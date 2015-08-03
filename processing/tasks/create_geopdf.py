@@ -13,10 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from tasks.utils import status
-from tasks.utils import task_utils
-from tasks import _
-
+import collections
+from utils import status
+from utils import task_utils
 
 status_writer = status.Writer()
 import arcpy
@@ -32,7 +31,12 @@ def execute(request):
 
     parameters = request['params']
     num_results, response_index = task_utils.get_result_count(parameters)
-    input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
+    docs = parameters[response_index]['response']['docs']
+    input_items = task_utils.get_input_items(docs)
+    input_rows = collections.defaultdict(list)
+    for doc in docs:
+        if 'path' not in doc:
+           input_rows[doc['name']].append(doc)
     if num_results > task_utils.CHUNK_SIZE:
         status_writer.send_state(status.STAT_FAILED, 'Reduce results to 25 or less.')
         return
@@ -62,6 +66,23 @@ def execute(request):
 
     layers = []
     all_layers = []
+
+    if input_rows:
+        for name, rows in input_rows.iteritems():
+            for row in rows:
+                try:
+                    name = arcpy.CreateUniqueName(name, 'in_memory')
+                    # Create the geometry.
+                    geo_json = row['[geo]']
+                    geom = arcpy.AsShape(geo_json)
+                    arcpy.CopyFeatures_management(geom, name)
+                    feature_layer = arcpy.MakeFeatureLayer_management(name, os.path.basename(name))
+                    layer_file = arcpy.SaveToLayerFile_management(feature_layer, os.path.join(temp_folder, '{0}.lyr'.format(os.path.basename(name))))
+                    layers.append(arcpy.mapping.Layer(layer_file.getOutput(0)))
+                    all_layers.append(arcpy.mapping.Layer(layer_file.getOutput(0)))
+                except KeyError:
+                    continue
+
     for i, item in enumerate(input_items, 1):
         try:
             # Is the item a mxd data frame.
