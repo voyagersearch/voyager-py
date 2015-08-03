@@ -137,9 +137,11 @@ def add_to_geodatabase(input_items, out_gdb, is_fds, show_progress=False):
                                 icur.insertRow(field_values)
 
                         status_writer.send_percent(processed_count / result_count, _('Added: {0}').format(row['name']), 'add_to_geodatabase')
+                        processed_count += 1
                         added += 1
                         continue
                     except Exception as ex:
+                        processed_count += 1
                         errors += 1
                         continue
                 continue
@@ -345,8 +347,8 @@ def execute(request):
     # Query the index for results in groups of 25.
     query_index = task_utils.QueryIndex(parameters[response_index])
     fl = query_index.fl
-    # query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
-    query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
+    query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+    # query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
     fq = query_index.get_fq()
     if fq:
         groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
@@ -368,17 +370,19 @@ def execute(request):
         for doc in docs:
             if 'path' not in doc:
                input_rows[doc['title']].append(doc)
-
         if input_rows:
-            add_to_geodatabase(input_rows, out_gdb, is_fds)
+            result = add_to_geodatabase(input_rows, out_gdb, is_fds)
+
+        if input_items:
+            result = add_to_geodatabase(input_items, out_gdb, is_fds)
 
         if not input_items and not input_rows:
             status_writer.send_state(status.STAT_FAILED, _('No items to process. Check if items exist.'))
             return
-        result = add_to_geodatabase(input_items, out_gdb, is_fds)
-        added += result[0]
-        errors += result[1]
-        skipped += result[2]
+        else:
+            added += result[0]
+            errors += result[1]
+            skipped += result[2]
 
     # Copy the default thumbnail and create a report in the task folder..
     try:
