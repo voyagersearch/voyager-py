@@ -22,7 +22,7 @@ import logging
 import multiprocessing
 import arcpy
 import _server_admin as arcrest
-from utils import status, worker_utils
+from utils import status
 
 status_writer = status.Writer()
 
@@ -117,6 +117,7 @@ def update_row(fields, rows, row):
 
 def index_service(connection_info):
     """Index the records in Map and Feature Services."""
+    from utils import worker_utils
     geometry_ops = worker_utils.GeometryOps()
     job.connect_to_zmq()
     entry = {}
