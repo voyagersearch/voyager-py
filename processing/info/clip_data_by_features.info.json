@@ -14,7 +14,7 @@
 	  "query": {
 	      "fl":"id,name,path:[absolute]",
 	      "indent":"true",
-	      "facet":"true",
+	      "facet":true,
 	      "facet.field":["format"],
 	      "fq":["geometry_type:Polygon"]
       },
