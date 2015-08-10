@@ -1,0 +1,34 @@
+{
+  "name": "create_layer_files",
+  "runner": "python",
+  "categories": ["Managing Data and Files"],
+  "security": ["_ADMIN"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "FolderLocation",
+      "name": "meta_data_folder",
+      "required": true
+    }
+  ],
+  "display":
+  {
+    "en":
+    {
+      "display": "Create Layer Files",
+      "description": "Creates layers files in Voyager's meta folders.",
+      "helpURL": "https://voyagersearch.zendesk.com/entries/92842153-Create-Layer-Files",
+  	  "params":
+  	  {
+  	    "target_folder": {
+  	      "display": "Voyager Metadata Folder",
+  	      "description": "The Voyager metadata folder."
+  	    }
+   	  }
+    }
+  }
+}
