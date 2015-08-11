@@ -24,6 +24,9 @@ from tasks import _
 status_writer = status.Writer()
 import arcpy
 
+skipped_reasons = {}
+errors_reasons = {}
+
 
 def get_items(input_items, out_workspace):
     """Returns the list of items to package."""
@@ -101,11 +104,13 @@ def get_items(input_items, out_workspace):
                     files.append(item)
                 else:
                     status_writer.send_status(_('Invalid input type: {0}').format(item))
+                    skipped_reasons[item] = 'Invalid input type'
                     skipped += 1
                     continue
         except Exception as ex:
             status_writer.send_status(_('Cannot package: {0}: {1}').format(item, repr(ex)))
             errors += 1
+            errors_reasons[item] = repr(ex)
             pass
     return layers, files, errors, skipped
 
@@ -235,4 +240,4 @@ def execute(request):
     # Update state if necessary.
     if errors > 0 or skipped:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(errors + skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.json'), len(layers), skipped, errors)
+    task_utils.report(os.path.join(request['folder'], '_report.md'), len(layers), skipped, errors, errors_reasons, skipped_reasons)

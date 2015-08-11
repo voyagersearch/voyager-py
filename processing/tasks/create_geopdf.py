@@ -20,6 +20,9 @@ from utils import task_utils
 status_writer = status.Writer()
 import arcpy
 
+skipped_reasons = {}
+errors_reasons = {}
+
 
 def execute(request):
     """Creates a GeoPDF.
@@ -80,7 +83,10 @@ def execute(request):
                     layer_file = arcpy.SaveToLayerFile_management(feature_layer, os.path.join(temp_folder, '{0}.lyr'.format(os.path.basename(name))))
                     layers.append(arcpy.mapping.Layer(layer_file.getOutput(0)))
                     all_layers.append(arcpy.mapping.Layer(layer_file.getOutput(0)))
+                    added_to_map += 1
                 except KeyError:
+                    skipped += 1
+                    skipped_reasons[name] = 'No geographic information'
                     continue
 
     for i, item in enumerate(input_items, 1):
@@ -155,10 +161,12 @@ def execute(request):
                     layers = []
             else:
                 status_writer.send_status(_('Invalid input type: {0}').format(item))
+                skipped_reasons[item] = 'Invalid input type'
                 skipped += 1
         except Exception as ex:
             status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
             errors += 1
+            errors_reasons[item] = repr(ex)
             pass
 
     if map_view:
@@ -225,10 +233,10 @@ def execute(request):
         task_utils.make_thumbnail(mxd, os.path.join(request['folder'], '_thumb.png'), False)
     else:
         status_writer.send_state(status.STAT_FAILED, _('No results can be exported to PDF'))
-        task_utils.report(os.path.join(request['folder'], '_report.json'), added_to_map, skipped, skipped, 0)
+        task_utils.report(os.path.join(request['folder'], '_report.md'), added_to_map, skipped, skipped_details=skipped_reasons)
         return
 
     # Update state if necessary.
     if skipped > 0 or errors > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
-    task_utils.report(os.path.join(request['folder'], '_report.json'), added_to_map, skipped, errors)
+    task_utils.report(os.path.join(request['folder'], '_report.md'), added_to_map, skipped, errors, errors_reasons, skipped_reasons)

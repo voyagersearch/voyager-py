@@ -19,15 +19,17 @@ import tempfile
 import urllib2
 import xml.etree.cElementTree as eTree
 import shutil
-from tasks.utils import status
-from tasks.utils import task_utils
-from tasks import _
+from utils import status
+from utils import task_utils
 
 
 status_writer = status.Writer()
 import arcpy
 if arcpy.GetInstallInfo()['Version'] == '10.0':
     raise ImportError('write_metadata not available with ArcGIS 10.0.')
+
+errors_reasons = {}
+skipped_reasons = {}
 
 
 def index_item(id):
@@ -110,7 +112,7 @@ def execute(request):
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
     else:
         status_writer.send_state(status.STAT_SUCCESS)
-    task_utils.report(os.path.join(request['folder'], '_report.json'), updated, skipped, errors)
+    task_utils.report(os.path.join(request['folder'], '_report.md'), updated, skipped, errors, errors_reasons, skipped_reasons)
 
 
 def write_metadata(input_items, template_xml, xslt_file, summary, description, tags, overwrite, show_progress=False):
@@ -219,12 +221,14 @@ def write_metadata(input_items, template_xml, xslt_file, summary, description, t
                     i += 1
                 else:
                     status_writer.send_status(_('No metadata changes for: {0}').format(item))
+                skipped_reasons[item] = _('No metadata changes for: {0}').format(item)
                 skipped += 1
         except Exception as ex:
             if show_progress:
                 status_writer.send_percent(i / item_count, _('Skipped: {0}').format(item), 'write_metadata')
                 i += 1
             status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
+            errors_reasons[item] = repr(ex)
             errors += 1
             pass
 

@@ -25,6 +25,8 @@ from utils import task_utils
 status_writer = status.Writer()
 result_count = 0
 processed_count = 0.
+skipped_reasons = {}
+errors_reasons = {}
 import arcpy
 
 
@@ -39,7 +41,7 @@ def is_feature_dataset(workspace):
     return False
 
 
-def add_to_geodatabase(input_items, out_gdb, is_fds, show_progress=False):
+def add_to_geodatabase(input_items, out_gdb, is_fds):
     """Adds items to a geodatabase."""
     added = 0
     skipped = 0
@@ -58,7 +60,7 @@ def add_to_geodatabase(input_items, out_gdb, is_fds, show_progress=False):
                     oid_groups = service_layer.object_ids
                     out_features = None
                     for group in oid_groups:
-                        group = [oid for oid in group if not oid == None]
+                        group = [oid for oid in group if not oid]
                         where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
                         url = ds + "/query?where={}&outFields={}&returnGeometry=true&geometryType=esriGeometryPolygon&f=json&token={}".format(where, '*', '')
                         feature_set = arcpy.FeatureSet()
@@ -74,6 +76,7 @@ def add_to_geodatabase(input_items, out_gdb, is_fds, show_progress=False):
                     continue
                 except Exception as ex:
                     status_writer.send_state(status.STAT_WARNING, str(ex))
+                    errors_reasons[ds] = ex.message
                     errors += 1
                     continue
 
@@ -126,7 +129,7 @@ def add_to_geodatabase(input_items, out_gdb, is_fds, show_progress=False):
                             valid_field = arcpy.ValidateFieldName(field, out_gdb)
                             new_fields.append(valid_field)
                             field_values.append(value)
-                            if not valid_field in existing_fields:
+                            if valid_field not in existing_fields:
                                 arcpy.AddField_management(name, valid_field, 'TEXT')
 
                         if geom:
@@ -143,6 +146,7 @@ def add_to_geodatabase(input_items, out_gdb, is_fds, show_progress=False):
                     except Exception as ex:
                         processed_count += 1
                         errors += 1
+                        errors_reasons[name] = ex.message
                         continue
                 continue
             # -----------------------------
@@ -234,6 +238,7 @@ def add_to_geodatabase(input_items, out_gdb, is_fds, show_progress=False):
                     processed_count += 1
                     status_writer.send_percent(processed_count / result_count, _('Invalid input type: {0}').format(dsc.name), 'add_to_geodatabase')
                     skipped += 1
+                    skipped_reasons[ds] = _('Invalid input type: {0}').format(dsc.dataType)
                     continue
 
             elif dsc.dataType == 'MapDocument':
@@ -284,6 +289,7 @@ def add_to_geodatabase(input_items, out_gdb, is_fds, show_progress=False):
             processed_count += 1
             status_writer.send_percent(processed_count / result_count, _('Skipped: {0}').format(ds), 'add_to_geodatabase')
             status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
+            errors_reasons[ds] = repr(ex)
             errors += 1
             continue
 
@@ -339,7 +345,6 @@ def execute(request):
                                                            os.path.basename(os.path.dirname(out_gdb)))
                     arcpy.CreateFeatureDataset_management(os.path.dirname(out_gdb), os.path.basename(out_gdb))
 
-
     status_writer.send_status(_('Setting the output workspace...'))
     arcpy.env.workspace = out_gdb
 
@@ -348,6 +353,7 @@ def execute(request):
     query_index = task_utils.QueryIndex(parameters[response_index])
     fl = query_index.fl
     query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+    # query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
     fq = query_index.get_fq()
     if fq:
         groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
@@ -368,7 +374,7 @@ def execute(request):
         input_rows = collections.defaultdict(list)
         for doc in docs:
             if 'path' not in doc:
-               input_rows[doc['title']].append(doc)
+                input_rows[doc['title']].append(doc)
         if input_rows:
             result = add_to_geodatabase(input_rows, out_gdb, is_fds)
             added += result[0]
@@ -394,4 +400,4 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0 or errors > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
-    task_utils.report(os.path.join(task_folder, '_report.json'), added, skipped, errors)
+    task_utils.report(os.path.join(task_folder, '_report.md'), added, skipped, errors, errors_reasons, skipped_reasons)

@@ -16,13 +16,14 @@ import os
 import sys
 import shutil
 import urllib2
-from tasks.utils import status
-from tasks.utils import task_utils
-from tasks import _
+from utils import status
+from utils import task_utils
 
 
 status_writer = status.Writer()
 import arcpy
+
+skipped_reasons = {}
 
 
 def index_item(id):
@@ -129,7 +130,7 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.json'), updated, skipped)
+    task_utils.report(os.path.join(request['folder'], '_report.md'), updated, skipped, skipped_details=skipped_reasons)
 
 
 def replace_data_source(input_items, old_data_source, new_workspace,
@@ -161,6 +162,7 @@ def replace_data_source(input_items, old_data_source, new_workspace,
                 table_views = arcpy.mapping.ListTableViews(mxd)
         else:
             status_writer.send_status(_('{0} is not a layer file or map document').format(item))
+            skipped_reasons[item] = _('{0} is not a layer file or map document').format(item)
             skipped += 1
             continue
 
@@ -184,6 +186,7 @@ def replace_data_source(input_items, old_data_source, new_workspace,
                         layer.save()
                 except ValueError:
                     status_writer.send_status(_('Invalid workspace'))
+                    skipped_reasons[item] = _('Invalid workspace')
                     skipped += 1
                     pass
 
@@ -197,6 +200,7 @@ def replace_data_source(input_items, old_data_source, new_workspace,
                             table_view.replaceDataSource(new_workspace, workspace_type, new_dataset, False)
                 except ValueError:
                     status_writer.send_status(_('Invalid workspace'))
+                    skipped_reasons[item] = _('Invalid workspace')
                     skipped += 1
                     pass
         if mxd:

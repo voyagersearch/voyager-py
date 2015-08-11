@@ -654,30 +654,39 @@ def make_thumbnail(layer_or_mxd, output_png_file, use_data_frame=True):
         arcpy.mapping.ExportToPNG(mxd, output_png_file, '', 150, 150, 10)
 
 
-def report(report_file, num_processed, num_skipped, num_errors=0, num_warnings=0):
+def report(report_file, num_processed=0, num_skipped=0, num_errors=0, errors_details=None, skipped_details=None):
     """Create a markdown report of inputs processed or skipped.
-
     :param report_file: path of the .md file
     :param num_processed: number of items processed
     :param num_skipped: number of items skipped
     :param num_errors:  number of errors
-    :param num_warnings: number of warnings
     """
-    #TODO: May add report markdown report to text field later on.
-    # report_md = ['| Action    | Count |',
-    #              '| ------    | ----- |',
-    #              '| Processed | {0} |'.format(num_processed),
-    #              '| Skipped   | {0} |'.format(num_skipped)]
-    # report_info = {"count": num_skipped, "warnings": num_warnings, "errors": num_errors, "text": '\n'.join(report_md)}
+    report_md = ['Summary:',
+                 '=========',
+                 '| Action    | Count |',
+                 '|:--------- | ----: |',
+                 '| Processed | {0} |'.format(num_processed),
+                 '| Skipped   | {0} |'.format(num_skipped),
+                 '| Errors    | {0} |'.format(num_errors)]
 
-    total = sum([num_processed, num_skipped, num_warnings, num_errors])
-    report_info = {"count": total,
-                   "processed": num_processed,
-                   "skipped": num_skipped,
-                   "warnings": num_warnings,
-                   "errors": num_errors}
-    with open(report_file, 'w') as fp:
-        json.dump(report_info, fp, indent=2)
+    with open(report_file, 'wb') as fp:
+        for line in report_md:
+            fp.write(line + '\n')
+
+        if skipped_details:
+            fp.write('#### Skipped:\n')
+            fp.write('| Item | Reason | \n')
+            fp.write('|:------- | :------| \n')
+            for k, v in skipped_details.iteritems():
+                fp.write(' |{0} | {1} | \n'.format(k, v))
+
+        if errors_details:
+            fp.write('#### Errors:\n')
+            fp.write('| Item | Reason | \n')
+            fp.write('|:------ | :------| \n')
+            for k, v in errors_details.iteritems():
+                fp.write('| {0} | {1} | \n'.format(k, v))
+            fp.write("#\n")
 
 
 def save_to_layer_file(data_location, include_mxd_layers=True):

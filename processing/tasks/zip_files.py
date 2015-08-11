@@ -17,14 +17,14 @@ import sys
 import shutil
 import urllib2
 import zipfile
-from tasks.utils import status
-from tasks.utils import task_utils
-from tasks import _
+from utils import status
+from utils import task_utils
 
 
 status_writer = status.Writer()
 shp_files = ('shp', 'shx', 'sbn', 'dbf', 'prj', 'cpg', 'shp.xml', 'dbf.xml')
 sdc_files = ('sdc', 'sdi', 'sdc.xml', 'sdc.prj')
+skipped_reasons = {}
 
 
 def execute(request):
@@ -88,7 +88,7 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.json'), zipped, skipped)
+    task_utils.report(os.path.join(request['folder'], '_report.md'), zipped, skipped, skipped_details=skipped_reasons)
 
 
 def zip_files(zipper, input_items, zip_file_location, flatten_results, show_progress=False):
@@ -140,5 +140,6 @@ def zip_files(zipper, input_items, zip_file_location, flatten_results, show_prog
                     'zip_files'
                 )
                 i += 1
+            skipped_reasons[in_file] = _('{0} is not a file or does not exist').format(in_file)
             skipped += 1
     return zipped, skipped

@@ -15,13 +15,15 @@
 import os
 import sys
 import urllib2
-from tasks.utils import status
-from tasks.utils import task_utils
-from tasks import _
+from utils import status
+from utils import task_utils
 
 
 status_writer = status.Writer()
 import arcpy
+
+errors_reasons = {}
+skipped_reasons = {}
 
 
 def execute(request):
@@ -92,7 +94,7 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.md'), processed, skipped)
+    task_utils.report(os.path.join(request['folder'], '_report.md'), processed, skipped, skipped_details=skipped_reasons)
 
 
 def calculate_raster_statistics(input_items, extent, horizontal_skip_factor,
@@ -109,6 +111,7 @@ def calculate_raster_statistics(input_items, extent, horizontal_skip_factor,
         dsc = arcpy.Describe(result)
         if dsc.datasetType not in ('RasterDataset', 'MosaicDataset'):
             status_writer.send_state(status.STAT_WARNING, _('{0} is not a valid raster type.').format(result))
+            skipped_reasons[result] = _('is not a valid raster type.')
             skipped += 1
             if show_progress:
                 i += 1
@@ -134,6 +137,7 @@ def calculate_raster_statistics(input_items, extent, horizontal_skip_factor,
             except arcpy.ExecuteError as ee:
                 status_writer.send_state(status.STAT_WARNING,
                                          _('Failed to calculate statistics for: {0}. {1}').format(result, ee))
+                skipped_reasons[result] = ee.message
                 skipped += 1
                 if show_progress:
                     i += 1

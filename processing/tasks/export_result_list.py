@@ -20,9 +20,8 @@ import shutil
 import urllib2
 import datetime
 import xml.etree.cElementTree as et
-from tasks.utils import status
-from tasks.utils import task_utils
-from tasks import _
+from utils import status
+from utils import task_utils
 
 
 SHAPE_FIELD_LENGTH = slice(0, 10)

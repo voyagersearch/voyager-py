@@ -16,9 +16,8 @@ import os
 import sys
 import collections
 import urllib2
-from tasks.utils import status
-from tasks.utils import task_utils
-from tasks import _
+from utils import status
+from utils import task_utils
 
 
 status_writer = status.Writer()
@@ -36,6 +35,7 @@ pixel_types = {"U1": "1_BIT",
                "S32": "32_BIT_SIGNED",
                "F32": "32_BIT_FLOAT",
                "F64": "64_BIT"}
+skipped_reasons = {}
 
 
 def get_items(input_items):
@@ -55,6 +55,7 @@ def get_items(input_items):
             bands[dsc.bandcount] = 1
         else:
             status_writer.send_status(_('Invalid input type: {0}').format(item))
+            skipped_reasons[item] = 'Invalid input type'
             skipped += 1
     return raster_items, pixels, bands, skipped
 
@@ -105,7 +106,7 @@ def execute(request):
 
     status_writer.send_status(_('Starting to process...'))
     num_results, response_index = task_utils.get_result_count(parameters)
-
+    raster_items = None
     if num_results > task_utils.CHUNK_SIZE:
         # Query the index for results in groups of 25.
         query_index = task_utils.QueryIndex(parameters[response_index])
@@ -132,6 +133,7 @@ def execute(request):
 
     if not raster_items:
         status_writer.send_state(status.STAT_FAILED, _('Invalid input types'))
+        task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), skipped, skipped_details=skipped_reasons)
         return
 
     # Get most common pixel type.
@@ -199,4 +201,4 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), skipped)
+    task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), skipped, skipped_details=skipped_reasons)

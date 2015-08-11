@@ -26,7 +26,8 @@ status_writer = status.Writer()
 result_count = 0
 processed_count = 0.
 files_to_package = list()
-
+errors_reasons = {}
+skipped_reasons = {}
 
 def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_clip_poly, out_format):
     """Clips input results."""
@@ -70,7 +71,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
                     oid_groups = service_layer.object_ids
                     out_features = None
                     for group in oid_groups:
-                        group = [oid for oid in group if not oid == None]
+                        group = [oid for oid in group if not oid]
                         where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
                         url = ds + "/query?where={}&outFields={}&returnGeometry=true&geometryType=esriGeometryPolygon&geometry={}&f=json&token={}".format(where, '*', eval(clip_poly.JSON), '')
                         feature_set = arcpy.FeatureSet()
@@ -86,6 +87,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
                     continue
                 except Exception as ex:
                     status_writer.send_state(status.STAT_WARNING, str(ex))
+                    errors_reasons[ds] = ex.message
                     errors += 1
                     continue
 
@@ -143,9 +145,11 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
                         processed_count += 1
                         skipped += 1
                         status_writer.send_state(_(status.STAT_WARNING, 'Invalid input type: {0}').format(ds))
-                    except Exception:
+                        skipped_reasons[ds] = 'Invalid input type'
+                    except Exception as ex:
                         processed_count += 1
                         errors += 1
+                        errors_reasons[ds] = ex.message
                         continue
                 continue
 
@@ -279,6 +283,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
                 status_writer.send_percent(processed_count / result_count, _('Invalid input type: {0}').format(ds), 'clip_data')
                 status_writer.send_state(_(status.STAT_WARNING, 'Invalid input type: {0}').format(ds))
                 skipped += 1
+                skipped_reasons[ds] = _('Invalid input type: {0}').format(dsc.dataType)
                 continue
 
             processed_count += 1.
@@ -290,6 +295,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
             processed_count += 1.
             status_writer.send_percent(processed_count / result_count, _('Skipped: {0}').format(os.path.basename(ds)), 'clip_data')
             status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
+            errors_reasons[ds] = ex.message
             errors += 1
             pass
     return clipped, errors, skipped
@@ -419,4 +425,4 @@ def execute(request):
     # Update state if necessary.
     if errors > 0 or skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(errors + skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.json'), clipped, skipped, errors)
+    task_utils.report(os.path.join(request['folder'], '_report.md'), clipped, skipped, errors, errors_reasons, skipped_reasons)

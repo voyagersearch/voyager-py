@@ -26,6 +26,8 @@ result_count = 0
 processed_count = 0.
 status_writer = status.Writer()
 import arcpy
+skipped_reasons = {}
+errors_reasons = {}
 
 
 def execute(request):
@@ -105,7 +107,7 @@ def execute(request):
         zip_file = task_utils.zip_data(out_workspace, 'output.zip')
         shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
         shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
-    else:
+    elif converted == 1:
         kml_file = glob.glob(os.path.join(out_workspace, '*.kmz'))[0]
         tmp_lyr = arcpy.KMLToLayer_conversion(kml_file, out_workspace, 'kml_layer')
         task_utils.make_thumbnail(tmp_lyr.getOutput(0), os.path.join(request['folder'], '_thumb.png'))
@@ -114,7 +116,7 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0 or errors > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(errors + skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.json'), converted, skipped, errors)
+    task_utils.report(os.path.join(request['folder'], '_report.md'), converted, skipped, errors, errors_reasons, skipped_reasons)
 
 
 def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
@@ -160,6 +162,7 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
                 except Exception as ex:
                     status_writer.send_state(status.STAT_WARNING, str(ex))
                     errors += 1
+                    errors_reasons[ds] = ex.message
                     continue
 
             # Is the input a mxd data frame.
@@ -218,10 +221,12 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
                     except KeyError:
                         processed_count += 1
                         skipped += 1
+                        skipped_reasons[ds] = 'Invalid input type'
                         status_writer.send_state(_(status.STAT_WARNING, 'Invalid input type: {0}').format(ds))
-                    except Exception:
+                    except Exception as ex:
                         processed_count += 1
                         errors += 1
+                        errors_reasons[ds] = ex.message
                         continue
                 continue
 
@@ -333,6 +338,7 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
                 processed_count += 1
                 status_writer.send_percent(processed_count / result_count, _('Invalid input type: {0}').format(dsc.name), 'convert_to_kml')
                 skipped += 1
+                skipped_reasons[ds] = _('Invalid input type: {0}').format(dsc.dataType)
                 continue
             processed_count += 1
             status_writer.send_percent(processed_count / result_count, _('Converted: {0}').format(ds), 'convert_to_kml')
@@ -341,6 +347,7 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
             processed_count += 1
             status_writer.send_percent(processed_count / result_count, _('Skipped: {0}').format(ds), 'convert_to_kml')
             status_writer.send_status(_('WARNING: {0}').format(repr(ex)))
+            errors_reasons[ds] = repr(ex)
             errors += 1
             pass
 

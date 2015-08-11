@@ -16,12 +16,12 @@ import os
 import sys
 import shutil
 import urllib2
-from tasks.utils import status
-from tasks.utils import task_utils
-from tasks import _
-
+from utils import status
+from utils import task_utils
 
 status_writer = status.Writer()
+skipped_reasons = {}
+errors_reasons = {}
 
 
 def remove_from_index(id):
@@ -82,7 +82,7 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.json'), deleted, skipped, 0)
+    task_utils.report(os.path.join(request['folder'], '_report.md'), deleted, skipped, skipped_details=skipped_reasons)
 
 
 def delete_files(input_items, show_progress=False):
@@ -119,6 +119,7 @@ def delete_files(input_items, show_progress=False):
                     i += 1
                 else:
                     status_writer.send_status(_('{0} is not a file or does no exist').format(src_file))
+                skipped_reasons[src_file] = _('{0} is not a file or does no exist').format(src_file)
                 skipped += 1
         except (IOError, EnvironmentError) as err:
             if show_progress:
@@ -126,6 +127,7 @@ def delete_files(input_items, show_progress=False):
                 i += 1
             else:
                 status_writer.send_status(_('Skipped: {0}').format(src_file), repr(err))
+            skipped_reasons[src_file] = repr(err)
             skipped += 1
             pass
     return deleted, skipped

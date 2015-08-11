@@ -15,9 +15,8 @@
 import os
 import sys
 import urllib2
-from tasks.utils import status
-from tasks.utils import task_utils
-from tasks import _
+from utils import status
+from utils import task_utils
 
 
 status_writer = status.Writer()
@@ -26,6 +25,7 @@ import arcpy
 resampling_options = {'NEAREST_NEIGHBOR': 'NEAREST',
                       'BILINEAR_INTERPOLATION': 'BILINEAR',
                       'CUBIC_CONVOLUTION': 'CUBIC'}
+skipped_reasons = {}
 
 
 def execute(request):
@@ -80,7 +80,7 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.md'), processed, skipped)
+    task_utils.report(os.path.join(request['folder'], '_report.md'), processed, skipped, skipped_details=skipped_reasons)
 
 
 def build_pyramids(input_items, compression_method, compression_quality, resampling_method, show_progress=False):
@@ -97,6 +97,7 @@ def build_pyramids(input_items, compression_method, compression_quality, resampl
         if not dsc.datasetType in ('RasterDataset', 'MosaicDataset', 'RasterCatalog'):
             status_writer.send_state(status.STAT_WARNING, _('{0} is not a raster dataset type.').format(result))
             skipped += 1
+            skipped_reasons[result] = _('is not a raster dataset type.')
             if show_progress:
                 i += 1
         else:
@@ -131,9 +132,9 @@ def build_pyramids(input_items, compression_method, compression_quality, resampl
             except arcpy.ExecuteError as ee:
                 status_writer.send_state(status.STAT_WARNING,
                                          _('Failed to build pyramids for: {0}. {1}').format(result, ee))
+                skipped_reasons[result] = ee.message
                 skipped += 1
                 if show_progress:
                     i += 1
         continue
-
     return processed, skipped

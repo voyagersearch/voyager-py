@@ -16,12 +16,13 @@ import os
 import sys
 import shutil
 import urllib2
-from tasks.utils import status
-from tasks.utils import task_utils
-from tasks import _
+from utils import status
+from utils import task_utils
 
 
 status_writer = status.Writer()
+errors_reasons = {}
+skipped_reasons = {}
 
 
 def update_index(id, file_location):
@@ -111,7 +112,7 @@ def execute(request):
     # Update state if necessary.
     if errors > 0 or skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
-    task_utils.report(os.path.join(request['folder'], '_report.json'), moved, skipped, errors)
+    task_utils.report(os.path.join(request['folder'], '_report.md'), moved, skipped, errors, errors_reasons, skipped_reasons)
 
 
 def move_files(input_items, target_folder, flatten_results, show_progress=False):
@@ -136,6 +137,7 @@ def move_files(input_items, target_folder, flatten_results, show_progress=False)
                     shutil.move(src_file, dst)
                 except (OSError, WindowsError) as err:
                     status_writer.send_status(_(err))
+                    skipped_reasons[src_file] = _(err)
                     skipped += 1
                     continue
                 if show_progress:
@@ -153,6 +155,7 @@ def move_files(input_items, target_folder, flatten_results, show_progress=False)
                         i / file_count,
                         _('{0} is not a file or does no exist').format(src_file), 'move_files')
                     i += 1
+                skipped_reasons[src_file] = _('{0} is not a file or does no exist').format(src_file)
                 skipped += 1
         except (IOError, EnvironmentError) as err:
             if show_progress:
@@ -160,6 +163,7 @@ def move_files(input_items, target_folder, flatten_results, show_progress=False)
                     i/file_count, _('Skipped: {0}').format(src_file), 'move_files')
                 i += 1
             status_writer.send_status(_('FAIL: {0}').format(repr(err)))
+            errors_reasons[src_file] = repr(err)
             errors += 1
             pass
     return moved, errors, skipped
