@@ -35,23 +35,48 @@ def run_task(json_file):
 
 if __name__ == '__main__':
     if sys.argv[1] == '--info':
+        # Metadata GP tools do not work in Python with ArcGIS 10.0
         task_info = collections.defaultdict(list)
+        info_dir = os.path.join(os.path.dirname(__file__), 'info')
         for task in tasks.__all__:
-            try:
-                # Metadata GP tools do not work in Python with ArcGIS 10.0
-                __import__(task)
-                task_info['tasks'].append({'name': task, 'available': True})
-            except ImportError as ie:
-                if 'arcpy' in ie:
-                    task_info['tasks'].append({'name': task, 'available': False, 'warning': '{0}. Requires ArcGIS'.format(str(ie))})
-                else:
-                    task_info['tasks'].append({'name': task, 'available': False, 'warning': str(ie)})
-            except RuntimeError as re:
-                if 'NotInitialized' in re:
-                    task_info['tasks'].append({'name': task, 'available': False, 'warning': '{0}. ArcGIS is not licensed.'.format(str(re))})
-                else:
-                    task_info['tasks'].append({'name': task, 'available': False, 'warning': str(re)})
+                if task not in ('ogr', 'utils', 'sample_task', 'template_task', 'dev_pretend_py'):
+                    # Validate the .info.json file.
+                    task_properties = collections.OrderedDict()
+                    task_properties['name'] = task
+                    task_properties['available'] = True
+                    fp = None
+                    fp = open(os.path.join(info_dir, '{0}.info.json'.format(task)))
+                    try:
+                        d = json.load(fp)
+                    except ValueError as ve:
+                        task_properties['available'] = False
+                        task_properties['JSON syntax error'] = str(ve)
+                    finally:
+                        if fp:
+                            fp.close()
 
+                    # Validate the Python code.
+                    try:
+                        __import__(task)
+                    except ImportError as ie:
+                        if 'arcpy' in ie:
+                            task_properties['available'] = False
+                            task_properties['Import error'] = '{0}. Requires ArcGIS'.format(str(ie))
+                        else:
+                            task_properties['available'] = False
+                            task_properties['Import error'] = str(ie)
+                    except RuntimeError as re:
+                        if 'NotInitialized' in re:
+                            task_properties['available'] = False
+                            task_properties['License error'] = '{0}. ArcGIS is not licensed.'.format(str(re))
+                        else:
+                            task_properties['available'] = False
+                            task_properties['Error'] = str(re)
+                    except SyntaxError as se:
+                        task_properties['available'] = False
+                        task_properties['Python syntax error'] = str(se)
+
+                    task_info['tasks'].append(task_properties)
         sys.stdout.write(json.dumps(task_info, indent=2))
         sys.stdout.flush()
     elif sys.argv[1] == '--license':
