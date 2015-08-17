@@ -39,7 +39,6 @@ if __name__ == '__main__':
         task_info = collections.defaultdict(list)
         info_dir = os.path.join(os.path.dirname(__file__), 'info')
         for task in tasks.__all__:
-            # if task not in ('ogr', 'utils', 'template_task', 'dev_pretend_py'):
             # Validate the .info.json file.
             task_properties = collections.OrderedDict()
             task_properties['name'] = task
