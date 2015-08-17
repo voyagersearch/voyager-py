@@ -100,7 +100,7 @@ def get_items(input_items, out_workspace):
                             layers.append(arcpy.mapping.Layer(layer_name))
                         arcpy.env.workspace = item
                     arcpy.env.workspace = out_workspace
-                elif dsc.dataType == 'File':
+                elif dsc.dataType == 'File' or dsc.dataType == 'TextFile':
                     files.append(item)
                 else:
                     status_writer.send_status(_('Invalid input type: {0}').format(item))
@@ -240,4 +240,4 @@ def execute(request):
     # Update state if necessary.
     if errors > 0 or skipped:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(errors + skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.md'), len(layers), skipped, errors, errors_reasons, skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], '_report.md'), num_results - (skipped + errors), skipped, errors, errors_reasons, skipped_reasons)

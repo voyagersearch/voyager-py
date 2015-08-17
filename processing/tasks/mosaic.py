@@ -123,9 +123,15 @@ def execute(request):
         raster_items, pixels, bands, skipped = get_items(input_items)
 
     if not raster_items:
-        status_writer.send_state(status.STAT_FAILED, _('Invalid input types'))
-        task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), skipped, skipped_details=skipped_reasons)
-        return
+        if skipped == 0:
+            status_writer.send_state(status.STAT_FAILED, _('Invalid input types'))
+            skipped_reasons['All Items'] = _('Invalid input types')
+            task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), num_results, skipped_details=skipped_reasons)
+            return
+        else:
+            status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
+            task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), skipped, skipped_details=skipped_reasons)
+            return
 
     # Get most common pixel type.
     pixel_type = pixel_types[max(set(pixels), key=pixels.count)]
