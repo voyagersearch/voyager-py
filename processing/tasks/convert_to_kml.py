@@ -108,9 +108,12 @@ def execute(request):
         shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
         shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
     elif converted == 1:
-        kml_file = glob.glob(os.path.join(out_workspace, '*.kmz'))[0]
-        tmp_lyr = arcpy.KMLToLayer_conversion(kml_file, out_workspace, 'kml_layer')
-        task_utils.make_thumbnail(tmp_lyr.getOutput(0), os.path.join(request['folder'], '_thumb.png'))
+        try:
+            kml_file = glob.glob(os.path.join(out_workspace, '*.kmz'))[0]
+            tmp_lyr = arcpy.KMLToLayer_conversion(kml_file, out_workspace, 'kml_layer')
+            task_utils.make_thumbnail(tmp_lyr.getOutput(0), os.path.join(request['folder'], '_thumb.png'))
+        except arcpy.ExecuteError:
+            pass
         shutil.move(kml_file, os.path.join(request['folder'], os.path.basename(kml_file)))
 
     # Update state if necessary.
