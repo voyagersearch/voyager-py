@@ -37,7 +37,8 @@ def index_item(id):
     :param id: Item's index ID
     """
     solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
-    request = urllib2.Request(solr_url, headers={'Content-type': 'application/json'})
+    status_writer.send_status(solr_url)
+    request = urllib2.Request(solr_url)
     urllib2.urlopen(request)
 
 
