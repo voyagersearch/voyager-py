@@ -37,7 +37,6 @@ def index_item(id):
     :param id: Item's index ID
     """
     solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
-    status_writer.send_status(solr_url)
     request = urllib2.Request(solr_url)
     urllib2.urlopen(request)
 
@@ -175,6 +174,7 @@ def write_metadata(input_items, template_xml, xslt_file, summary, description, t
                             changes += 1
 
                 # Write tags.
+                tags = task_utils.get_unique_strings(tags)
                 search_keys = root.findall(".//searchKeys")
                 if not search_keys:
                     search_element = eTree.SubElement(data_id_element, 'searchKeys')

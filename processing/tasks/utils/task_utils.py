@@ -737,6 +737,15 @@ def time_it(func):
     return timed
 
 
+def get_unique_strings(input_strings):
+    """Returns unique strings with preference given to uppercase strings."""
+    seen = {}  # Using {} since the order is not important.
+    for s in input_strings:
+        l = s.lower()
+        seen[l] = min(s, seen.get(l, s))
+    return seen.values()
+
+
 def zip_data(data_location, name):
     """Creates a compressed zip file of the entire data location.
 
