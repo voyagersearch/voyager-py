@@ -36,9 +36,12 @@ def index_item(id):
     """Re-indexes an item.
     :param id: Item's index ID
     """
-    solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
-    request = urllib2.Request(solr_url)
-    urllib2.urlopen(request)
+    import zmq
+    indexer = sys.argv[3].split('=')[1]
+    zmq_socket = zmq.Context.instance().socket(zmq.PUSH)
+    zmq_socket.connect(indexer)
+    entry = {"action": "UPDATE", "id": id, "entry": {"fields": {"__to_extract": True}}}
+    zmq_socket.send_json(entry)
 
 
 def execute(request):
@@ -187,9 +190,10 @@ def write_metadata(input_items, template_xml, xslt_file, summary, description, t
                     for search_element in search_keys:
                         if tags:
                             for tag in tags:
-                                new_tag = eTree.SubElement(search_keys[0], "keyword")
-                                new_tag.text = tag
-                                changes += 1
+                                if tag.lower() not in [se.text.lower() for se in search_element.findall('.//keyword')]:
+                                    new_tag = eTree.SubElement(search_element, "keyword")
+                                    new_tag.text = tag
+                                    changes += 1
                 else:
                     if tags:
                         for search_element in search_keys:
