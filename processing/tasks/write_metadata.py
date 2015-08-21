@@ -19,6 +19,7 @@ import tempfile
 import urllib2
 import xml.etree.cElementTree as eTree
 import shutil
+import requests
 from utils import status
 from utils import task_utils
 
@@ -36,12 +37,8 @@ def index_item(id):
     """Re-indexes an item.
     :param id: Item's index ID
     """
-    import zmq
-    indexer = sys.argv[3].split('=')[1]
-    zmq_socket = zmq.Context.instance().socket(zmq.PUSH)
-    zmq_socket.connect(indexer)
-    entry = {"action": "UPDATE", "id": id, "entry": {"fields": {"__to_extract": True}}}
-    zmq_socket.send_json(entry)
+    solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
+    requests.post(solr_url)
 
 
 def execute(request):

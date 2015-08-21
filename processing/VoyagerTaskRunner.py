@@ -57,6 +57,7 @@ if __name__ == '__main__':
                     fp.close()
 
             # Validate the Python code.
+            #TODO: Validate LocateXT tools...
             try:
                 __import__(task)
             except ImportError as ie:
