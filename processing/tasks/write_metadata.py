@@ -213,8 +213,8 @@ def write_metadata(input_items, template_xml, xslt_file, summary, description, t
 
                 try:
                     index_item(input_items[item][1])
-                except (IndexError, urllib2.HTTPError, urllib2.URLError) as e:
-                    status_writer.send_status(e)
+                except (IndexError, requests.HTTPError, requests.RequestException) as e:
+                    status_writer.send_status(e.message)
                     pass
                 updated += 1
             else:
