@@ -30,6 +30,9 @@ CHUNK_SIZE = 25
 
 
 # Custom Exceptions
+class LicenseError(Exception):
+    pass
+
 class AnalyzeServiceException(Exception):
     pass
 
