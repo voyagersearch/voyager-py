@@ -368,7 +368,13 @@ class Job(object):
                     port = self.sql_connection_info['connection']['port']
                     sid = self.sql_connection_info['connection']['sid']
                     dsn_string = cx_Oracle.makedsn(srvr, port, sid)
-                    self.db_connection = cx_Oracle.connect(user=un, password=pw, dsn=dsn_string)
+                    try:
+                        self.db_connection = cx_Oracle.connect(user=un, password=pw, dsn=dsn_string)
+                    except cx_Oracle.DatabaseError:
+                        # Try - uid/pwd@server:port/sid
+                        port = self.sql_connection_info['connection']['port']
+                        sid = self.sql_connection_info['connection']['sid']
+                        self.db_connection = cx_Oracle.connect("{0}/{1}@{2}:{3}/{4}".format(un, pw, srvr, port, sid))
                 self.db_cursor = self.db_connection.cursor()
             elif self.drvr == 'SQL Server':
                 import pyodbc
