@@ -19,6 +19,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), 'tasks'))
 import tasks
 from tasks import utils
+from utils import task_utils
 
 
 def run_task(json_file):
@@ -59,6 +60,12 @@ if __name__ == '__main__':
             # Validate the Python code.
             try:
                 __import__(task)
+            except task_utils.LicenseError as le:
+                task_properties['available'] = False
+                task_properties['No LocateXT License'] = str(le)
+            except IOError as ioe:
+                task_properties['available'] = False
+                task_properties['No LocateXT Tool'] = str(ioe)
             except ImportError as ie:
                 if 'arcpy' in ie:
                     task_properties['available'] = False

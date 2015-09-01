@@ -1,0 +1,73 @@
+{
+  "name": "locate_xt_arcgis_tool",
+  "runner": "python",
+  "categories": ["Extracting Data"],
+  "group": "Managing Data and Files",
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "StringChoice",
+      "name": "output_format",
+      "value": "CSV",
+      "choices": [
+        "CSV",
+        "KML",
+        "SHP",
+        "FGDB"
+      ]
+    },
+    {
+      "type": "CatalogPath",
+      "name": "gazeteer_file",
+      "required": false
+    },
+    {
+      "type": "Integer",
+      "name": "fuzzy_error",
+      "value": 0,
+      "min": 0,
+      "max": 30
+    },
+    {
+      "type": "CatalogPath",
+      "name": "attributes_file",
+      "required": false
+    }
+  ],
+  "display":
+  {
+    "en":
+	{
+      "display": "LocateXT ArcGIS Tool",
+      "description": "Extracts coordinates, user-defined place names, dates, and other critical information from unstructured data",
+      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#locate_xt_arcgis_tool",
+	  "params":
+	  {
+		"output_format":
+		{
+			"display": "Output Format",
+			"description": "The type of output dataset to create"
+		},
+        "gazeteer_file":
+        {
+          "display": "Gazeteer File",
+          "description": "The LocateXT Custom Locations Gazetteer file (.lxtgaz) to be used in the search"
+        },
+        "fuzzy_error":
+        {
+          "display": "Fuzzy Error Level",
+          "description": "The error level as a percent (0% - 30%) which will be applied to every gazetteer entry not specifying an individual error setting"
+        },
+        "attributes_file":
+        {
+          "display": "Attributes Files",
+          "description": "The LocateXT Custom Attributes file (.lxtca) used in the search"
+        }
+	  }
+	 }
+  }
+}
