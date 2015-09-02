@@ -56,6 +56,9 @@ def execute(request):
     summary = task_utils.get_parameter_value(parameters, 'summary', 'value')
     description = task_utils.get_parameter_value(parameters, 'description', 'value')
     tags = task_utils.get_parameter_value(parameters, 'tags', 'value')
+    data_credits = task_utils.get_parameter_value(parameters, 'credits', 'value')
+    constraints = task_utils.get_parameter_value(parameters, 'constraints', 'value')
+
     # Handle commas, spaces, and/or new line separators.
     tags = [tag for tag in re.split(' |,|\n', tags) if not tag == '']
     overwrite = task_utils.get_parameter_value(parameters, 'overwrite', 'value')
@@ -93,15 +96,14 @@ def execute(request):
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
 
             input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'], True)
-            result = write_metadata(input_items, template_xml, xslt_file, summary, description, tags, overwrite)
+            result = write_metadata(input_items, template_xml, xslt_file, summary, description, tags, data_credits, constraints, overwrite)
             updated += result[0]
             errors += result[1]
             skipped += result[2]
             status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'write_metadata')
     else:
         input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], True)
-        updated, errors, skipped = write_metadata(input_items, template_xml, xslt_file,
-                                                  summary, description, tags, overwrite, True)
+        updated, errors, skipped = write_metadata(input_items, template_xml, xslt_file, summary, description, tags, data_credits, constraints, overwrite, True)
 
     try:
         shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
@@ -116,7 +118,8 @@ def execute(request):
     task_utils.report(os.path.join(request['folder'], '_report.md'), updated, skipped, errors, errors_reasons, skipped_reasons)
 
 
-def write_metadata(input_items, template_xml, xslt_file, summary, description, tags, overwrite, show_progress=False):
+def write_metadata(input_items, template_xml, xslt_file, summary, description,
+                   tags, data_credits, use_constraints, overwrite, show_progress=False):
     """Writes metadata."""
     updated = 0
     errors = 0
@@ -200,6 +203,42 @@ def write_metadata(input_items, template_xml, xslt_file, summary, description, t
                                 new_tag = eTree.SubElement(search_element, "keyword")
                                 new_tag.text = tag
                                 changes += 1
+
+                # Write credits.
+                credits_element = root.findall(".//idCredit")
+                if not credits_element:
+                    credits_element = eTree.SubElement(data_id_element, 'idCredit')
+                    credits_element.text = data_credits
+                    changes += 1
+                else:
+                    for element in credits_element:
+                        if data_credits and (overwrite or element.text is None):
+                            element.text = data_credits
+                            changes += 1
+
+                # Write use constraints.
+                res_constraints = root.findall(".//resConst")
+                if not res_constraints:
+                    res_constraint_element = eTree.SubElement(data_id_element, 'resConst')
+                    const_element = eTree.SubElement(res_constraint_element, 'Consts')
+                    new_constraint = eTree.SubElement(const_element, 'useLimit')
+                    new_constraint.text = use_constraints
+                    changes += 1
+                elif not overwrite:
+                    constraint_elements = root.findall('.//Consts')
+                    for element in constraint_elements:
+                        if use_constraints:
+                            new_constraint = eTree.SubElement(element, 'useLimit')
+                            new_constraint.text = use_constraints
+                            changes += 1
+                else:
+                    if use_constraints:
+                        constraint_elements = root.findall('.//Consts')
+                        if constraint_elements:
+                            [constraint_elements[0].remove(e) for e in constraint_elements[0].findall('.//useLimit')]
+                            new_constraint = eTree.SubElement(constraint_elements[0], 'useLimit')
+                            new_constraint.text = use_constraints
+                            changes += 1
 
             if changes > 0:
                 # Save modifications to the temporary XML file.
