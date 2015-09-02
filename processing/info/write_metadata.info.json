@@ -24,6 +24,14 @@
     {
       "type": "TextArea",
       "name": "description"
+    },
+    {
+      "type": "TextArea",
+      "name": "credits"
+    },
+    {
+      "type": "TextArea",
+      "name": "constraints"
     }
   ],
   "display":
@@ -50,6 +58,14 @@
       "description": {
         "display": "Description",
         "description": "A brief narrative of the data, also known as an abstract."
+        },
+        "credits": {
+          "display": "Credits",
+          "description": "The recognition of those who created or contributed to the data (e.g. Voyager Search)."
+        },
+        "constraints": {
+          "display": "Use Limitations",
+          "description": "The use limitations and copyright information."
         }
       }
     }
