@@ -29,6 +29,8 @@ import arcpy
 if arcpy.GetInstallInfo()['Version'] == '10.0':
     raise ImportError('write_metadata not available with ArcGIS 10.0.')
 
+result_count = 0
+processed_count = 0.
 errors_reasons = {}
 skipped_reasons = {}
 
@@ -52,6 +54,7 @@ def execute(request):
     updated = 0
     errors = 0
     skipped = 0
+    global result_count
     parameters = request['params']
     summary = task_utils.get_parameter_value(parameters, 'summary', 'value')
     description = task_utils.get_parameter_value(parameters, 'description', 'value')
@@ -73,37 +76,42 @@ def execute(request):
     # Template metadata file.
     template_xml = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'metadata_template.xml')
 
-    num_results, response_index = task_utils.get_result_count(parameters)
-    if num_results > task_utils.CHUNK_SIZE:
-        # Query the index for results in groups of 25.
-        query_index = task_utils.QueryIndex(parameters[response_index])
-        fl = query_index.fl
-        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
-        fq = query_index.get_fq()
-        if fq:
-            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
-            query += fq
-        else:
-            groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
-
-        status_writer.send_percent(0.0, _('Starting to process...'), 'write_metadata')
-        i = 0.
-        for group in groups:
-            i += len(group) - group.count('')
-            if fq:
-                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
-            else:
-                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
-
-            input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'], True)
-            result = write_metadata(input_items, template_xml, xslt_file, summary, description, tags, data_credits, constraints, overwrite)
-            updated += result[0]
-            errors += result[1]
-            skipped += result[2]
-            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'write_metadata')
+    result_count, response_index = task_utils.get_result_count(parameters)
+    # Query the index for results in groups of 25.
+    query_index = task_utils.QueryIndex(parameters[response_index])
+    fl = query_index.fl + ',links'
+    query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+    fq = query_index.get_fq()
+    if fq:
+        groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
+        query += fq
     else:
-        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], True)
-        updated, errors, skipped = write_metadata(input_items, template_xml, xslt_file, summary, description, tags, data_credits, constraints, overwrite, True)
+        groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
+
+    status_writer.send_percent(0.0, _('Starting to process...'), 'write_metadata')
+    i = 0.
+    for group in groups:
+        i += len(group) - group.count('')
+        if fq:
+            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+        else:
+            results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+
+        docs = eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs']
+        # input_items = task_utils.get_input_items(docs)
+        input_items = []
+        for doc in docs:
+            if 'path' in doc:
+                if 'links' in doc:
+                    links = eval(doc['links'])
+                    input_items.append((doc['path'], links['links'][0]['link'][0]['id']))
+                else:
+                    input_items.append((doc['path'], doc['id']))
+        result = write_metadata(input_items, template_xml, xslt_file, summary, description, tags, data_credits, constraints, overwrite)
+        updated += result[0]
+        errors += result[1]
+        skipped += result[2]
+        status_writer.send_percent(i / result_count, '{0}: {1:%}'.format("Processed", i / result_count), 'write_metadata')
 
     try:
         shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
@@ -118,26 +126,25 @@ def execute(request):
     task_utils.report(os.path.join(request['folder'], '_report.md'), updated, skipped, errors, errors_reasons, skipped_reasons)
 
 
-def write_metadata(input_items, template_xml, xslt_file, summary, description,
-                   tags, data_credits, use_constraints, overwrite, show_progress=False):
+def write_metadata(input_items, template_xml, xslt_file, summary, description, tags, data_credits, use_constraints, overwrite):
     """Writes metadata."""
     updated = 0
     errors = 0
     skipped = 0
-    if show_progress:
-        item_count = len(input_items)
-        i = 1.
+    global processed_count
 
     for item in input_items:
         try:
+            id = item[1]
+            path = item[0]
             # Temporary XML file
             temp_xml = tempfile.NamedTemporaryFile(suffix='.xml', delete=True).name
 
             # Export xml
             try:
-                arcpy.XSLTransform_conversion(item, xslt_file, temp_xml)
+                arcpy.XSLTransform_conversion(path, xslt_file, temp_xml)
             except arcpy.ExecuteError:
-                src_xml = os.path.join(arcpy.Describe(item).path, '{0}.xml'.format(os.path.basename(item)))
+                src_xml = os.path.join(arcpy.Describe(path).path, '{0}.xml'.format(os.path.basename(path)))
                 shutil.copyfile(template_xml, src_xml)
                 arcpy.XSLTransform_conversion(src_xml, xslt_file, temp_xml)
 
@@ -244,33 +251,26 @@ def write_metadata(input_items, template_xml, xslt_file, summary, description,
                 # Save modifications to the temporary XML file.
                 tree.write(temp_xml)
                 # Import the XML file to the item; existing metadata is replaced.
-                arcpy.MetadataImporter_conversion(temp_xml, item)
-                if show_progress:
-                    status_writer.send_percent(i / item_count, _('Metadata updated for: {0}').format(item), 'write_metadata')
-                    i += 1
-                else:
-                    status_writer.send_status(_('Metadata updated for: {0}').format(item))
+                arcpy.MetadataImporter_conversion(temp_xml, path)
+                status_writer.send_percent(processed_count / result_count, _('Metadata updated for: {0}').format(path), 'write_metadata')
+                processed_count += 1
 
                 try:
-                    index_item(input_items[item][1])
-                except (IndexError, requests.HTTPError, requests.RequestException) as e:
+                    index_item(id)
+                except (IndexError, urllib2.HTTPError, urllib2.URLError) as e:
                     status_writer.send_status(e.message)
                     pass
                 updated += 1
             else:
-                if show_progress:
-                    status_writer.send_percent(i / item_count, _('No metadata changes for: {0}').format(item), 'write_metadata')
-                    i += 1
-                else:
-                    status_writer.send_status(_('No metadata changes for: {0}').format(item))
-                skipped_reasons[item] = _('No metadata changes for: {0}').format(item)
+                processed_count += 1
+                status_writer.send_percent(processed_count / result_count, _('No metadata changes for: {0}').format(path), 'write_metadata')
+                skipped_reasons[path] = _('No metadata changes for: {0}').format(path)
                 skipped += 1
         except Exception as ex:
-            if show_progress:
-                status_writer.send_percent(i / item_count, _('Skipped: {0}').format(item), 'write_metadata')
-                i += 1
+            processed_count += 1
+            status_writer.send_percent(processed_count / result_count, _('Skipped: {0}').format(path), 'write_metadata')
             status_writer.send_status(_('FAIL: {0}').format(repr(ex)))
-            errors_reasons[item] = repr(ex)
+            errors_reasons[path] = repr(ex)
             errors += 1
             pass
 
