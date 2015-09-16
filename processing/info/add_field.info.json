@@ -1,0 +1,58 @@
+{
+  "name": "add_field",
+  "runner": "python",
+  "categories": ["Managing Data and Files"],
+  "security": ["_ADMIN"],
+  "fields": "links",
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "String",
+      "name": "field_name",
+      "required": true
+    },
+    {
+      "type": "StringChoice",
+      "name": "field_type",
+      "required": true,
+      "choices": [
+        "TEXT",
+        "DOUBLE",
+        "LONG"
+      ]
+    },
+    {
+      "type": "String",
+      "name": "field_value",
+      "required": true
+    }
+  ],
+  "display":
+  {
+    "en":
+    {
+      "display": "Add Field",
+      "description": "Adds a new field and calculates it with the field value.",
+      "helpURL": "https://voyagersearch.zendesk.com/entries/92842153-Create-Layer-Files",
+  	  "params":
+  	  {
+  	    "field_name": {
+  	      "display": "Field Name",
+  	      "description": "The field name (no spaces allowed)"
+  	    },
+        "field_type": {
+          "display": "Field Type",
+          "description": "The field type"
+        },
+        "field_value": {
+          "display": "Field Value",
+          "description": "The field value"
+        }
+   	  }
+    }
+  }
+}

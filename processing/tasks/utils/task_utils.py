@@ -518,6 +518,18 @@ def get_increment(count):
     return int(math.pow(10, p - 1))
 
 
+def get_geodatabase_path(input_table):
+  """Return the Geodatabase path from the input table or feature class.
+
+  :param input_table: path to the input table or feature class
+  """
+  workspace = os.path.dirname(input_table)
+  if [any(ext) for ext in ('.gdb', '.mdb', '.sde') if ext in os.path.splitext(workspace)]:
+    return workspace
+  else:
+    return os.path.dirname(workspace)
+
+
 def get_data_path(item):
     """Return the layer file or dataset path.
 

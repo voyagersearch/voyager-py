@@ -45,6 +45,16 @@ msgstr "Réglage de la sortie espace de travail ..."
 msgid "Initializing..."
 msgstr "Initialisation ..."
 
+#: add_field.py:125,126
+#, python-format
+msgid "Format is not editable"
+msgstr "Format est non modifiable"
+
+#: add_field.py:149
+#, python-format
+msgid "Added field: {0} to {1}"
+msgstr "Champ ajouté {0} au {1}"
+
 #: add_to_geodatabase.py:65,68
 #, python-format
 msgid "Created output workspace: {0}"
