@@ -400,4 +400,4 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0 or errors > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
-    task_utils.report(os.path.join(task_folder, '_report.md'), added, skipped, errors, errors_reasons, skipped_reasons)
+    task_utils.report(os.path.join(task_folder, 'report.json'), added, skipped, errors, errors_reasons, skipped_reasons)

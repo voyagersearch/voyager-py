@@ -128,7 +128,7 @@ def execute(request):
     # Update state if necessary.
     if errors > 0 or skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
-    task_utils.report(os.path.join(request['folder'], '_report.md'), extracted, skipped, errors, errors_reasons, skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], 'report.json'), extracted, skipped, errors, errors_reasons, skipped_reasons)
 
 
 def extract(input_items, out_type, output_dir, gazetteer_file=None, fuzzy_error_level=None, attributes_file=None):

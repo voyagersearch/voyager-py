@@ -135,11 +135,11 @@ def execute(request):
         if skipped == 0:
             status_writer.send_state(status.STAT_FAILED, _('Invalid input types'))
             skipped_reasons['All Items'] = _('Invalid input types')
-            task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), num_results, skipped_details=skipped_reasons)
+            task_utils.report(os.path.join(request['folder'], 'report.json'), len(raster_items), num_results, skipped_details=skipped_reasons)
             return
         else:
             status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-            task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), skipped, skipped_details=skipped_reasons)
+            task_utils.report(os.path.join(request['folder'], 'report.json'), len(raster_items), skipped, skipped_details=skipped_reasons)
             return
 
     # Get most common pixel type.
@@ -207,4 +207,4 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.md'), len(raster_items), skipped, skipped_details=skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], 'report.json'), len(raster_items), skipped, skipped_details=skipped_reasons)

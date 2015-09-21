@@ -88,7 +88,7 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.md'), zipped, skipped, skipped_details=skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], 'report.json'), zipped, skipped, skipped_details=skipped_reasons)
 
 
 def zip_files(zipper, input_items, zip_file_location, flatten_results, show_progress=False):

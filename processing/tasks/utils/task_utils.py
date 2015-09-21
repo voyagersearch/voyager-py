@@ -671,37 +671,32 @@ def make_thumbnail(layer_or_mxd, output_png_file, use_data_frame=True):
 
 def report(report_file, num_processed=0, num_skipped=0, num_errors=0, errors_details=None, skipped_details=None):
     """Create a markdown report of inputs processed or skipped.
-    :param report_file: path of the .md file
+    :param report_file: path of the .json file
     :param num_processed: number of items processed
     :param num_skipped: number of items skipped
     :param num_errors:  number of errors
     """
-    report_md = ['Summary:',
-                 '=========',
-                 '| Action    | Count |',
-                 '|:--------- | ----: |',
-                 '| Processed | {0} |'.format(num_processed),
-                 '| Skipped   | {0} |'.format(num_skipped),
-                 '| Errors    | {0} |'.format(num_errors)]
+    report_dict = {}
+    summary_list = [{'Action': 'Processed', 'Count': num_processed},
+                    {'Action': 'Skipped', 'Count': num_skipped},
+                    {'Action': 'Errors', 'Count': num_errors}]
+    report_dict['Summary'] = summary_list
+
+    if skipped_details:
+        skipped_list = []
+        for k, v in skipped_details.iteritems():
+            skipped_list.append({'Item': k, 'Reason': v})
+        report_dict['Skipped'] = skipped_list
+
+    if errors_details:
+        errors_list = []
+        for k, v in errors_details.iteritems():
+            errors_list.append({'Item': k, 'Reason': v})
+        report_dict['Errors'] = errors_list
 
     with open(report_file, 'wb') as fp:
-        for line in report_md:
-            fp.write(line + '\n')
+        json.dump(report_dict, fp)
 
-        if skipped_details:
-            fp.write('#### Skipped:\n')
-            fp.write('| Item | Reason | \n')
-            fp.write('|:------- | :------| \n')
-            for k, v in skipped_details.iteritems():
-                fp.write(' |{0} | {1} | \n'.format(k, v))
-
-        if errors_details:
-            fp.write('#### Errors:\n')
-            fp.write('| Item | Reason | \n')
-            fp.write('|:------ | :------| \n')
-            for k, v in errors_details.iteritems():
-                fp.write('| {0} | {1} | \n'.format(k, v))
-            fp.write("#\n")
 
 
 def save_to_layer_file(data_location, include_mxd_layers=True):

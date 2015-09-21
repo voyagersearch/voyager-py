@@ -112,7 +112,7 @@ def execute(request):
     # Update state if necessary.
     if errors > 0 or skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
-    task_utils.report(os.path.join(request['folder'], '_report.md'), moved, skipped, errors, errors_reasons, skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], 'report.json'), moved, skipped, errors, errors_reasons, skipped_reasons)
 
 
 def move_files(input_items, target_folder, flatten_results, show_progress=False):

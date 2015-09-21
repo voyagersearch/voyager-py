@@ -233,10 +233,10 @@ def execute(request):
         task_utils.make_thumbnail(mxd, os.path.join(request['folder'], '_thumb.png'), False)
     else:
         status_writer.send_state(status.STAT_FAILED, _('No results can be exported to PDF'))
-        task_utils.report(os.path.join(request['folder'], '_report.md'), added_to_map, skipped, skipped_details=skipped_reasons)
+        task_utils.report(os.path.join(request['folder'], 'report.json'), added_to_map, skipped, skipped_details=skipped_reasons)
         return
 
     # Update state if necessary.
     if skipped > 0 or errors > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
-    task_utils.report(os.path.join(request['folder'], '_report.md'), added_to_map, skipped, errors, errors_reasons, skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], 'report.json'), added_to_map, skipped, errors, errors_reasons, skipped_reasons)

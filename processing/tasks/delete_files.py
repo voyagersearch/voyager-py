@@ -82,7 +82,7 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], '_report.md'), deleted, skipped, skipped_details=skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], 'report.json'), deleted, skipped, skipped_details=skipped_reasons)
 
 
 def delete_files(input_items, show_progress=False):

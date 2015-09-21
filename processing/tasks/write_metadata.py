@@ -123,7 +123,7 @@ def execute(request):
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
     else:
         status_writer.send_state(status.STAT_SUCCESS)
-    task_utils.report(os.path.join(request['folder'], '_report.md'), updated, skipped, errors, errors_reasons, skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], 'report.json'), updated, skipped, errors, errors_reasons, skipped_reasons)
 
 
 def write_metadata(input_items, template_xml, xslt_file, summary, description, tags, data_credits, use_constraints, overwrite):
