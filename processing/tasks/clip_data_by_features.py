@@ -163,7 +163,7 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
                 for fc in arcpy.ListFeatureClasses():
                     try:
                         if not out_format == 'SHP':
-                            arcpy.Clip_analysis(fc, clip_polygons, task_utils.create_unique_name(fc, fds))
+                            arcpy.Clip_analysis(fc, clip_polygons, task_utils.create_unique_name(fc, fds.getOutput(0)))
                         else:
                             arcpy.Clip_analysis(fc, clip_polygons, task_utils.create_unique_name(fc, out_workspace))
                     except arcpy.ExecuteError:
