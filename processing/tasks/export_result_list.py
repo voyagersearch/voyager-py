@@ -198,8 +198,6 @@ def execute(request):
     """Exports search results a CSV, shapefile or XML document.
     :param request: json as a dict.
     """
-    import time
-    time.sleep(8)
     chunk_size = task_utils.CHUNK_SIZE
     file_name = task_utils.get_parameter_value(request['params'], 'file_name', 'value')
     fields = task_utils.get_parameter_value(request['params'], 'fields', 'value')
@@ -212,7 +210,6 @@ def execute(request):
 
     num_results, response_index = task_utils.get_result_count(request['params'])
     query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
-    # query = '{0}/select?&wt=json&fl={1}'.format('http://localhost:8888/solr/v0', ','.join(fields))
     if 'query' in request['params'][response_index]:
         # Voyager Search Traditional UI
         for p in request['params']:
@@ -224,14 +221,26 @@ def execute(request):
 
         # Replace spaces with %20 & remove \\ to avoid HTTP Error 400.
         if 'fq' in request_qry:
-            query += '&fq={0}'.format(request_qry['fq'].replace("\\", ""))
-            query = query.replace(' ', '%20')
+            try:
+                query += '&fq={0}'.format(request_qry['fq'].replace("\\", ""))
+                query = query.replace(' ', '%20')
+            except AttributeError:
+                for qry in request_qry['fq']:
+                    query += '&fq={0}'.format(qry).replace("\\", "").replace(' ', '%20')
         if 'q' in request_qry:
-            query += '&q={0}'.format(request_qry['q'].replace("\\", ""))
-            query = query.replace(' ', '%20')
+            try:
+                query += '&q={0}'.format(request_qry['q'].replace("\\", ""))
+                query = query.replace(' ', '%20')
+            except AttributeError:
+                for qry in request_qry['q']:
+                    query += '&q={0}'.format(qry).replace("\\", "").replace(' ', '%20')
         if 'place' in request_qry:
-            query += '&place={0}'.format(request_qry['place'].replace("\\", ""))
-            query = query.replace(' ', '%20')
+            try:
+                query += '&place={0}'.format(request_qry['place'].replace("\\", ""))
+                query = query.replace(' ', '%20')
+            except AttributeError:
+                for qry in request_qry['place']:
+                    query += '&place={0}'.format(qry).replace("\\", "").replace(' ', '%20')
         if 'place.op' in request_qry:
             query += '&place.op={0}'.format(request_qry['place.op'])
 
