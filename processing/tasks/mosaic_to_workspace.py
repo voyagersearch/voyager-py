@@ -116,16 +116,22 @@ def execute(request):
         if fq:
             groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
             query += fq
-        else:
+        elif 'ids' in parameters[response_index]:
             groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
+        else:
+            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
 
         for group in groups:
             if fq:
                 results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
-            else:
+            elif 'ids' in parameters[response_index]:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+            else:
+                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
 
             input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
+            if not input_items:
+                input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
             raster_items, pixels, bands, skipped = get_items(input_items)
     else:
         input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
@@ -135,11 +141,11 @@ def execute(request):
         if skipped == 0:
             status_writer.send_state(status.STAT_FAILED, _('Invalid input types'))
             skipped_reasons['All Items'] = _('Invalid input types')
-            task_utils.report(os.path.join(request['folder'], 'report.json'), len(raster_items), num_results, skipped_details=skipped_reasons)
+            task_utils.report(os.path.join(request['folder'], '__report.json'), len(raster_items), num_results, skipped_details=skipped_reasons)
             return
         else:
             status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-            task_utils.report(os.path.join(request['folder'], 'report.json'), len(raster_items), skipped, skipped_details=skipped_reasons)
+            task_utils.report(os.path.join(request['folder'], '__report.json'), len(raster_items), skipped, skipped_details=skipped_reasons)
             return
 
     # Get most common pixel type.
@@ -207,4 +213,4 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], 'report.json'), len(raster_items), skipped, skipped_details=skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], '__report.json'), len(raster_items), skipped, skipped_details=skipped_reasons)

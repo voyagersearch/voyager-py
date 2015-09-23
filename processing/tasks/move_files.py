@@ -82,8 +82,10 @@ def execute(request):
         if fq:
             groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
             query += fq
-        else:
+        elif 'ids' in parameters[response_index]:
             groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
+        else:
+            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
 
         status_writer.send_percent(0.0, _('Starting to process...'), 'move_files')
         i = 0.
@@ -91,10 +93,15 @@ def execute(request):
             i += len(group) - group.count('')
             if fq:
                 results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
-            else:
+            elif 'ids' in parameters[response_index]:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+            else:
+                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
 
             input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'], True, True)
+            if not input_items:
+                input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
+
             result = move_files(input_items, target_folder, flatten_results)
             moved += result[0]
             errors += result[1]
@@ -104,15 +111,10 @@ def execute(request):
         input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], True, True)
         moved, errors, skipped = move_files(input_items, target_folder, flatten_results, True)
 
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
-    except IOError:
-        pass
-
     # Update state if necessary.
     if errors > 0 or skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
-    task_utils.report(os.path.join(request['folder'], 'report.json'), moved, skipped, errors, errors_reasons, skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], '__report.json'), moved, skipped, errors, errors_reasons, skipped_reasons)
 
 
 def move_files(input_items, target_folder, flatten_results, show_progress=False):

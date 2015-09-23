@@ -102,8 +102,10 @@ def execute(request):
     if fq:
         groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
         query += fq
-    else:
+    elif 'ids' in parameters[response_index]:
         groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
+    else:
+        groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
 
     status_writer.send_percent(0.0, _('Starting to process...'), 'replace_data_source')
     i = 0.
@@ -111,26 +113,24 @@ def execute(request):
         i += len(group) - group.count('')
         if fq:
             results = urllib2.urlopen(query + "{0}&rows={1}&start={2}".format(fl, task_utils.CHUNK_SIZE, group[0]))
-        else:
+        elif 'ids' in parameters[response_index]:
             results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+        else:
+            results = urllib2.urlopen(query + "{0}&rows={1}&start={2}".format(fl, task_utils.CHUNK_SIZE, group[0]))
         results_str = results.read().replace('false', 'False')
         results_str = results_str.replace('true', 'True')
         input_items = task_utils.get_input_items(eval(results_str)['response']['docs'], True)
+        if not input_items:
+            input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
         result = replace_data_source(input_items, old_data_source, new_workspace, new_dataset, wks_type, backup)
         updated += result[0]
         skipped += result[1]
         status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'replace_data_source')
 
-    # Copy a default thumbnail image to the request folder.
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
-    except IOError:
-        pass
-
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], 'report.json'), updated, skipped, skipped_details=skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], '__report.json'), updated, skipped, skipped_details=skipped_reasons)
 
 
 def replace_data_source(input_items, old_data_source, new_workspace,

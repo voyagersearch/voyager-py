@@ -152,17 +152,23 @@ def execute(request):
         if fq:
             groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
             query += fq
-        else:
+        elif 'ids' in parameters[response_index]:
             groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
+        else:
+            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
 
         status_writer.send_status(_('Starting to process...'))
         for group in groups:
             if fq:
                 results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
-            else:
+            elif 'ids' in parameters[response_index]:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+            else:
+               results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
 
             input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
+            if not input_items:
+                input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
             layers, files, errors, skipped = get_items(input_items, out_workspace)
     else:
         input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
@@ -240,4 +246,4 @@ def execute(request):
     # Update state if necessary.
     if errors > 0 or skipped:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(errors + skipped))
-    task_utils.report(os.path.join(request['folder'], 'report.json'), num_results - (skipped + errors), skipped, errors, errors_reasons, skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], '__report.json'), num_results - (skipped + errors), skipped, errors, errors_reasons, skipped_reasons)

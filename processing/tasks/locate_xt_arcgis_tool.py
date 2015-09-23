@@ -94,18 +94,25 @@ def execute(request):
     if fq:
         groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
         query += fq
-    else:
+    elif 'ids' in parameters[response_index]:
         groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
+    else:
+        groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
 
     status_writer.send_percent(0.0, _('Starting to process...'), 'locate_xt_arcgis_tool')
     for group in groups:
         if fq:
             results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
             # results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
-        else:
+        elif 'ids' in parameters[response_index]:
             results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+        else:
+            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
 
         docs =eval(results.read())['response']['docs']
+        if not docs:
+            docs = parameters[response_index]['response']['docs']
+
         input_items = task_utils.get_input_items(docs)
         if input_items:
             result = extract(input_items, output_type, task_folder)
@@ -116,11 +123,6 @@ def execute(request):
             status_writer.send_state(status.STAT_FAILED, _('No items to process. Check if items exist.'))
             return
 
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), task_folder)
-    except IOError:
-        pass
-
     # Zip up outputs.
     zip_file = task_utils.zip_data(task_folder, 'output.zip')
     shutil.move(zip_file, os.path.join(os.path.dirname(task_folder), os.path.basename(zip_file)))
@@ -128,7 +130,7 @@ def execute(request):
     # Update state if necessary.
     if errors > 0 or skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
-    task_utils.report(os.path.join(request['folder'], 'report.json'), extracted, skipped, errors, errors_reasons, skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], '__report.json'), extracted, skipped, errors, errors_reasons, skipped_reasons)
 
 
 def extract(input_items, out_type, output_dir, gazetteer_file=None, fuzzy_error_level=None, attributes_file=None):

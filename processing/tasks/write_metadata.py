@@ -85,8 +85,10 @@ def execute(request):
     if fq:
         groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
         query += fq
-    else:
+    elif 'ids' in parameters[response_index]:
         groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
+    else:
+        groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
 
     status_writer.send_percent(0.0, _('Starting to process...'), 'write_metadata')
     i = 0.
@@ -94,11 +96,15 @@ def execute(request):
         i += len(group) - group.count('')
         if fq:
             results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
-        else:
+        elif 'ids' in parameters[response_index]:
             results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+        else:
+            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
 
         docs = eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs']
-        # input_items = task_utils.get_input_items(docs)
+        if not docs:
+            docs = parameters[response_index]['response']['docs']
+
         input_items = []
         for doc in docs:
             if 'path' in doc:
@@ -113,17 +119,12 @@ def execute(request):
         skipped += result[2]
         status_writer.send_percent(i / result_count, '{0}: {1:%}'.format("Processed", i / result_count), 'write_metadata')
 
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
-    except IOError:
-        pass
-
     # Report state.
     if skipped > 0 or errors > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
     else:
         status_writer.send_state(status.STAT_SUCCESS)
-    task_utils.report(os.path.join(request['folder'], 'report.json'), updated, skipped, errors, errors_reasons, skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], '__report.json'), updated, skipped, errors, errors_reasons, skipped_reasons)
 
 
 def write_metadata(input_items, template_xml, xslt_file, summary, description, tags, data_credits, use_constraints, overwrite):

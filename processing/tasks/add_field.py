@@ -60,23 +60,26 @@ def execute(request):
     result_count, response_index = task_utils.get_result_count(parameters)
     query_index = task_utils.QueryIndex(parameters[response_index])
     fl = query_index.fl + ',links'
-    # query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
-    query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
+    query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+    # query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
     fq = query_index.get_fq()
     if fq:
         groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
         query += fq
-    else:
+    elif 'ids' in parameters[response_index]:
         groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
+    else:
+        groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
 
+    # Begin processing
     status_writer.send_percent(0.0, _('Starting to process...'), 'add_field')
-    i = 0.
     for group in groups:
-        i += len(group) - group.count('')
         if fq:
             results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+        elif 'ids' in parameters[response_index]:
+             results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
         else:
-            results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
 
         docs = eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs']
         input_items = []
@@ -87,20 +90,16 @@ def execute(request):
                     input_items.append((doc['id'], doc['path'], links['links'][0]['link'][0]['id']))
                 else:
                     input_items.append((doc['id'], doc['path']))
-        # input_items = task_utils.get_input_items(docs, True)
+
         result = add_field(input_items, field_name, field_type, field_value)
         created += result[0]
         errors += result[1]
         skipped += result[2]
 
-    try:
-        shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
-    except IOError:
-        pass
     # Update state if necessary.
     if errors > 0 or skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
-    task_utils.report(os.path.join(request['folder'], 'report.json'), created, skipped, errors, errors_reasons, skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], '__report.json'), created, skipped, errors, errors_reasons, skipped_reasons)
 
 
 def add_field(input_items, field_name, field_type, field_value):

@@ -56,19 +56,26 @@ def execute(request):
         if fq:
             groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
             query += fq
-        else:
+        elif 'ids' in parameters[response_index]:
             groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
+        else:
+            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
 
+        # Begin processing
         status_writer.send_percent(0.0, _('Starting to process...'), 'build_raster_pyramids')
         i = 0.
         for group in groups:
             i += len(group) - group.count('')
             if fq:
                 results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
-            else:
+            elif 'ids' in parameters[response_index]:
                 results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+            else:
+                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
 
             input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
+            if not input_items:
+                input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
             result = build_pyramids(input_items, compression_method, compression_quality, resampling_method)
             processed += result[0]
             skipped += result[1]
@@ -80,7 +87,7 @@ def execute(request):
     # Update state if necessary.
     if skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped))
-    task_utils.report(os.path.join(request['folder'], 'report.json'), processed, skipped, skipped_details=skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], '__report.json'), processed, skipped, skipped_details=skipped_reasons)
 
 
 def build_pyramids(input_items, compression_method, compression_quality, resampling_method, show_progress=False):
@@ -94,6 +101,14 @@ def build_pyramids(input_items, compression_method, compression_quality, resampl
 
     for result in input_items:
         dsc = arcpy.Describe(result)
+        if not hasattr(dsc, 'datasetType'):
+            status_writer.send_state(status.STAT_WARNING, _('{0} is not a raster dataset type.').format(result))
+            skipped += 1
+            skipped_reasons[result] = _('is not a raster dataset type.')
+            if show_progress:
+                i += 1
+            continue
+
         if not dsc.datasetType in ('RasterDataset', 'MosaicDataset', 'RasterCatalog'):
             status_writer.send_state(status.STAT_WARNING, _('{0} is not a raster dataset type.').format(result))
             skipped += 1

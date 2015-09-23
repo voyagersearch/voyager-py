@@ -11,6 +11,7 @@
     {
 	  "type": "QueryIndex",
 	  "name": "clip_features",
+      "required": true,
 	  "query": {
 	      "fl":"id,name,path:[absolute]",
 	      "indent":"true",
