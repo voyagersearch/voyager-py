@@ -25,14 +25,11 @@ errors_reasons = {}
 skipped_reasons = {}
 
 
-def update_index(id, file_location):
-    """Update the index by re-indexng an item."""
-    import zmq
-    indexer = sys.argv[3].split('=')[1]
-    zmq_socket = zmq.Context.instance().socket(zmq.PUSH)
-    zmq_socket.connect(indexer)
-    entry = {"id": id, "action": "ADD", "path": file_location, "entry": {"fields": {"__to_extract": "true"}}}
-    zmq_socket.send_json(entry)
+def remove_from_index(id):
+    """Remove the item from the index."""
+    solr_url = "{0}/update?stream.body=<delete><id>{1}</id></delete>&commit=true".format(sys.argv[2].split('=')[1], id)
+    request = urllib2.Request(solr_url, headers={'Content-type': 'application/json'})
+    urllib2.urlopen(request)
 
 
 def create_dir(src_file, target_folder):
@@ -145,9 +142,10 @@ def move_files(input_items, target_folder, flatten_results, show_progress=False)
                 if show_progress:
                     status_writer.send_percent(i / file_count, _('Moved: {0}').format(src_file), 'move_files')
                     i += 1
-                # Update the index.
+
+                # Attempt to remove the file from the index.
                 try:
-                    update_index(input_items[src_file][1], os.path.join(dst, os.path.basename(src_file)))
+                    remove_from_index(input_items[src_file][1])
                 except (IndexError, ImportError):
                     pass
                 moved += 1
