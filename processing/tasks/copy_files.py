@@ -27,16 +27,6 @@ skipped_reasons = {}
 errors_reasons = {}
 
 
-def update_index(file_location):
-    """Update the index by re-indexng an item."""
-    import zmq
-    indexer = sys.argv[3].split('=')[1]
-    zmq_socket = zmq.Context.instance().socket(zmq.PUSH)
-    zmq_socket.connect(indexer)
-    entry = {"action": "ADD", "path": file_location, "entry": {"fields": {"__to_extract": "true"}}}
-    zmq_socket.send_json(entry)
-
-
 def execute(request):
     """Copies files to a target folder.
     :param request: json as a dict.
@@ -136,11 +126,6 @@ def copy_files(input_items, target_folder, flatten_results, target_dirs):
                 processed_count += 1
                 status_writer.send_percent(processed_count / result_count, _('Copied: {0}').format(src_file), 'copy_files')
                 copied += 1
-                # Update the index.
-                try:
-                    update_index(os.path.join(dst, os.path.basename(src_file)))
-                except (IndexError, ImportError):
-                    pass
             else:
                 processed_count += 1
                 status_writer.send_percent(processed_count / result_count, _('{0} is not a file or does no exist').format(src_file), 'copy_files')
