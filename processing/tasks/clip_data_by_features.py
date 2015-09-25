@@ -50,9 +50,9 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
                     oid_groups = service_layer.object_ids
                     out_features = None
                     for group in oid_groups:
-                        group = [oid for oid in group if not oid == None]
+                        group = [oid for oid in group if oid]
                         where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
-                        url = ds + "/query?where={}&outFields={}&returnGeometry=true&geometryType=esriGeometryPolygon&geometry={}&f=json&token={}".format(where, '*', eval(clip_poly.JSON), '')
+                        url = ds + "/query?where={}&outFields={}&returnGeometry=true&geometryType=esriGeometryPolygon&geometry={}&f=json&token={}".format(where, '*', eval(clip_polygons.JSON), '')
                         feature_set = arcpy.FeatureSet()
                         feature_set.load(url)
                         if not out_features:
@@ -60,6 +60,10 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
                         else:
                             clip_features = arcpy.Clip_analysis(feature_set, clip_polygons, 'in_memory/features')
                             arcpy.Append_management(clip_features, out_features, 'NO_TEST')
+                            try:
+                                arcpy.Delete_management(clip_features)
+                            except arcpy.ExecuteError:
+                                pass
                     processed_count += 1.
                     clipped += 1
                     status_writer.send_percent(processed_count / result_count, _('Clipped: {0}').format(ds), 'clip_data')
