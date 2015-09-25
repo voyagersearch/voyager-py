@@ -60,7 +60,7 @@ def add_to_geodatabase(input_items, out_gdb, is_fds):
                     oid_groups = service_layer.object_ids
                     out_features = None
                     for group in oid_groups:
-                        group = [oid for oid in group if not oid]
+                        group = [oid for oid in group if oid]
                         where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
                         url = ds + "/query?where={}&outFields={}&returnGeometry=true&geometryType=esriGeometryPolygon&f=json&token={}".format(where, '*', '')
                         feature_set = arcpy.FeatureSet()
@@ -70,6 +70,10 @@ def add_to_geodatabase(input_items, out_gdb, is_fds):
                         else:
                             features = arcpy.CopyFeatures_management(feature_set, task_utils.create_unique_name(out_name, out_gdb))
                             arcpy.Append_management(features, out_features, 'NO_TEST')
+                            try:
+                                arcpy.Delete_management(features)
+                            except arcpy.ExecuteError:
+                                pass
                     processed_count += 1.
                     added += 1
                     status_writer.send_percent(processed_count / result_count, _('Added: {0}').format(ds), 'add_to_geodatabase')

@@ -153,7 +153,7 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
                     else:
                         temp_gdb = os.path.join(out_workspace, 'temp.gdb')
                     for group in oid_groups:
-                        group = [oid for oid in group if not oid == None]
+                        group = [oid for oid in group if oid]
                         where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
                         url = ds + "/query?where={}&outFields={}&returnGeometry=true&geometryType=esriGeometryPolygon&f=json&token={}".format(where, '*', '')
                         feature_set = arcpy.FeatureSet()
@@ -163,6 +163,10 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
                         else:
                             features = arcpy.CopyFeatures_management(feature_set, task_utils.create_unique_name(out_name, temp_gdb))
                             arcpy.Append_management(features, out_features, 'NO_TEST')
+                            try:
+                                arcpy.Delete_management(features)
+                            except arcpy.ExecuteError:
+                                pass
                     arcpy.MakeFeatureLayer_management(out_features, out_name)
                     arcpy.LayerToKML_conversion(out_name, '{0}.kmz'.format(os.path.join(out_workspace, out_name)), 1, boundary_box_extent=extent)
                     processed_count += 1.
