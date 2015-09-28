@@ -76,7 +76,16 @@ def export_to_shp(jobs, file_name, output_folder):
             for name in jobs[0].keys():
                 if not name == '[geo]':
                     name = str(name)
-                    new_field = ogr.FieldDefn(name, ogr.OFTString)
+                    if name.startswith('fu_'):
+                        new_field = ogr.FieldDefn(name, ogr.OFTReal)
+                    elif name.startswith('fi_'):
+                        new_field = ogr.FieldDefn(name, ogr.OFTInteger)
+                    elif name.startswith('fl_'):
+                        new_field = ogr.FieldDefn(name, ogr.OFTInteger64)
+                    elif name.startswith('fd_'):
+                        new_field = ogr.FieldDefn(name, ogr.OFTDateTime)
+                    else:
+                        new_field = ogr.FieldDefn(name, ogr.OFTString)
                     layer.CreateField(new_field)
 
         try:
@@ -93,7 +102,7 @@ def export_to_shp(jobs, file_name, output_folder):
             pass
         for field, value in job.iteritems():
             field, value = str(field), str(value)
-            i = feature.GetFieldIndex(field)
+            i = feature.GetFieldIndex(field[0:10])
             feature.SetField(i, value)
         layer.CreateFeature(feature)
         shape_file.Destroy()
