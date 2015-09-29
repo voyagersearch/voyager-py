@@ -159,9 +159,9 @@ def index_service(connection_info):
         elif layer.endswith('*'):
             layers = [l for l in layers if lk[0] in l['name']]
         elif layer.startswith('*'):
-            layers = [l['id'] for l in layers if lk[1] in l['name']]
+            layers = [l for l in layers if lk[1] in l['name']]
         else:
-            layers = [l['id'] for l in layers if lk[0] == l['name']]
+            layers = [l for l in layers if lk[0] == l['name']]
 
     # Index the records for each layer and table within a feature or map service.
     for layer in layers:
