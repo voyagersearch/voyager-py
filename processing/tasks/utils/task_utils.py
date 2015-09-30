@@ -94,10 +94,10 @@ class QueryIndex(object):
                     self._fq = self._fq.replace(' ', '%20')
 
             if 'place' in self._items['query']:
-                self._fq += '&place={0}'.format(self._items['place'].replace("\\", ""))
+                self._fq += '&place={0}'.format(self._items['query']['place'].replace("\\", ""))
                 self._fq = self._fq.replace(' ', '%20')
             if 'place.op' in self._items['query']:
-                self._fq += '&place.op={0}'.format(self._items['place.op'])
+                self._fq += '&place.op={0}'.format(self._items['query']['place.op'])
 
         elif 'ids' in self._items:
             ids = self._items['ids']
@@ -109,6 +109,7 @@ class QueryIndex(object):
 class ServiceLayer(object):
     """Helper class for working with ArcGIS services."""
     def __init__(self, service_layer_url, token=''):
+        self.object_ids_cnt = 0
         self._service_layer_url = service_layer_url
         self._token = token
         self._wkid = self.__get_wkid()
@@ -157,6 +158,7 @@ class ServiceLayer(object):
         response = urllib.urlopen('{0}/query?'.format(self._service_layer_url), urllib.urlencode(query))
         data = json.loads(response.read())
         objectids = data['objectIds']
+        self.object_ids_cnt = len(objectids)
         if not objectids:
             return None
         self._oid_field_name = data['objectIdFieldName']
