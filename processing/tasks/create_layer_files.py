@@ -154,6 +154,8 @@ def create_layer_file(input_items, meta_folder, show_progress=False):
                         status_writer.send_status(arcpy.GetMessages(2))
                         errors_reasons[name] = arcpy.GetMessages(2)
                         continue
+                else:
+                    lyr = [os.path.join(layer_folder, '{0}.layer.lyr'.format(id))]
             created += 1
             # Update the index.
             if lyr:
