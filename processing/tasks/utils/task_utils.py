@@ -108,13 +108,13 @@ class QueryIndex(object):
 
 class ServiceLayer(object):
     """Helper class for working with ArcGIS services."""
-    def __init__(self, service_layer_url, token=''):
+    def __init__(self, service_layer_url, geometry='', geometry_type='', token=''):
         self.object_ids_cnt = 0
         self._service_layer_url = service_layer_url
         self._token = token
         self._wkid = self.__get_wkid()
         self._oid_field_name = ''
-        self._object_ids = self.__get_object_ids()
+        self._object_ids = self.__get_object_ids(geometry, geometry_type)
 
     @property
     def service_layer_url(self):
@@ -149,12 +149,12 @@ class ServiceLayer(object):
         else:
             return 4326
 
-    def __get_object_ids(self):
+    def __get_object_ids(self, geom, geom_type):
         """Returns groups of OIDs/FIDs for the service layer as an iterator (groups of 100)."""
         if self._token:
-            query = {'where': '1=1', 'returnIdsOnly':True, 'token': self._token, 'f': 'json'}
+            query = {'where': '1=1', 'returnIdsOnly':True, 'geometry': geom, 'geometryType': geom_type, 'token': self._token, 'f': 'json'}
         else:
-            query = {'where': '1=1', 'returnIdsOnly':True, 'f': 'json'}
+            query = {'where': '1=1', 'geometry': geom, 'geometryType': geom_type, 'returnIdsOnly':True, 'f': 'json'}
         response = urllib.urlopen('{0}/query?'.format(self._service_layer_url), urllib.urlencode(query))
         data = json.loads(response.read())
         objectids = data['objectIds']

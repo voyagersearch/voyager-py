@@ -23,20 +23,68 @@ from utils import task_utils
 
 
 status_writer = status.Writer()
-result_count = 0
-processed_count = 0.
 files_to_package = list()
 errors_reasons = {}
 skipped_reasons = {}
+result_count = 0
+processed_count = 0.
+
+# Used when clipping geometry features (globals of these are defined as well).
+layer_name = ""
+new_fields = []
+field_values = []
+existing_fields = []
 
 
-def clip_data(input_items, out_workspace, clip_polygons, out_format):
-    """Clips input results."""
+def clip_service_layers(layer, clipping_polygon, output_name):
+    """Clips map and feature service layers using the clippnig polygon."""
+    service_layer = task_utils.ServiceLayer(layer, clipping_polygon.extent.JSON, 'esriGeometryEnvelope')
+    arcpy.env.overwriteOutput = True
+    oid_groups = service_layer.object_ids
+    out_features = None
+    g = 0.
+    group_cnt = service_layer.object_ids_cnt
+    for group in oid_groups:
+        g += 1
+        group = [oid for oid in group if oid]
+        where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
+        url = layer + "/query?where={}&outFields={}&returnGeometry=true&f=json&token={}".format(where, '*', '')
+        feature_set = arcpy.FeatureSet()
+        try:
+            feature_set.load(url)
+        except Exception:
+            continue
+        if not out_features:
+            out_features = arcpy.Clip_analysis(feature_set, clipping_polygon, output_name)
+        else:
+            clip_features = arcpy.Clip_analysis(feature_set, clipping_polygon, 'in_memory/features')
+            arcpy.Append_management(clip_features, out_features, 'NO_TEST')
+            try:
+                arcpy.Delete_management(clip_features)
+            except arcpy.ExecuteError:
+                pass
+        status_writer.send_percent(float(g) / group_cnt * 100, '', 'clip_data_by_features')
+
+
+def clip_data(input_items, out_workspace, clip_polygon, out_format):
+    """Clips input results using the clip polygon.
+
+    :param input_items: list of item to be clipped
+    :param out_workspace: the output workspace where results are created
+    :param clip_polygon: the clip polygon geometry
+    :param out_format: the type of output to be created (i.e. SHP for shapefile)
+    """
+
+    global processed_count
+    global layer_name
+    global existing_fields
+    global new_fields
+    global field_values
+
     clipped = 0
     errors = 0
     skipped = 0
     fds = None
-    global processed_count
 
     for ds, out_name in input_items.iteritems():
         try:
@@ -45,34 +93,17 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
             # -----------------------------------------------
             if ds.startswith('http'):
                 try:
-                    service_layer = task_utils.ServiceLayer(ds)
-                    arcpy.env.overwriteOutput = True
-                    oid_groups = service_layer.object_ids
-                    out_features = None
-                    for group in oid_groups:
-                        group = [oid for oid in group if oid]
-                        where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
-                        url = ds + "/query?where={}&outFields={}&returnGeometry=true&geometryType=esriGeometryPolygon&geometry={}&f=json&token={}".format(where, '*', eval(clip_polygons.JSON), '')
-                        feature_set = arcpy.FeatureSet()
-                        feature_set.load(url)
-                        if not out_features:
-                            out_features = arcpy.Clip_analysis(feature_set, clip_polygons, out_name)
-                        else:
-                            clip_features = arcpy.Clip_analysis(feature_set, clip_polygons, 'in_memory/features')
-                            arcpy.Append_management(clip_features, out_features, 'NO_TEST')
-                            try:
-                                arcpy.Delete_management(clip_features)
-                            except arcpy.ExecuteError:
-                                pass
+                    clip_service_layers(ds, clip_polygon, out_name)
                     processed_count += 1.
                     clipped += 1
-                    status_writer.send_percent(processed_count / result_count, _('Clipped: {0}').format(ds), 'clip_data')
+                    status_writer.send_percent(processed_count / result_count, _('Clipped: {0}').format(ds), 'clip_data_by_features')
                     continue
                 except Exception as ex:
                     status_writer.send_state(status.STAT_WARNING, str(ex))
                     errors_reasons[ds] = ex.message
                     errors += 1
                     continue
+
 
             # -----------------------------------------------
             # Check if the path is a MXD data frame type.
@@ -82,14 +113,17 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
                 ds = ds.split('|')[0].strip()
 
 
-            # -------------------------------
-            # Is the input a geometry feature
-            # -------------------------------
+            # ---------------------------------
+            # Is the input is geometry features
+            # ---------------------------------
             if isinstance(out_name, list):
+                increment = task_utils.get_increment(result_count)
                 for row in out_name:
                     try:
                         name = os.path.join(out_workspace, arcpy.ValidateTableName(ds, out_workspace))
-                        # Clip the geometry.
+                        if out_format == 'SHP':
+                            name += '.shp'
+
                         geo_json = row['[geo]']
                         geom = arcpy.AsShape(geo_json)
                         row.pop('[geo]')
@@ -99,6 +133,18 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
                             else:
                                 arcpy.env.outputCoordinateSystem = 4326
                                 arcpy.CreateFeatureclass_management(out_workspace, os.path.basename(name), geom.type.upper())
+
+                            layer_name = arcpy.MakeFeatureLayer_management(name, 'flayer')
+                            if out_format == 'SHP':
+                                arcpy.DeleteField_management(layer_name, 'Id')
+                            existing_fields = [f.name for f in arcpy.ListFields(layer_name)]
+                            new_fields = []
+                            field_values = []
+                            for field, value in row.iteritems():
+                                valid_field = arcpy.ValidateFieldName(field, out_workspace)
+                                new_fields.append(valid_field)
+                                field_values.append(value)
+                                arcpy.AddField_management(layer_name, valid_field, 'TEXT')
                         else:
                             if not geom.type.upper() == arcpy.Describe(name).shapeType.upper():
                                 name = arcpy.CreateUniqueName(os.path.basename(name), out_workspace)
@@ -108,22 +154,27 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
                                     arcpy.env.outputCoordinateSystem = 4326
                                     arcpy.CreateFeatureclass_management(out_workspace, os.path.basename(name), geom.type.upper())
 
-                        existing_fields = [f.name for f in arcpy.ListFields(name)]
-                        new_fields = []
-                        field_values = []
-                        for field, value in row.iteritems():
-                            valid_field = arcpy.ValidateFieldName(field, out_workspace)
-                            new_fields.append(valid_field)
-                            field_values.append(value)
-                            if not valid_field in existing_fields:
-                                arcpy.AddField_management(name, valid_field, 'TEXT')
+                                layer_name = arcpy.MakeFeatureLayer_management(name, 'flayer')
+                                if out_format == 'SHP':
+                                    arcpy.DeleteField_management(layer_name, 'Id')
+                                existing_fields = [f.name for f in arcpy.ListFields(layer_name)]
+                                new_fields = []
+                                field_values = []
+                                for field, value in row.iteritems():
+                                    valid_field = arcpy.ValidateFieldName(field, out_workspace)
+                                    new_fields.append(valid_field)
+                                    field_values.append(value)
+                                    if not valid_field in existing_fields:
+                                        arcpy.AddField_management(layer_name, valid_field, 'TEXT')
 
-                        clipped_geometry = arcpy.Clip_analysis(geom, clip_polygons, arcpy.Geometry())
+                        clipped_geometry = arcpy.Clip_analysis(geom, clip_polygon, arcpy.Geometry())
                         if clipped_geometry:
-                            with arcpy.da.InsertCursor(name, ["SHAPE@"] + new_fields) as icur:
+                            with arcpy.da.InsertCursor(layer_name, ["SHAPE@"] + new_fields) as icur:
                                 icur.insertRow([clipped_geometry[0]] + field_values)
-                        status_writer.send_percent(processed_count / result_count, _('Clipped: {0}').format(row['name']), 'clip_data')
+
                         processed_count += 1
+                        if (processed_count % increment) == 0:
+                            status_writer.send_percent(float(processed_count) / result_count, _('Clipped: {0}').format(row['name']), 'clip_data')
                         clipped += 1
                     except KeyError:
                         processed_count += 1
@@ -138,7 +189,6 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
                 continue
 
 
-
             dsc = arcpy.Describe(ds)
             try:
                 if dsc.spatialReference.name == 'Unknown':
@@ -151,12 +201,14 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
             # -----------------------------
 
             # Feature Class or ShapeFile
-            if dsc.dataType in ('FeatureClass', 'ShapeFile'):
+            if dsc.dataType in ('FeatureClass', 'ShapeFile', 'Shapefile'):
                 if out_name == '':
-                    name = task_utils.create_unique_name(dsc.name, out_workspace)
+                    name = arcpy.ValidateTableName(dsc.name, out_workspace)
+                    name = task_utils.create_unique_name(name, out_workspace)
                 else:
-                    name = task_utils.create_unique_name(out_name, out_workspace)
-                arcpy.Clip_analysis(ds, clip_polygons, name)
+                    name = arcpy.ValidateTableName(out_name, out_workspace)
+                    name = task_utils.create_unique_name(name, out_workspace)
+                arcpy.Clip_analysis(ds, clip_polygon, name)
 
             # Feature dataset
             elif dsc.dataType == 'FeatureDataset':
@@ -167,9 +219,9 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
                 for fc in arcpy.ListFeatureClasses():
                     try:
                         if not out_format == 'SHP':
-                            arcpy.Clip_analysis(fc, clip_polygons, task_utils.create_unique_name(fc, fds.getOutput(0)))
+                            arcpy.Clip_analysis(fc, clip_polygon, task_utils.create_unique_name(fc, fds.getOutput(0)))
                         else:
-                            arcpy.Clip_analysis(fc, clip_polygons, task_utils.create_unique_name(fc, out_workspace))
+                            arcpy.Clip_analysis(fc, clip_polygon, task_utils.create_unique_name(fc, out_workspace))
                     except arcpy.ExecuteError:
                         pass
                 arcpy.env.workspace = out_workspace
@@ -180,13 +232,13 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
                     name = task_utils.create_unique_name(dsc.name, out_workspace)
                 else:
                     name = task_utils.create_unique_name(out_name, out_workspace)
-                extent = arcpy.Describe(clip_polygons).extent
+                extent = arcpy.Describe(clip_polygon).extent
                 ext = '{0} {1} {2} {3}'.format(extent.XMin, extent.YMin, extent.XMax, extent.YMax)
-                arcpy.Clip_management(ds, ext, name, in_template_dataset=clip_polygons, clipping_geometry="ClippingGeometry")
+                arcpy.Clip_management(ds, ext, name, in_template_dataset=clip_polygon, clipping_geometry="ClippingGeometry")
 
             # Layer file
             elif dsc.dataType == 'Layer':
-                task_utils.clip_layer_file(dsc.catalogPath, clip_polygons, arcpy.env.workspace)
+                task_utils.clip_layer_file(dsc.catalogPath, clip_polygon, arcpy.env.workspace)
 
             # Cad drawing dataset
             elif dsc.dataType == 'CadDrawingDataset':
@@ -194,7 +246,7 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
                 cad_wks_name = os.path.splitext(dsc.name)[0]
                 for cad_fc in arcpy.ListFeatureClasses():
                     name = task_utils.create_unique_name('{0}_{1}'.format(cad_wks_name, cad_fc), out_workspace)
-                    arcpy.Clip_analysis(cad_fc, clip_polygons, name)
+                    arcpy.Clip_analysis(cad_fc, clip_polygon, name)
                 arcpy.env.workspace = out_workspace
 
             # File
@@ -206,7 +258,7 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
                     for layer in arcpy.mapping.ListLayers(group_layer):
                         if layer.isFeatureLayer:
                             arcpy.Clip_analysis(layer,
-                                                clip_polygons,
+                                                clip_polygon,
                                                 task_utils.create_unique_name(layer, out_workspace))
                     # Clean up temp KML results.
                     arcpy.Delete_management(os.path.join(arcpy.env.scratchFolder, '{0}.lyr'.format(name)))
@@ -229,7 +281,7 @@ def clip_data(input_items, out_workspace, clip_polygons, out_format):
 
             # Map document
             elif dsc.dataType == 'MapDocument':
-                task_utils.clip_mxd_layers(dsc.catalogPath, clip_polygons, arcpy.env.workspace, map_frame_name)
+                task_utils.clip_mxd_layers(dsc.catalogPath, clip_polygon, arcpy.env.workspace, map_frame_name)
             else:
                 processed_count += 1.
                 status_writer.send_percent(processed_count / result_count, _('Invalid input type: {0}').format(ds), 'clip_data')
@@ -330,7 +382,7 @@ def execute(request):
         else:
             results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
 
-        docs = eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs']
+        docs = eval(results.read().replace('false', 'False').replace('true', 'True').replace('null', 'None'))['response']['docs']
         input_items = task_utils.get_input_items(docs)
         if not input_items:
             input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
@@ -338,9 +390,9 @@ def execute(request):
         input_rows = collections.defaultdict(list)
         for doc in docs:
             if 'path' not in doc:
-               input_rows[doc['name']].append(doc)
+                input_rows[doc['name']].append(doc)
         if input_rows:
-            result = clip_data(input_rows, out_workspace, clip_features,out_format)
+            result = clip_data(input_rows, out_workspace, clip_features, out_format)
             clipped += result[0]
             errors += result[1]
             skipped += result[2]
@@ -372,7 +424,11 @@ def execute(request):
             elif out_format == 'KML':
                 task_utils.convert_to_kml(os.path.join(out_workspace, "output.gdb"))
                 arcpy.env.workspace = ''
-                arcpy.Delete_management(os.path.join(out_workspace, "output.gdb"))
+                arcpy.RefreshCatalog(os.path.join(out_workspace, "output.gdb"))
+                try:
+                    arcpy.Delete_management(os.path.join(out_workspace, "output.gdb"))
+                except arcpy.ExecuteError:
+                    pass
                 zip_file = task_utils.zip_data(out_workspace, 'output.zip')
                 shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
             else:

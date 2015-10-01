@@ -28,6 +28,10 @@ status_writer = status.Writer()
 import arcpy
 skipped_reasons = {}
 errors_reasons = {}
+layer_name = ''
+existing_fields = []
+new_fields = []
+field_values = []
 
 
 def execute(request):
@@ -83,7 +87,7 @@ def execute(request):
         else:
             results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
 
-        docs = eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs']
+        docs = eval(results.read().replace('false', 'False').replace('true', 'True').replace('null', 'None'))['response']['docs']
         input_items = task_utils.get_input_items(docs)
         if not input_items:
             input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
@@ -134,6 +138,11 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
     errors = 0
     skipped = 0
     global processed_count
+    global layer_name
+    global existing_fields
+    global new_fields
+    global field_values
+
 
     arcpy.env.overwriteOutput = True
     for ds, out_name in input_items.iteritems():
@@ -143,21 +152,27 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
             # -----------------------------------------------
             if ds.startswith('http'):
                 try:
-                    service_layer = task_utils.ServiceLayer(ds)
+                    service_layer = task_utils.ServiceLayer(ds, extent.JSON, 'esriGeometryPolygon')
                     arcpy.env.overwriteOutput = True
                     oid_groups = service_layer.object_ids
                     out_features = None
+                    g = 0.
+                    group_cnt = service_layer.object_ids_cnt
                     if not arcpy.Exists(os.path.join(out_workspace, 'temp.gdb')):
                         temp_gdb = arcpy.CreateFileGDB_management(out_workspace, 'temp.gdb')
                         temp_gdb = temp_gdb[0]
                     else:
                         temp_gdb = os.path.join(out_workspace, 'temp.gdb')
                     for group in oid_groups:
+                        g += 1
                         group = [oid for oid in group if oid]
                         where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
-                        url = ds + "/query?where={}&outFields={}&returnGeometry=true&geometryType=esriGeometryPolygon&f=json&token={}".format(where, '*', '')
+                        url = ds + "/query?where={}&outFields={}&returnGeometry=true&f=json&token={}".format(where, '*', '')
                         feature_set = arcpy.FeatureSet()
-                        feature_set.load(url)
+                        try:
+                            feature_set.load(url)
+                        except Exception:
+                            continue
                         if not out_features:
                             out_features = arcpy.CopyFeatures_management(feature_set, task_utils.create_unique_name(out_name, temp_gdb))
                         else:
@@ -167,6 +182,7 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
                                 arcpy.Delete_management(features)
                             except arcpy.ExecuteError:
                                 pass
+                        status_writer.send_percent(float(g) / group_cnt * 100, '', 'convert_to_kml')
                     arcpy.MakeFeatureLayer_management(out_features, out_name)
                     arcpy.LayerToKML_conversion(out_name, '{0}.kmz'.format(os.path.join(out_workspace, out_name)), 1, boundary_box_extent=extent)
                     processed_count += 1.
@@ -188,6 +204,7 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
             # Is the input a geometry feature
             # -------------------------------
             if isinstance(out_name, list):
+                increment = task_utils.get_increment(result_count)
                 for row in out_name:
                     try:
                         name = arcpy.ValidateTableName(ds, 'in_memory')
@@ -198,38 +215,48 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
                         row.pop('[geo]')
                         if not arcpy.Exists(name):
                             if arcpy.env.outputCoordinateSystem:
-                                arcpy.CreateFeatureclass_management('in_memory', os.path.basename(name), geom.type.upper())
+                                layer_name = arcpy.CreateFeatureclass_management('in_memory', os.path.basename(name), geom.type.upper())
                             else:
                                 arcpy.env.outputCoordinateSystem = 4326
-                                arcpy.CreateFeatureclass_management('in_memory', os.path.basename(name), geom.type.upper())
+                                layer_name = arcpy.CreateFeatureclass_management('in_memory', os.path.basename(name), geom.type.upper())
+                            # layer_name = arcpy.MakeFeatureLayer_management(name, 'flayer')
+                            existing_fields = [f.name for f in arcpy.ListFields(layer_name)]
+                            new_fields = []
+                            field_values = []
+                            for field, value in row.iteritems():
+                                valid_field = arcpy.ValidateFieldName(field, 'in_memory')
+                                new_fields.append(valid_field)
+                                field_values.append(value)
+                                arcpy.AddField_management(layer_name, valid_field, 'TEXT')
                         else:
                             if not geom.type.upper() == arcpy.Describe(name).shapeType.upper():
                                 name = arcpy.CreateUniqueName(os.path.basename(name), 'in_memory')
                                 if arcpy.env.outputCoordinateSystem:
-                                    arcpy.CreateFeatureclass_management('in_memory', os.path.basename(name), geom.type.upper())
+                                    layer_name = arcpy.CreateFeatureclass_management('in_memory', os.path.basename(name), geom.type.upper())
                                 else:
                                     arcpy.env.outputCoordinateSystem = 4326
-                                    arcpy.CreateFeatureclass_management('in_memory', os.path.basename(name), geom.type.upper())
+                                    layer_name = arcpy.CreateFeatureclass_management('in_memory', os.path.basename(name), geom.type.upper())
 
-                        existing_fields = [f.name for f in arcpy.ListFields(name)]
-                        new_fields = []
-                        field_values = []
-                        for field, value in row.iteritems():
-                            valid_field = arcpy.ValidateFieldName(field, 'in_memory')
-                            new_fields.append(valid_field)
-                            field_values.append(value)
-                            if not valid_field in existing_fields:
-                                arcpy.AddField_management(name, valid_field, 'TEXT')
+                                existing_fields = [f.name for f in arcpy.ListFields(layer_name)]
+                                new_fields = []
+                                field_values = []
+                                for field, value in row.iteritems():
+                                    valid_field = arcpy.ValidateFieldName(field, 'in_memory')
+                                    new_fields.append(valid_field)
+                                    field_values.append(value)
+                                    if not valid_field in existing_fields:
+                                        arcpy.AddField_management(layer_name, valid_field, 'TEXT')
 
-                        with arcpy.da.InsertCursor(name, ["SHAPE@"] + new_fields) as icur:
+                        with arcpy.da.InsertCursor(layer_name, ["SHAPE@"] + new_fields) as icur:
                             icur.insertRow([geom] + field_values)
 
-                        arcpy.MakeFeatureLayer_management(name, os.path.basename(name))
+                        arcpy.MakeFeatureLayer_management(layer_name, os.path.basename(name))
                         arcpy.LayerToKML_conversion(os.path.basename(name),
                                                     '{0}.kmz'.format(os.path.join(out_workspace, os.path.basename(name))),
                                                     1,
                                                     boundary_box_extent=extent)
-                        status_writer.send_percent(processed_count / result_count, _('Converted: {0}').format(row['name']), 'convert_to_kml')
+                        if (processed_count % increment) == 0:
+                            status_writer.send_percent(float(processed_count) / result_count, _('Converted: {0}').format(row['name']), 'convert_to_kml')
                         processed_count += 1
                         converted += 1
                     except KeyError:
@@ -242,6 +269,7 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
                         errors += 1
                         errors_reasons[ds] = ex.message
                         continue
+                del icur
                 continue
 
 

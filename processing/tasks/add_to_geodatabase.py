@@ -15,9 +15,9 @@
 import os
 import sys
 import collections
-import shutil
 import tempfile
 import urllib2
+import arcpy
 from utils import status
 from utils import task_utils
 
@@ -27,7 +27,10 @@ result_count = 0
 processed_count = 0.
 skipped_reasons = {}
 errors_reasons = {}
-import arcpy
+layer_name = ""
+existing_fields = []
+new_fields = []
+field_values = []
 
 
 def is_feature_dataset(workspace):
@@ -47,6 +50,10 @@ def add_to_geodatabase(input_items, out_gdb, is_fds):
     skipped = 0
     errors = 0
     global processed_count
+    global layer_name
+    global  existing_fields
+    global new_fields
+    global  field_values
 
     for ds, out_name in input_items.iteritems():
         try:
@@ -59,7 +66,10 @@ def add_to_geodatabase(input_items, out_gdb, is_fds):
                     arcpy.env.overwriteOutput = True
                     oid_groups = service_layer.object_ids
                     out_features = None
+                    g = 0.
+                    group_cnt = service_layer.object_ids_cnt
                     for group in oid_groups:
+                        g += 1
                         group = [oid for oid in group if oid]
                         where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
                         url = ds + "/query?where={}&outFields={}&returnGeometry=true&geometryType=esriGeometryPolygon&f=json&token={}".format(where, '*', '')
@@ -74,6 +84,7 @@ def add_to_geodatabase(input_items, out_gdb, is_fds):
                                 arcpy.Delete_management(features)
                             except arcpy.ExecuteError:
                                 pass
+                        status_writer.send_percent(float(g) / group_cnt * 100, '', 'add_to_geodatabase')
                     processed_count += 1.
                     added += 1
                     status_writer.send_percent(processed_count / result_count, _('Added: {0}').format(ds), 'add_to_geodatabase')
@@ -95,6 +106,7 @@ def add_to_geodatabase(input_items, out_gdb, is_fds):
             # Is the input a geometry feature
             # -------------------------------
             if isinstance(out_name, list):
+                increment = task_utils.get_increment(result_count)
                 for row in out_name:
                     try:
                         name = os.path.join(out_gdb, arcpy.ValidateTableName(ds, out_gdb))
@@ -114,6 +126,15 @@ def add_to_geodatabase(input_items, out_gdb, is_fds):
                                 else:
                                     arcpy.env.outputCoordinateSystem = 4326
                                     arcpy.CreateFeatureclass_management(out_gdb, os.path.basename(name), geom.type.upper())
+                                layer_name = arcpy.MakeFeatureLayer_management(name, 'flayer')
+                                existing_fields = [f.name for f in arcpy.ListFields(layer_name)]
+                                new_fields = []
+                                field_values = []
+                                for field, value in row.iteritems():
+                                    valid_field = arcpy.ValidateFieldName(field, out_gdb)
+                                    new_fields.append(valid_field)
+                                    field_values.append(value)
+                                    arcpy.AddField_management(layer_name, valid_field, 'TEXT')
                             else:
                                 if not geom.type.upper() == arcpy.Describe(name).shapeType.upper():
                                     name = arcpy.CreateUniqueName(os.path.basename(name), out_gdb)
@@ -122,29 +143,41 @@ def add_to_geodatabase(input_items, out_gdb, is_fds):
                                     else:
                                         arcpy.env.outputCoordinateSystem = 4326
                                         arcpy.CreateFeatureclass_management(out_gdb, os.path.basename(name), geom.type.upper())
+                                    layer_name = arcpy.MakeFeatureLayer_management(name, 'flayer')
+                                    existing_fields = [f.name for f in arcpy.ListFields(layer_name)]
+                                    new_fields = []
+                                    field_values = []
+                                    for field, value in row.iteritems():
+                                        valid_field = arcpy.ValidateFieldName(field, out_gdb)
+                                        new_fields.append(valid_field)
+                                        field_values.append(value)
+                                        if valid_field not in existing_fields:
+                                            arcpy.AddField_management(layer_name, valid_field, 'TEXT')
                         else:
                             if not arcpy.Exists(name):
                                 arcpy.CreateTable_management(out_gdb, os.path.basename(name))
+                                view_name = arcpy.MakeTableView_management(name, 'tableview')
+                                existing_fields = [f.name for f in arcpy.ListFields(view_name)]
+                                new_fields = []
+                                field_values = []
+                                for field, value in row.iteritems():
+                                    valid_field = arcpy.ValidateFieldName(field, out_gdb)
+                                    new_fields.append(valid_field)
+                                    field_values.append(value)
+                                    if valid_field not in existing_fields:
+                                        arcpy.AddField_management(view_name, valid_field, 'TEXT')
 
-                        existing_fields = [f.name for f in arcpy.ListFields(name)]
-                        new_fields = []
-                        field_values = []
-                        for field, value in row.iteritems():
-                            valid_field = arcpy.ValidateFieldName(field, out_gdb)
-                            new_fields.append(valid_field)
-                            field_values.append(value)
-                            if valid_field not in existing_fields:
-                                arcpy.AddField_management(name, valid_field, 'TEXT')
 
                         if geom:
-                            with arcpy.da.InsertCursor(name, ["SHAPE@"] + new_fields) as icur:
+                            with arcpy.da.InsertCursor(layer_name, ["SHAPE@"] + new_fields) as icur:
                                 icur.insertRow([geom] + field_values)
                         else:
-                            with arcpy.da.InsertCursor(name, new_fields) as icur:
+                            with arcpy.da.InsertCursor(view_name, new_fields) as icur:
                                 icur.insertRow(field_values)
 
-                        status_writer.send_percent(processed_count / result_count, _('Added: {0}').format(row['name']), 'add_to_geodatabase')
                         processed_count += 1
+                        if (processed_count % increment) == 0:
+                            status_writer.send_percent(float(processed_count) / result_count, _('Added: {0}').format(row['name']), 'add_to_geodatabase')
                         added += 1
                         continue
                     except Exception as ex:
@@ -376,7 +409,7 @@ def execute(request):
         else:
             results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
 
-        docs = eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs']
+        docs = eval(results.read().replace('false', 'False').replace('true', 'True').replace('null', 'None'))['response']['docs']
         input_items = task_utils.get_input_items(docs)
         if not input_items:
             input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
