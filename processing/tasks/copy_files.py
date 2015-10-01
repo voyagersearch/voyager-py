@@ -129,7 +129,7 @@ def copy_files(input_items, target_folder, flatten_results, target_dirs):
             else:
                 processed_count += 1
                 status_writer.send_percent(processed_count / result_count, _('{0} is not a file or does no exist').format(src_file), 'copy_files')
-                skipped_reasons[src_file] = _('{0} is not a file or does no exist').format(src_file)
+                skipped_reasons[src_file] = _('is not a file or does no exist')
                 skipped += 1
         except IOError as io_err:
             processed_count += 1

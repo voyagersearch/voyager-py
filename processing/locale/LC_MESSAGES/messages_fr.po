@@ -162,10 +162,15 @@ msgstr "Pas de résultats peuvent être exportés au format PDF"
 msgid "Copied: {0}"
 msgstr "Copié: {0}"
 
-#: copy_files.py:77 zip_files:77
+#: copy_files.py:131 zip_files:137
 #, python-format
 msgid "{0} is not a file or does not exist"
 msgstr "{0} n'est pas un fichier, ou n'existe pas"
+
+#: copy_files.py:132 zip_files:145
+#, python-format
+msgid "is not a file or does not exist"
+msgstr " n'est pas un fichier, ou n'existe pas"
 
 #: convert_to_kml.py:147
 #, python-format

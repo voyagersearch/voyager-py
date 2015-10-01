@@ -165,9 +165,14 @@ msgstr ""
 msgid "Copied: {0}"
 msgstr ""
 
-#: copy_files.py:77 zip_files:77
+#: copy_files.py:131 zip_files:137
 #, python-format
 msgid "{0} is not a file or does not exist"
+msgstr ""
+
+#: copy_files.py:132 zip_files:145
+#, python-format
+msgid "is not a file or does not exist"
 msgstr ""
 
 #: convert_to_kml.py:147

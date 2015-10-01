@@ -72,7 +72,7 @@ def execute(request):
             input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
             if not input_items:
                 input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
-                
+
             result = zip_files(zipper, input_items, zip_file_location, flatten_results)
             zipped += result[0]
             skipped += result[1]
@@ -142,6 +142,6 @@ def zip_files(zipper, input_items, zip_file_location, flatten_results, show_prog
                     'zip_files'
                 )
                 i += 1
-            skipped_reasons[in_file] = _('{0} is not a file or does not exist').format(in_file)
+            skipped_reasons[in_file] = _('is not a file or does not exist')
             skipped += 1
     return zipped, skipped
