@@ -86,7 +86,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
                         g += 1
                         group = [oid for oid in group if oid]
                         where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
-                        url = ds + "/query?where={}&outFields={}&returnGeometry=true&f=json&token={}".format(where, '*', eval(clip_poly.JSON), '')
+                        url = ds + "/query?where={}&outFields={}&returnGeometry=true&f=json".format(where, '*', eval(clip_poly.JSON))
                         feature_set = arcpy.FeatureSet()
                         try:
                             feature_set.load(url)

@@ -167,7 +167,7 @@ def convert_to_kml(input_items, out_workspace, extent, show_progress=False):
                         g += 1
                         group = [oid for oid in group if oid]
                         where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
-                        url = ds + "/query?where={}&outFields={}&returnGeometry=true&f=json&token={}".format(where, '*', '')
+                        url = ds + "/query?where={}&outFields={}&returnGeometry=true&f=json&".format(where, '*')
                         feature_set = arcpy.FeatureSet()
                         try:
                             feature_set.load(url)

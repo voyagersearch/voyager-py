@@ -48,7 +48,7 @@ def clip_service_layers(layer, clipping_polygon, output_name):
         g += 1
         group = [oid for oid in group if oid]
         where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
-        url = layer + "/query?where={}&outFields={}&returnGeometry=true&f=json&token={}".format(where, '*', '')
+        url = layer + "/query?where={}&outFields={}&returnGeometry=true&f=json".format(where, '*')
         feature_set = arcpy.FeatureSet()
         try:
             feature_set.load(url)

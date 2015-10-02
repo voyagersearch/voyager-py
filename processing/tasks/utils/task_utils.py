@@ -157,11 +157,18 @@ class ServiceLayer(object):
             query = {'where': '1=1', 'geometry': geom, 'geometryType': geom_type, 'returnIdsOnly':True, 'f': 'json'}
         response = urllib.urlopen('{0}/query?'.format(self._service_layer_url), urllib.urlencode(query))
         data = json.loads(response.read())
+        if 'error' in data:
+            if data['error']['code'] == 400:
+                raise Exception('Service Layer has no records')
+        if 'layers' in data:
+            raise Exception('Not a service layer')
         objectids = data['objectIds']
-        self.object_ids_cnt = len(objectids)
+
         if not objectids:
             return None
         self._oid_field_name = data['objectIdFieldName']
+        args = [iter(objectids)] * 100
+        self.object_ids_cnt = len(list(itertools.izip_longest(fillvalue=None, *args)))
         args = [iter(objectids)] * 100
         return itertools.izip_longest(fillvalue=None, *args)
 

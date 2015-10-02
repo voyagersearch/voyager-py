@@ -72,7 +72,7 @@ def add_to_geodatabase(input_items, out_gdb, is_fds):
                         g += 1
                         group = [oid for oid in group if oid]
                         where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
-                        url = ds + "/query?where={}&outFields={}&returnGeometry=true&geometryType=esriGeometryPolygon&f=json&token={}".format(where, '*', '')
+                        url = ds + "/query?where={}&outFields={}&returnGeometry=true&geometryType=esriGeometryPolygon&f=json".format(where, '*')
                         feature_set = arcpy.FeatureSet()
                         feature_set.load(url)
                         if not out_features:
