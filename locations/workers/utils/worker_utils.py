@@ -311,6 +311,8 @@ class GeometryOps(object):
         try:
             # If Polyline and tolerance is 1, just get the first, mid and last points.
             geometry = ogr.CreateGeometryFromWkt(wkt)
+            if not geometry:
+                geometry = ogr.CreateGeometryFromWkt(eval(wkt))
             if geometry.GetGeometryName() == 'LINESTRING' and tolerance > 0.9:
                 first_point = "{0:.2f} {1:.2f}".format(geometry.GetPoint()[0], geometry.GetPoint()[1])
                 mid_point = "{0:.2f} {1:.2f}".format(geometry.Centroid().GetPoint()[0], geometry.Centroid().GetPoint()[1])

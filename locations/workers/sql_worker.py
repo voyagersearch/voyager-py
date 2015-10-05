@@ -209,6 +209,10 @@ def run_job(job):
         columns = [c.split('.')[1] for c in columns]
         mapped_fields = job.map_fields(tbl, columns, column_types)
         increment = job.get_increment(row_count)
+        if 'WKT' in columns:
+            has_shape = True
+            wkt_col = mapped_fields.index('fs_WKT')
+
         geometry_ops = worker_utils.GeometryOps()
         generalize_value = job.generalize_value
 
@@ -226,9 +230,13 @@ def run_job(job):
         job.send_entry(table_entry)
 
         for i, row in enumerate(rows):
-            if not cur_id == row[0]:
+            if not cur_id == row[0] or not job.related_tables:
                 if entry:
-                    job.send_entry(entry)
+                    try:
+                        job.send_entry(entry)
+                    except Exception as ex:
+                        entry = {}
+                        continue
                     entry = {}
                 if has_shape:
                     if is_point:
@@ -238,20 +246,34 @@ def run_job(job):
                         mapped_cols['geometry_type'] = 'Point'
                     else:
                         if generalize_value == 0 or generalize_value == 0.0:
-                            geo['wkt'] = row[0]
+                            if wkt_col >= 0:
+                                geo['wkt'] = row[wkt_col]
+                                mapped_cols = dict(zip(mapped_fields, row))
+                            else:
+                                geo['wkt'] = row[0]
                         elif generalize_value > 0.9:
-                            geo['xmin'] = row[1]
-                            geo['ymin'] = row[2]
-                            geo['xmax'] = row[3]
-                            geo['ymax'] = row[4]
+                            if wkt_col >= 0:
+                                geo['wkt'] = row[wkt_col]
+                                mapped_cols = dict(zip(mapped_fields, row))
+                            else:
+                                geo['xmin'] = row[1]
+                                geo['ymin'] = row[2]
+                                geo['xmax'] = row[3]
+                                geo['ymax'] = row[4]
                         else:
-                            geo['wkt'] = geometry_ops.generalize_geometry(str(row[0]), generalize_value)
-
-                        mapped_cols = dict(zip(mapped_fields[5:], row[5:]))
+                            if wkt_col >= 0:
+                                geo['wkt'] = geometry_ops.generalize_geometry(str(row[wkt_col]), generalize_value)
+                                mapped_cols = dict(zip(mapped_fields, row))
+                            else:
+                                geo['wkt'] = geometry_ops.generalize_geometry(str(row[0]), generalize_value)
+                        if not mapped_cols:
+                            mapped_cols = dict(zip(mapped_fields[5:], row[5:]))
                         if 'Polygon' in geom_type:
                             mapped_cols['geometry_type'] = 'Polygon'
-                        else:
+                        elif 'Polyline' in geom_type:
                             mapped_cols['geometry_type'] = 'Polyline'
+                        else:
+                            mapped_cols['geometry_type'] = 'Point'
                 else:
                     mapped_cols = dict(zip(mapped_fields, row))
 
