@@ -49,7 +49,7 @@
     "en": {
       "display": "Clip Data by Features",
       "description": "Clips selected search results using a polygon item within the index",
-      "helpURL": "https://voyagersearch.zendesk.com/entries/93829566-Clip-Data",
+      "helpURL": "https://voyagersearch.zendesk.com/hc/en-us/articles/211335158-Clip-Data-by-Features",
       "params": {
         "clip_features": {
           "display": "Clip Features",
