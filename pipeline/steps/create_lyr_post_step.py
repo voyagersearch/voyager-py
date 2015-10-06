@@ -1,10 +1,7 @@
 import os
 import sys
 import json
-try:
-    import arcpy
-except ImportError:
-    sys.exit(1)
+
 
 def run(entry):
     """
@@ -12,6 +9,11 @@ def run(entry):
     Currently has support for Shapefiles, raster datasets and geodatbase feature classes.
     :param entry: a JSON file containing a voyager entry.
     """
+    try:
+        import arcpy
+    except ImportError as ie:
+        sys.stdout.write(ie.message)
+        sys.exit(1)
     meta_folder = 'c:/voyager/data/meta'
     vmoptions = os.path.join(os.path.abspath(os.path.join(__file__, "../../../..")), 'Voyager.vmoptions')
     with open(vmoptions, 'rb') as fp:
