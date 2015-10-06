@@ -13,14 +13,13 @@
 	  "name": "clip_features",
       "required": true,
 	  "query": {
-	      "fl":"id,name,path:[absolute]",
+	      "fl":"name,path:[absolute]",
 	      "indent":"true",
 	      "facet":true,
-	      "facet.field":["format"],
+	      "facet.field":["format", "location"],
 	      "fq":["geometry_type:Polygon"]
       },
 	  "fields": [
-	    "id",
         "name",
 	    "path"
 	  ]
