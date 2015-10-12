@@ -10,9 +10,7 @@ class AvroExtractor(object):
         return "avro"
 
     def get_info(self):
-        return { 'name' : AvroExtractor.extractor(),
-                 'description' : 'extract avro file information',
-               }
+        return {'name': AvroExtractor.extractor(), 'description': 'extract avro file information'}
 
     def extract(self, infile, job):
         minx, miny, maxx, maxy = (None, None, None, None)
@@ -27,9 +25,9 @@ class AvroExtractor(object):
                     elif k == 'MBR_WEST':
                         maxx = float(v)
                     elif k == 'MBR_NORTH':
-                        maxy = v
+                        maxy = float(v)
                     elif k == 'MBR_SOUTH':
-                        miny = v
+                        miny = float(v)
                     job.set_field("meta_{0}".format(k), v)
 
             if minx:
