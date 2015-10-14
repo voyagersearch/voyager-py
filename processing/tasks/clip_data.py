@@ -241,11 +241,13 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
             # -----------------------------
 
             # Feature Class or ShapeFile
-            if dsc.dataType in ('FeatureClass', 'ShapeFile'):
+            if dsc.dataType in ('FeatureClass', 'ShapeFile', 'Shapefile'):
                 if out_name == '':
-                    name = task_utils.create_unique_name(dsc.name, out_workspace)
+                    name = arcpy.ValidateTableName(dsc.name, out_workspace)
+                    name = task_utils.create_unique_name(name, out_workspace)
                 else:
-                    name = task_utils.create_unique_name(out_name, out_workspace)
+                    name = arcpy.ValidateTableName(out_name, out_workspace)
+                    name = task_utils.create_unique_name(name, out_workspace)
                 arcpy.Clip_analysis(ds, clip_poly, name)
 
             # Feature dataset
