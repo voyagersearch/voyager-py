@@ -78,7 +78,7 @@ def execute(request):
             skipped += result[1]
             status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'zip_files')
     else:
-        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
+        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], list_components=True)
         zipped, skipped = zip_files(zipper, input_items, zip_file_location, flatten_results, True)
 
     zipper.close()
