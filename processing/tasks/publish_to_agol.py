@@ -45,8 +45,7 @@ class AGOLHandler(object):
         url = "{0}/sharing/rest/generateToken".format(self.portal_url)
         token = json.loads(urllib.urlopen(url + "?f=json", query_string).read())
         if "token" not in token:
-            print(token['error'])
-            sys.exit()
+            raise task_utils.PublishException(token['error']['message'] + ', ' + token['error']['details'][0])
         else:
             http_prefix = "{0}/sharing/rest".format(self.portal_url)
             return token['token'], http_prefix
@@ -118,16 +117,21 @@ def create_service(temp_folder, map_document, portal_url, username, password, se
             errors = analysis['errors']
         raise task_utils.AnalyzeServiceException(errors)
 
+
     # Upload/publish the service.
     status_writer.send_status(_('Publishing the map service to: {0}...').format(portal_url))
     agol_handler = AGOLHandler(portal_url, username, password, service_name)
     map_service_url = agol_handler.publish(stage_file, map_document.description, map_document.tags)
     status_writer.send_status(_('Successfully created: {0}').format(map_service_url))
 
+
 def execute(request):
     """Deletes files.
     :param request: json as a dict
     """
+    errors_reasons = {}
+    errors = 0
+    published = 0
     app_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     parameters = request['params']
     num_results, response_index = task_utils.get_result_count(parameters)
@@ -192,18 +196,26 @@ def execute(request):
                     arcpy.mapping.AddLayer(data_frame, layer)
                     mxd.save()
                     create_service(request_folder, mxd, url, username, password,  service_name, folder_name)
+                published += 1
         except task_utils.AnalyzeServiceException as ase:
             status_writer.send_state(status.STAT_FAILED, _(ase))
-            return
+            errors_reasons[item] = repr(ase)
+            errors += 1
         except requests.RequestException as re:
             status_writer.send_state(status.STAT_FAILED, _(re))
-            return
+            errors_reasons[item] = repr(re)
+            errors += 1
         except task_utils.PublishException as pe:
             status_writer.send_state(status.STAT_FAILED, _(pe))
-            return
+            errors_reasons[item] = repr(pe)
+            errors += 1
         except arcpy.ExecuteError as ee:
             status_writer.send_state(status.STAT_FAILED, _(ee))
-            return
+            errors_reasons[item] = repr(ee)
+            errors += 1
         except Exception as ex:
             status_writer.send_state(status.STAT_FAILED, _(ex))
-            return
+            errors_reasons[item] = repr(ex)
+            errors += 1
+        finally:
+            task_utils.report(os.path.join(request['folder'], '__report.json'), published, 0, errors, errors_reasons)

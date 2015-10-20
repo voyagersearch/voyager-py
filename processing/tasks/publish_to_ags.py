@@ -71,6 +71,9 @@ def execute(request):
     """Deletes files.
     :param request: json as a dict
     """
+    errors_reasons = {}
+    errors = 0
+    published = 0
     app_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     parameters = request['params']
     num_results, response_index = task_utils.get_result_count(parameters)
@@ -134,12 +137,18 @@ def execute(request):
                     arcpy.mapping.AddLayer(data_frame, layer)
                     mxd.save()
                     create_service(request_folder, mxd, server_conn, service_name, folder_name)
+                published += 1
         except task_utils.AnalyzeServiceException as ase:
             status_writer.send_state(status.STAT_FAILED, _(ase))
-            return
+            errors_reasons[item] = repr(ase)
+            errors += 1
         except arcpy.ExecuteError as ee:
             status_writer.send_state(status.STAT_FAILED, _(ee))
-            return
+            errors_reasons[item] = repr(ee)
+            errors += 1
         except Exception as ex:
             status_writer.send_state(status.STAT_FAILED, _(ex))
-            return
+            errors_reasons[item] = repr(ex)
+            errors += 1
+        finally:
+            task_utils.report(os.path.join(request['folder'], '__report.json'), published, 0, errors, errors_reasons)

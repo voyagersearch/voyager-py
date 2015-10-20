@@ -25,6 +25,10 @@ from utils import task_utils
 
 
 SHAPE_FIELD_LENGTH = slice(0, 10)
+errors_reasons = {}
+skipped_reasons = {}
+exported_count = 0.
+errors_count = 0.
 status_writer = status.Writer()
 
 
@@ -34,7 +38,17 @@ def export_to_shp(jobs, file_name, output_folder):
     :param file_name: the output file name
     :param output_folder: the output task folder
     """
-    import ogr
+    global exported_count
+    global errors_count
+    try:
+        import ogr
+    except ImportError as ie:
+        errors_count += 1
+        exported_count = 0
+        errors_reasons['Import Error'] = ie.message
+        status_writer.send_state(status.STAT_FAILED, repr(ie))
+        return
+
     driver = ogr.GetDriverByName("ESRI Shapefile")
     for job in jobs:
         try:
@@ -59,10 +73,17 @@ def export_to_shp(jobs, file_name, output_folder):
                 geometry_type = ogr.wkbPoint
             elif geo_json['type'].lower() == 'multipoint':
                 geometry_type = ogr.wkbMultiPoint
-        except KeyError:
+        except KeyError as ke:
+            errors_count += 1
+            errors_reasons[job.values()[0]] = repr(ke)
+            status_writer.send_state(status.STAT_WARNING)
             continue
-        except TypeError:
+        except TypeError as te:
+            errors_count += 1
+            errors_reasons[job.values()[0]] = repr(te)
+            status_writer.send_state(status.STAT_WARNING)
             continue
+
 
         if os.path.exists(os.path.join(output_folder, '{0}_{1}.shp'.format(file_name, geo_json['type']))):
             shape_file = ogr.Open(os.path.join(output_folder, '{0}_{1}.shp'.format(file_name, geo_json['type'])), 1)
@@ -100,13 +121,21 @@ def export_to_shp(jobs, file_name, output_folder):
             job.pop('[geo]')
         except KeyError:
             pass
-        for field, value in job.iteritems():
-            field, value = str(field), str(value)
-            i = feature.GetFieldIndex(field[0:10])
-            feature.SetField(i, value)
-        layer.CreateFeature(feature)
-        shape_file.Destroy()
-        shape_file = None
+
+        try:
+            for field, value in job.iteritems():
+                field, value = str(field), str(value)
+                i = feature.GetFieldIndex(field[0:10])
+                feature.SetField(i, value)
+            layer.CreateFeature(feature)
+            shape_file.Destroy()
+            shape_file = None
+            exported_count += 1
+        except Exception as ex:
+            errors_count += 1
+            errors_reasons[job.values()[0]] = repr(ex)
+            shape_file = None
+            continue
 
 
 def export_to_csv(jobs, file_name, output_folder, fields):
@@ -116,6 +145,8 @@ def export_to_csv(jobs, file_name, output_folder, fields):
     :param file_name: the output file name
     :param output_folder: the output task folder
     """
+    global exported_count
+    global  errors_count
     write_keys = True
     if os.path.exists(os.path.join(output_folder, '{0}.csv'.format(file_name))):
         write_keys = False
@@ -128,7 +159,14 @@ def export_to_csv(jobs, file_name, output_folder, fields):
         if write_keys:
             writer.writeheader()
         for cnt, job in enumerate(jobs, 1):
-            writer.writerow(job)
+            try:
+                writer.writerow(job)
+                exported_count += 1
+            except Exception as ex:
+                errors_count += 1
+                errors_reasons[job.keys()[0]] = repr(ex)
+                continue
+
 
 def export_to_xml(jobs, file_name, output_folder):
     """
@@ -137,69 +175,84 @@ def export_to_xml(jobs, file_name, output_folder):
     :param file_name: the output file name
     :param output_folder: the output task folder
     """
+    global  exported_count
+    global  errors_count
     comment = et.Comment('{0}'.format(datetime.datetime.today().strftime('Exported: %c')))
     if not os.path.exists(os.path.join(output_folder, "{0}.xml".format(file_name))):
         results = et.Element('results')
         for job in jobs:
-            result = et.SubElement(results, 'result')
-            for key, val in job.items():
-                if key == '[geo]':
-                    child = et.SubElement(result, 'geo')
-                    if 'geometries' in val:
-                        geom_collection = et.SubElement(child, val['type'])
-                        for geom in val['geometries']:
-                            geom_part = et.SubElement(geom_collection, geom['type'])
-                            for part in list(itertools.chain(*geom['coordinates'])):
-                                point = et.SubElement(geom_part, 'point')
-                                point.text = str(part).replace('[', '').replace(']', '')
-                    else:
-                        geom_parent = et.SubElement(child, val['type'])
-                        try:
-                            list_coords = list(itertools.chain(*val['coordinates']))
-                        except TypeError:
-                            list_coords = [val['coordinates']]
-                        if list_coords:
-                            for coords in list_coords:
-                                point = et.SubElement(geom_parent, 'point')
-                                point.text = str(coords).replace('[', '').replace(']', '')
+            try:
+                result = et.SubElement(results, 'result')
+                for key, val in job.items():
+                    if key == '[geo]':
+                        child = et.SubElement(result, 'geo')
+                        if 'geometries' in val:
+                            geom_collection = et.SubElement(child, val['type'])
+                            for geom in val['geometries']:
+                                geom_part = et.SubElement(geom_collection, geom['type'])
+                                for part in list(itertools.chain(*geom['coordinates'])):
+                                    point = et.SubElement(geom_part, 'point')
+                                    point.text = str(part).replace('[', '').replace(']', '')
                         else:
-                            for coords in val['coordinates']:
-                                point.text = str(coords).replace('[', '').replace(']', '')
-                    continue
-                child = et.SubElement(result, key)
-                child.text = str(val)
+                            geom_parent = et.SubElement(child, val['type'])
+                            try:
+                                list_coords = list(itertools.chain(*val['coordinates']))
+                            except TypeError:
+                                list_coords = [val['coordinates']]
+                            if list_coords:
+                                for coords in list_coords:
+                                    point = et.SubElement(geom_parent, 'point')
+                                    point.text = str(coords).replace('[', '').replace(']', '')
+                            else:
+                                for coords in val['coordinates']:
+                                    point.text = str(coords).replace('[', '').replace(']', '')
+                        continue
+                    child = et.SubElement(result, key)
+                    child.text = str(val)
+
+            except Exception as ex:
+                errors_count += 1
+                errors_reasons[job.keys()[0]] = repr(ex)
+                continue
+        exported_count += len(results)
         tree = et.ElementTree(results)
     else:
         tree = et.parse(os.path.join(output_folder, "{0}.xml".format(file_name)))
         root = tree.getroot()
         for job in jobs:
-            result = et.SubElement(root, 'result')
-            for key, val in job.items():
-                if key == '[geo]':
-                    child = et.SubElement(result, 'geo')
-                    if 'geometries' in val:
-                        geom_collection = et.SubElement(child, val['type'])
-                        for geom in val['geometries']:
-                            geom_part = et.SubElement(geom_collection, geom['type'])
-                            for part in list(itertools.chain(*geom['coordinates'])):
-                                point = et.SubElement(geom_part, 'point')
-                                point.text = str(part).replace('[', '').replace(']', '')
-                    else:
-                        geom_parent = et.SubElement(child, val['type'])
-                        try:
-                            list_coords = list(itertools.chain(*val['coordinates']))
-                        except TypeError:
-                            list_coords = [val['coordinates']]
-                        if list_coords:
-                            for coords in list_coords:
-                                point = et.SubElement(geom_parent, 'point')
-                                point.text = str(coords).replace('[', '').replace(']', '')
+            try:
+                result = et.SubElement(root, 'result')
+                for key, val in job.items():
+                    if key == '[geo]':
+                        child = et.SubElement(result, 'geo')
+                        if 'geometries' in val:
+                            geom_collection = et.SubElement(child, val['type'])
+                            for geom in val['geometries']:
+                                geom_part = et.SubElement(geom_collection, geom['type'])
+                                for part in list(itertools.chain(*geom['coordinates'])):
+                                    point = et.SubElement(geom_part, 'point')
+                                    point.text = str(part).replace('[', '').replace(']', '')
                         else:
-                            for coords in val['coordinates']:
-                                point.text = str(coords).replace('[', '').replace(']', '')
-                    continue
-                child = et.SubElement(result, key)
-                child.text = str(val)
+                            geom_parent = et.SubElement(child, val['type'])
+                            try:
+                                list_coords = list(itertools.chain(*val['coordinates']))
+                            except TypeError:
+                                list_coords = [val['coordinates']]
+                            if list_coords:
+                                for coords in list_coords:
+                                    point = et.SubElement(geom_parent, 'point')
+                                    point.text = str(coords).replace('[', '').replace(']', '')
+                            else:
+                                for coords in val['coordinates']:
+                                    point.text = str(coords).replace('[', '').replace(']', '')
+                        continue
+                    child = et.SubElement(result, key)
+                    child.text = str(val)
+                exported_count += 1
+            except Exception as ex:
+                errors_count += 1
+                errors_reasons[job.keys()[0]] = repr(ex)
+                continue
     tree.getroot().insert(0, comment)
     tree.write(os.path.join(output_folder, "{0}.xml".format(file_name)), encoding='UTF-8')
 
@@ -293,5 +346,9 @@ def execute(request):
                                        '{0}: {1:%}'.format("exported", float(i) / num_results), 'export_features')
 
     # Zip up outputs.
+    if exported_count == 0:
+        task_utils.report(os.path.join(request['folder'], '__report.json'), exported_count, 0, errors_count, errors_reasons)
+    else:
+        task_utils.report(os.path.join(request['folder'], '__report.json'), exported_count, 0, errors_count, errors_reasons)
     zip_file = task_utils.zip_data(task_folder, 'output.zip')
     shutil.move(zip_file, os.path.join(os.path.dirname(task_folder), os.path.basename(zip_file)))
