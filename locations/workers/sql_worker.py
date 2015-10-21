@@ -211,8 +211,10 @@ def run_job(job):
         increment = job.get_increment(row_count)
         if 'WKT' in columns:
             has_shape = True
-            wkt_col = mapped_fields.index('fs_WKT')
-
+            try:
+                wkt_col = mapped_fields.index('fs_WKT')
+            except ValueError:
+                wkt_col = mapped_fields.index('WKT')
         geometry_ops = worker_utils.GeometryOps()
         generalize_value = job.generalize_value
 
