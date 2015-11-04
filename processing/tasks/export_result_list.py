@@ -270,6 +270,7 @@ def execute(request):
     if not os.path.exists(task_folder):
         os.makedirs(task_folder)
 
+    headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     num_results, response_index = task_utils.get_result_count(request['params'])
     query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
     if 'query' in request['params'][response_index]:
@@ -309,7 +310,8 @@ def execute(request):
         query += '&rows={0}&start={1}'
         exported_cnt = 0.
         for i in xrange(0, num_results, chunk_size):
-            for n in urllib2.urlopen(query.format(chunk_size, i)):
+            req = urllib2.Request(query.format(chunk_size, i), headers=headers)
+            for n in urllib2.urlopen(req):
                 jobs = eval(n.replace('null', '"null"'))['response']['docs']
                 if out_format == 'CSV':
                     export_to_csv(jobs, file_name, task_folder, fields)
@@ -334,7 +336,8 @@ def execute(request):
         i = 0
         for group in groups:
             i += len([v for v in group if not v == ''])
-            results = urllib2.urlopen(query + '&ids={0}'.format(','.join(group)))
+            req = urllib2.Request(query + '&ids={0}'.format(','.join(group)), headers=headers)
+            results = urllib2.urlopen(req)
             jobs = eval(results.read())['response']['docs']
             if out_format == 'CSV':
                 export_to_csv(jobs, file_name, task_folder, fields)

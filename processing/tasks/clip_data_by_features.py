@@ -16,7 +16,7 @@ import os
 import sys
 import collections
 import shutil
-import urllib2
+import requests
 import arcpy
 from utils import status
 from utils import task_utils
@@ -342,6 +342,7 @@ def execute(request):
     arcpy.env.workspace = out_workspace
 
     # Query the index for results in groups of 25.
+    headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     result_count, response_index = task_utils.get_result_count(parameters)
     query_index = task_utils.QueryIndex(parameters[response_index])
     fl = query_index.fl
@@ -349,8 +350,8 @@ def execute(request):
     # Get the Clip features by id.
     id = clip_features['id']
     clip_query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', "&fl=id,path:[absolute],[lyrFile],[geo]&q=id:{0}".format(id))
-    clip_result = urllib2.urlopen(clip_query)
-    clipper = eval(clip_result.read())['response']['docs'][0]
+    clip_result = requests.get(clip_query, headers=headers)
+    clipper = clip_result.json()['response']['docs'][0]
     if 'path' in clipper:
         clip_features = clipper['path']
     elif '[lyrFile]' in clipper:
@@ -376,13 +377,14 @@ def execute(request):
     status_writer.send_percent(0.0, _('Starting to process...'), 'clip_data')
     for group in groups:
         if fq:
-            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
         elif 'ids' in parameters[response_index]:
-            results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
         else:
-            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
 
-        docs = eval(results.read().replace('false', 'False').replace('true', 'True').replace('null', 'None'))['response']['docs']
+        # docs = eval(results.read().replace('false', 'False').replace('true', 'True').replace('null', 'None'))['response']['docs']
+        docs = results.json()['response']['docs']
         input_items = task_utils.get_input_items(docs)
         if not input_items:
             input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])

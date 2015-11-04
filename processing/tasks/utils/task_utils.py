@@ -547,7 +547,7 @@ def get_data_path(item):
     """
     try:
         # If input is a Geodatabase feature class.
-        if [any(ext) for ext in ('.sde', '.gdb', '.mdb') if ext in item['path']]:
+        if [any(ext) for ext in ('.sde', '.gdb', '.mdb', '.lyr') if ext in item['path']]:
             import arcpy
             if arcpy.Exists(item['path']):
                 return item['path']
@@ -625,6 +625,12 @@ def get_spatial_reference(factory_code):
     return sr
 
 
+def get_security_token(owner_info):
+    if 'token' in owner_info:
+        return owner_info['token']
+    else:
+        return ''
+
 def get_projection_file(factory_code):
     """Returns a projection file using the factory code as a lookup.
     This function adds support for ArcGIS 10.0.
@@ -678,7 +684,7 @@ def make_thumbnail(layer_or_mxd, output_png_file, use_data_frame=True):
         arcpy.mapping.ExportToPNG(mxd, output_png_file, '', 150, 150, 10)
 
 
-def report(report_file, num_processed=0, num_skipped=0, num_errors=0, errors_details=None, skipped_details=None):
+def report(report_file, num_processed=0, num_skipped=0, num_errors=0, errors_details=None, skipped_details=None, num_warnings=0, warnings_details=None):
     """Create a markdown report of inputs processed or skipped.
     :param report_file: path of the .json file
     :param num_processed: number of items processed
@@ -688,8 +694,15 @@ def report(report_file, num_processed=0, num_skipped=0, num_errors=0, errors_det
     report_dict = {}
     summary_list = [{'Action': 'Processed', 'Count': num_processed},
                     {'Action': 'Skipped', 'Count': num_skipped},
-                    {'Action': 'Errors', 'Count': num_errors}]
+                    {'Action': 'Errors', 'Count': num_errors},
+                    {'Action': 'Warnings', 'Count': num_warnings}]
     report_dict['Summary'] = summary_list
+
+    if warnings_details:
+        warnings_list = []
+        for k, v in warnings_details.iteritems():
+            warnings_list.append({'Item': k, 'Reason': v})
+        report_dict['Warnings'] = warnings_list
 
     if skipped_details:
         skipped_list = []

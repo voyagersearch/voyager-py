@@ -35,12 +35,12 @@ errors_reasons = {}
 skipped_reasons = {}
 
 
-def index_item(id):
+def index_item(id, header):
     """Re-indexes an item.
     :param id: Item's index ID
     """
     solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
-    request = urllib2.Request(solr_url)
+    request = urllib2.Request(solr_url, headers=header)
     urllib2.urlopen(request)
 
 
@@ -77,6 +77,7 @@ def execute(request):
     template_xml = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'metadata_template.xml')
 
     result_count, response_index = task_utils.get_result_count(parameters)
+    headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     # Query the index for results in groups of 25.
     query_index = task_utils.QueryIndex(parameters[response_index])
     fl = query_index.fl + ',links'
@@ -95,13 +96,13 @@ def execute(request):
     for group in groups:
         i += len(group) - group.count('')
         if fq:
-            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
         elif 'ids' in parameters[response_index]:
-            results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
         else:
-            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
 
-        docs = eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs']
+        docs = results.json()['response']['docs']
         if not docs:
             docs = parameters[response_index]['response']['docs']
 
@@ -113,7 +114,7 @@ def execute(request):
                     input_items.append((doc['path'], links['links'][0]['link'][0]['id']))
                 else:
                     input_items.append((doc['path'], doc['id']))
-        result = write_metadata(input_items, template_xml, xslt_file, summary, description, tags, data_credits, constraints, overwrite)
+        result = write_metadata(input_items, template_xml, xslt_file, summary, description, tags, data_credits, constraints, overwrite, headers)
         updated += result[0]
         errors += result[1]
         skipped += result[2]
@@ -127,7 +128,7 @@ def execute(request):
     task_utils.report(os.path.join(request['folder'], '__report.json'), updated, skipped, errors, errors_reasons, skipped_reasons)
 
 
-def write_metadata(input_items, template_xml, xslt_file, summary, description, tags, data_credits, use_constraints, overwrite):
+def write_metadata(input_items, template_xml, xslt_file, summary, description, tags, data_credits, use_constraints, overwrite, token_header):
     """Writes metadata."""
     updated = 0
     errors = 0
@@ -257,7 +258,7 @@ def write_metadata(input_items, template_xml, xslt_file, summary, description, t
                 processed_count += 1
 
                 try:
-                    index_item(id)
+                    index_item(id, token_header)
                 except (IndexError, urllib2.HTTPError, urllib2.URLError) as e:
                     status_writer.send_status(e.message)
                     pass

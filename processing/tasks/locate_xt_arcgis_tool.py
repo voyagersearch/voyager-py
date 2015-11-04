@@ -15,7 +15,7 @@
 import os
 import sys
 import shutil
-import urllib2
+import requests
 import csv
 import xlrd
 import arcpy
@@ -99,17 +99,17 @@ def execute(request):
     else:
         groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
 
+    headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     status_writer.send_percent(0.0, _('Starting to process...'), 'locate_xt_arcgis_tool')
     for group in groups:
         if fq:
-            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
-            # results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
         elif 'ids' in parameters[response_index]:
-            results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
         else:
-            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
 
-        docs =eval(results.read())['response']['docs']
+        docs = results.json()['response']['docs']
         if not docs:
             docs = parameters[response_index]['response']['docs']
 

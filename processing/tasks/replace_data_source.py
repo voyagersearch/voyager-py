@@ -16,6 +16,7 @@ import os
 import sys
 import shutil
 import urllib2
+import requests
 from utils import status
 from utils import task_utils
 
@@ -95,6 +96,7 @@ def execute(request):
 
     num_results, response_index = task_utils.get_result_count(parameters)
     # Query the index for results in groups of 25.
+    headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     query_index = task_utils.QueryIndex(parameters[response_index])
     fl = query_index.fl
     query = '{0}{1}'.format(sys.argv[2].split('=')[1], '/select?&wt=json')
@@ -112,14 +114,13 @@ def execute(request):
     for group in groups:
         i += len(group) - group.count('')
         if fq:
-            results = urllib2.urlopen(query + "{0}&rows={1}&start={2}".format(fl, task_utils.CHUNK_SIZE, group[0]))
+            results = requests.get(query + "{0}&rows={1}&start={2}".format(fl, task_utils.CHUNK_SIZE, group[0]), headers=headers)
         elif 'ids' in parameters[response_index]:
-            results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers= headers)
         else:
-            results = urllib2.urlopen(query + "{0}&rows={1}&start={2}".format(fl, task_utils.CHUNK_SIZE, group[0]))
-        results_str = results.read().replace('false', 'False')
-        results_str = results_str.replace('true', 'True')
-        input_items = task_utils.get_input_items(eval(results_str)['response']['docs'], True)
+            results = requests.get(query + "{0}&rows={1}&start={2}".format(fl, task_utils.CHUNK_SIZE, group[0]), headers=headers)
+
+        input_items = task_utils.get_input_items(results.json()['response']['docs'], True)
         if not input_items:
             input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
         result = replace_data_source(input_items, old_data_source, new_workspace, new_dataset, wks_type, backup)

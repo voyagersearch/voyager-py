@@ -14,11 +14,10 @@
 # limitations under the License.
 import os
 import sys
-import shutil
-import urllib2
 import zipfile
 from utils import status
 from utils import task_utils
+import requests
 
 
 status_writer = status.Writer()
@@ -44,6 +43,7 @@ def execute(request):
     zip_file = os.path.join(zip_file_location, 'output.zip')
     zipper = task_utils.ZipFileManager(zip_file, 'w', zipfile.ZIP_DEFLATED)
     num_results, response_index = task_utils.get_result_count(parameters)
+    headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     if num_results > task_utils.CHUNK_SIZE:
         # Query the index for results in groups of 25.
         query_index = task_utils.QueryIndex(parameters[response_index])
@@ -63,16 +63,15 @@ def execute(request):
         for group in groups:
             i += len(group) - group.count('')
             if fq:
-                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+                results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
             elif 'ids' in parameters[response_index]:
-                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+                results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
             else:
-                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+                results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
 
-            input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
+            input_items = task_utils.get_input_items(results.json()['response']['docs'], list_components=True)
             if not input_items:
-                input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
-
+                input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], list_components=True)
             result = zip_files(zipper, input_items, zip_file_location, flatten_results)
             zipped += result[0]
             skipped += result[1]
