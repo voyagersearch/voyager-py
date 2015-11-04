@@ -626,6 +626,10 @@ def get_spatial_reference(factory_code):
 
 
 def get_security_token(owner_info):
+    """Get the security token value.
+    :param owner_info: dictionary containing token value
+    :return: string
+    """
     if 'token' in owner_info:
         return owner_info['token']
     else:

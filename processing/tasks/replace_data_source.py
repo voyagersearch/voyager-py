@@ -15,7 +15,6 @@
 import os
 import sys
 import shutil
-import urllib2
 import requests
 from utils import status
 from utils import task_utils
@@ -27,13 +26,12 @@ import arcpy
 skipped_reasons = {}
 
 
-def index_item(id):
+def index_item(id, header):
     """Re-indexes an item.
     :param id: Item's index ID
     """
     solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
-    request = urllib2.Request(solr_url)
-    urllib2.urlopen(request)
+    requests.get(solr_url, headers=header)
 
 
 def get_workspace_type(workspace_path):
@@ -123,7 +121,7 @@ def execute(request):
         input_items = task_utils.get_input_items(results.json()['response']['docs'], True)
         if not input_items:
             input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
-        result = replace_data_source(input_items, old_data_source, new_workspace, new_dataset, wks_type, backup)
+        result = replace_data_source(input_items, old_data_source, new_workspace, new_dataset, wks_type, backup, headers)
         updated += result[0]
         skipped += result[1]
         status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'replace_data_source')
@@ -135,7 +133,7 @@ def execute(request):
 
 
 def replace_data_source(input_items, old_data_source, new_workspace,
-                        new_dataset, workspace_type, backup):
+                        new_dataset, workspace_type, backup, header):
     """Replaces data sources."""
     updated = 0
     skipped = 0
@@ -171,14 +169,14 @@ def replace_data_source(input_items, old_data_source, new_workspace,
             for layer in layers:
                 try:
                     if layer.isFeatureLayer or layer.isRasterLayer:
-                        if old_data_source.lower() in layer.dataSource.lower():
+                        if os.path.abspath(old_data_source.lower()) in os.path.abspath(layer.dataSource.lower()):
                             if layer.datasetName.lower() == new_dataset.lower():
                                 layer.replaceDataSource(new_workspace, workspace_type, validate=False)
                             else:
                                 layer.replaceDataSource(new_workspace, workspace_type, new_dataset, False)
                             status_writer.send_status(_('Updated layer: {0}'.format(layer.name)))
                     elif layer.isRasterLayer:
-                        if old_data_source.lower() in layer.dataSource.lower():
+                        if os.path.abspath(old_data_source.lower()) in os.path.abspath(layer.dataSource.lower()):
                             if layer.datasetName.lower() == new_dataset.lower():
                                 layer.replaceDataSource(new_workspace, workspace_type, validate=False)
                             else:
@@ -212,8 +210,8 @@ def replace_data_source(input_items, old_data_source, new_workspace,
 
         # Try to re-index the item once it is updated.
         try:
-            index_item(input_items[item][1])
-        except (IndexError, urllib2.URLError, urllib2.HTTPError):
+            index_item(input_items[item][1], header)
+        except (IndexError, requests.RequestException):
             pass
         updated += 1
     return updated, skipped
