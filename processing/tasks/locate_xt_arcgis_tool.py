@@ -37,7 +37,7 @@ elif '10.2' in arcgis_version or '10.1' in arcgis_version:
 else:
     arcpy.ImportToolbox(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'locatext', 'LocateXT10.tbx'))
 try:
-    arcpy.LocateXTServerTool_lxt()
+    arcpy.LocateXT_Tool_lxt
 except RuntimeError as re:
     if 'ERROR 000824' in re.message:
         raise task_utils.LicenseError('No LocateXT License')
@@ -74,10 +74,6 @@ def execute(request):
     parameters = request['params']
 
     output_type = task_utils.get_parameter_value(parameters, 'output_format', 'value')
-    gaz_file = task_utils.get_parameter_value(parameters, 'gazeteer_file', 'value')
-    fuzzy_error = task_utils.get_parameter_value(parameters, 'fuzzy_error', 'value')
-    attributes_file = task_utils.get_parameter_value(parameters, 'attributes_file', 'value')
-
     task_folder = os.path.join(request['folder'], 'temp')
     if not os.path.exists(task_folder):
         os.makedirs(task_folder)
@@ -133,7 +129,7 @@ def execute(request):
     task_utils.report(os.path.join(request['folder'], '__report.json'), extracted, skipped, errors, errors_reasons, skipped_reasons)
 
 
-def extract(input_items, out_type, output_dir, gazetteer_file=None, fuzzy_error_level=None, attributes_file=None):
+def extract(input_items, out_type, output_dir):
     """Extract geographic information from input items."""
     extracted = 0
     skipped = 0
@@ -148,7 +144,7 @@ def extract(input_items, out_type, output_dir, gazetteer_file=None, fuzzy_error_
                 file_name = arcpy.ValidateTableName(os.path.basename(os.path.splitext(src_file)[0]))
                 if out_type == 'CSV':
                     shp_file = os.path.join(output_dir, '{0}.shp'.format(file_name))
-                    arcpy.LocateXTServerTool_lxt(src_file, shp_file, in_gaz_file_lxtgaz=gazetteer_file, in_fuzzy_error_level=fuzzy_error_level, in_ca_file_lxtca=attributes_file)
+                    arcpy.LocateXT_Tool_lxt(src_file, shp_file)
                     xls_file = os.path.join(output_dir, '{0}.xls'.format(file_name))
                     arcpy.TableToExcel_conversion(shp_file, xls_file)
                     xls_to_csv(xls_file)
@@ -156,15 +152,15 @@ def extract(input_items, out_type, output_dir, gazetteer_file=None, fuzzy_error_
                     arcpy.Delete_management(xls_file)
                 elif out_type == 'KML':
                     shp_file = os.path.join(output_dir, '{0}.shp'.format(file_name))
-                    arcpy.LocateXTServerTool_lxt(src_file, shp_file, in_gaz_file_lxtgaz=gazetteer_file, in_fuzzy_error_level=fuzzy_error_level, in_ca_file_lxtca=attributes_file)
+                    arcpy.LocateXT_Tool_lxt(src_file, shp_file)
                     layer_name = os.path.basename(shp_file)[:-4]
                     arcpy.MakeFeatureLayer_management(shp_file, layer_name)
                     arcpy.LayerToKML_conversion(layer_name, '{0}.kmz'.format(os.path.join(output_dir, layer_name)), 1)
                     arcpy.Delete_management(shp_file)
                 elif out_type == 'SHP':
-                    arcpy.LocateXTServerTool_lxt(src_file, os.path.join(output_dir, '{0}.shp'.format(file_name)), in_gaz_file_lxtgaz=gazetteer_file, in_fuzzy_error_level=fuzzy_error_level, in_ca_file_lxtca=attributes_file)
+                    arcpy.LocateXT_Tool_lxt(src_file, os.path.join(output_dir, '{0}.shp'.format(file_name)))
                 elif out_type == 'FGDB':
-                    arcpy.LocateXTServerTool_lxt(src_file, os.path.join(output_dir, 'output.gdb', file_name), in_gaz_file_lxtgaz=gazetteer_file, in_fuzzy_error_level=fuzzy_error_level, in_ca_file_lxtca=attributes_file)
+                    arcpy.LocateXT_Tool_lxt(src_file, os.path.join(output_dir, 'output.gdb', file_name))
 
                 status_writer.send_percent(processed_count / result_count, _('Extracted: {0}').format(src_file), 'locate_xt_arcgis_tool')
                 extracted += 1
