@@ -14,23 +14,31 @@ class AvroExtractor(object):
 
     def extract(self, infile, job):
         minx, miny, maxx, maxy = (None, None, None, None)
+        poly_wkt = None
         job.set_field(VgDexField.NAME, os.path.basename(infile))
         job.set_field(VgDexField.PATH, infile)
         with open(infile, 'rb') as avro_file:
             reader = fastavro.reader(avro_file)
             for record in reader:
                 for k, v in record.iteritems():
-                    if k == 'MBR_EAST':
-                        minx = float(v)
-                    elif k == 'MBR_WEST':
-                        maxx = float(v)
-                    elif k == 'MBR_NORTH':
-                        maxy = float(v)
-                    elif k == 'MBR_SOUTH':
-                        miny = float(v)
+                    if k.lower() == 'footprint_geometry':
+                        poly_wkt = v
+                        job.set_field(VgDexField.GEO_WKT, poly_wkt)
+                        if job.get(VgDexField.GEO):
+                            job.geo['wkt'] = poly_wkt
+                        job.set_field(VgDexField.GEO, job.get_field(VgDexField.GEO_WKT))
+                    else:
+                        if k == 'MBR_EAST' and v:
+                            minx = float(v)
+                        elif k == 'MBR_WEST' and v:
+                            maxx = float(v)
+                        elif k == 'MBR_NORTH' and v:
+                            maxy = float(v)
+                        elif k == 'MBR_SOUTH' and v:
+                            miny = float(v)
                     job.set_field("meta_{0}".format(k), v)
 
-            if minx:
+            if minx and not poly_wkt:
                 poly_wkt = "POLYGON (({0} {1}, {0} {3}, {2} {3}, {2} {1}, {0} {1}))".format(minx, miny, maxx, maxy)
                 job.set_field(VgDexField.GEO_WKT, poly_wkt)
                 if job.get(VgDexField.GEO):
