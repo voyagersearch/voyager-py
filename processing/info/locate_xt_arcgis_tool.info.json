@@ -27,7 +27,7 @@
 	{
       "display": "LocateXT ArcGIS Tool",
       "description": "Extracts coordinates, user-defined place names, dates, and other critical information from unstructured data",
-      "helpURL": "https://github.com/voyagersearch/tasks/tree/master/docs#locate_xt_arcgis_tool",
+      "helpURL": "https://voyagersearch.zendesk.com/hc/en-us/articles/213230748-LocateXT-ArcGIS-Tool",
 	  "params":
 	  {
 		"output_format":
