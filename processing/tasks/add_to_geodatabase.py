@@ -31,6 +31,7 @@ layer_name = ""
 existing_fields = []
 new_fields = []
 field_values = []
+# arcpy.env.overwriteOutput = True
 
 
 def is_feature_dataset(workspace):
@@ -126,7 +127,7 @@ def add_to_geodatabase(input_items, out_gdb, is_fds):
                                 else:
                                     arcpy.env.outputCoordinateSystem = 4326
                                     arcpy.CreateFeatureclass_management(out_gdb, os.path.basename(name), geom.type.upper())
-                                layer_name = arcpy.MakeFeatureLayer_management(name, 'flayer')
+                                layer_name = arcpy.MakeFeatureLayer_management(name, 'flayer_{0}'.format(os.path.basename(name)))
                                 existing_fields = [f.name for f in arcpy.ListFields(layer_name)]
                                 new_fields = []
                                 field_values = []
@@ -143,7 +144,7 @@ def add_to_geodatabase(input_items, out_gdb, is_fds):
                                     else:
                                         arcpy.env.outputCoordinateSystem = 4326
                                         arcpy.CreateFeatureclass_management(out_gdb, os.path.basename(name), geom.type.upper())
-                                    layer_name = arcpy.MakeFeatureLayer_management(name, 'flayer')
+                                    layer_name = arcpy.MakeFeatureLayer_management(name, 'flayer_{0}'.format(os.path.basename(name)))
                                     existing_fields = [f.name for f in arcpy.ListFields(layer_name)]
                                     new_fields = []
                                     field_values = []
