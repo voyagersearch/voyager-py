@@ -6,7 +6,7 @@ import voyager
 class SmokeTest(unittest.TestCase):
 
   def setUp(self):
-    self.cli = voyager.Client()
+    self.cli = voyager.client.Client()
 
   def test_system_status(self):
     status = self.cli.system_status()

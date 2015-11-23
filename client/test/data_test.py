@@ -1,16 +1,17 @@
 import unittest, sys, time
 sys.path.append('../')
 
-import voyager, pysolr
+import pysolr
+from voyager.client import *
 
 class DataTest(unittest.TestCase):
 
   def setUp(self):
-    self.cli = voyager.Client()
+    self.cli = Client()
     self.solr = pysolr.Solr(self.cli.url + '/solr/v0')
 
   def test_features(self):
-    loc = self.cli.add_location(voyager.Shapefile('data/states.shp', 'states'))
+    loc = self.cli.add_location(Shapefile('data/states.shp', 'states'))
     self.assertIsNotNone(loc.id)
 
     loc.index()
@@ -19,7 +20,7 @@ class DataTest(unittest.TestCase):
     self.assertEquals(56, len(docs))
 
   def test_layers(self):
-    loc = self.cli.add_location(voyager.Shapefile('data/states.shp'))
+    loc = self.cli.add_location(Shapefile('data/states.shp'))
     self.assertIsNotNone(loc.id)
 
     loc.index();

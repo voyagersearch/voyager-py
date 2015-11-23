@@ -1,5 +1,5 @@
 import os
-from voyager.location.location import Location
+from voyager.client.location.location import Location
 
 class Path(Location):
 
