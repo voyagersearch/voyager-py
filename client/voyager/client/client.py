@@ -3,6 +3,8 @@ from location import Location
 from spatial import Spatial
 
 class Client(object):
+  TOKEN_HEADER = 'x-access-token'
+  TOKEN_EXG_HEADER = 'x-access-token-exchange'
 
   def __init__(self, url='http://localhost:8888', user='admin', passwd='admin'):
     """
@@ -13,7 +15,18 @@ class Client(object):
     :param passwd: User password.
     """
     self.url = url;
-    self.auth = (user, passwd)
+    self.user = None
+    self.token = None
+    self.auth(user, passwd)
+
+  def auth(self, user, passwd):
+    """
+    Authenticates with basic auth and obtains an api token.
+    """
+    rsp = self.get('auth/info', auth=(user,passwd))
+
+    self.user = rsp['user']
+    self.token = self.user['token']
 
   def system_status(self):
     """
@@ -88,18 +101,19 @@ class Client(object):
     """
     return Spatial(self)
 
-  def get(self, path, params=None):
+  def get(self, path, params=None, auth=None):
     """
     Makes an api call with the GET method.
 
     :param path: The relative api path, without the '/api/rest/' prefix.
     :param params: Optional dict of query string parameters.
+    :param auth: Username/password tuple for basic auth, only used on initial connection.
 
     :returns: dict|array -- The request response body parsed as json.
     """
-    r = requests.get(self._path(path), auth=self.auth, params=params)
-    r.raise_for_status()
-    return r.json()
+    rsp = self._request('GET', path, params=params, auth=auth)
+    rsp.raise_for_status()
+    return rsp.json()
 
   def post(self, path, body=None, params=None):
     """
@@ -111,20 +125,9 @@ class Client(object):
 
     :returns: dict|array -- The request response body parsed as json.
     """
-    args = {
-      'auth': self.auth
-    }
-
-    if body is not None:
-      args['data'] = json.dumps(body) if isinstance(body, dict) else body
-      args['headers']={'Content-Type': 'application/json'}
-
-    if params is not None:
-      args['params'] = params
-
-    r = requests.post(self._path(path), **args)
-    r.raise_for_status()
-    return r.json()
+    rsp = self._request('POST', path, params=params, body=body)
+    rsp.raise_for_status()
+    return rsp.json()
 
   def delete(self, path, params=None):
     """
@@ -133,12 +136,42 @@ class Client(object):
     :param path: The relative api path, without the '/api/rest/' prefix.
     :param params: Optional dict of query string parameters.
     """
-    r = requests.delete(self._path(path), auth=self.auth, params=params)
-    r.raise_for_status()
+    rsp = self._request('DELETE', path, params=params)
+    rsp.raise_for_status()
 
-  def _path(self, path):
-    return '{0}/api/rest/{1}'.format(self.url, path)
+  def _request(self, method, path, params=None, body=None, auth=None):
+    headers = {}
+    args = {}
 
-if __name__ == '__main__':
-  vg = Voyager()
-  print vg.locations()
+    # query string params
+    if params:
+      args['params'] = params
+
+    # request body, always assumed to be json
+    if body:
+      args['data'] = json.dumps(body) if isinstance(body, dict) else body
+      headers['Content-Type'] = 'application/json'
+
+    # authentication, if specified directly use basic auth, otherwise ensure we have a token
+    if auth:
+      args['auth'] = auth
+    else:
+      if self.token:
+        headers['x-access-token'] = self.token
+      else:
+        raise Exception('Client has no authentication token and no credentials specified for basic auth')
+
+    if len(headers) > 0:
+      args['headers'] = headers
+
+    # make the request
+    url = '{0}/api/rest/{1}'.format(self.url, path)
+    rsp = requests.request(method, url, **args)
+    rsp.raise_for_status()
+
+    # check for token exchange header
+    try:
+      self.token = rsp.headers[Client.TOKEN_EXG_HEADER]
+    except KeyError:
+      pass
+    return rsp
