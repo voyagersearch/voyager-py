@@ -64,7 +64,6 @@ def execute(request):
     query_index = task_utils.QueryIndex(parameters[response_index])
     fl = query_index.fl + ',links'
     query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
-    # query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
     fq = query_index.get_fq()
     if fq:
         groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
@@ -122,7 +121,9 @@ def add_field(input_items, field_name, field_type, field_value):
                 id = input_item[2]
             dsc = arcpy.Describe(path)
             try:
-                if dsc.dataType in ('FeatureClass', 'Shapefile', 'ShapeFile', 'Table'):
+                if dsc.dataType in ('FeatureClass', 'Shapefile', 'ShapeFile', 'Table', 'RasterDataset'):
+                    if dsc.dataType == 'RasterDataset' and not dsc.isInteger:
+                        raise arcpy.ExecuteError(_('Invalid input type. Pixel type must be Integer.'))
                     field_name = arcpy.ValidateFieldName(field_name, task_utils.get_geodatabase_path(path))
                     arcpy.AddField_management(path, field_name, field_type)
                     try:
@@ -143,12 +144,10 @@ def add_field(input_items, field_name, field_type, field_value):
                         warnings += 1
                         warnings_reasons[dsc.name] = _('Invalid input type: {0}').format(dsc.dataType)
                     continue
-            except arcpy.ExecuteError:
+            except arcpy.ExecuteError as ee:
                 errors += 1
-                status_writer.send_status(arcpy.GetMessages(2))
-                errors_reasons[dsc.name] = arcpy.GetMessages(2)
-                warnings += 1
-                warnings_reasons[dsc.name] = arcpy.GetMessages(2)
+                status_writer.send_status(ee.message)
+                errors_reasons[dsc.name] = ee.message
                 continue
             updated += 1
 
