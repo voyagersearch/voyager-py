@@ -141,12 +141,20 @@ def index_service(connection_info):
     try:
         if token == '' and generate_token == 'false':
             url, items = ags_helper.find_item_url(service_name, service_type, folder_name)
+        elif token and folder_name:
+            url, items = ags_helper.find_item_url(service_name, service_type, folder_name, token=token)
         elif token:
             url, items = ags_helper.find_item_url(service_name, service_type, token=token)
         elif generate_token == 'true':
             url, items = ags_helper.find_item_url(service_name, service_type, token=ags_helper.token)
     except IndexError:
         status_writer.send_state(status.STAT_FAILED, "Cannot locate {0}.".format(service_name))
+        return
+    except worker_utils.InvalidToken as invalid_token:
+        status_writer.send_state(status.STAT_FAILED, invalid_token.message)
+        return
+    except Exception as ex:
+        status_writer.send_state(status.STAT_FAILED, ex.message)
         return
 
     # Support wildcards for filtering layers and views in the service.
