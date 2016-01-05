@@ -100,11 +100,6 @@ def zip_files(zipper, input_items, zip_file_location, flatten_results, show_prog
 
     for in_file in input_items:
         if os.path.isfile(in_file):
-            # if in_file.endswith('.shp'):
-            #     files = task_utils.list_files(in_file, shp_files)
-            # elif in_file.endswith('.sdc'):
-            #     files = task_utils.list_files(in_file, sdc_files)
-            # else:
             files = [in_file]
             if flatten_results:
                 for f in files:

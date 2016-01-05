@@ -3,6 +3,7 @@
   "runner": "python",
   "categories": ["Managing Data and Files"],
   "fields": "location",
+  "constraints": [{"format_category": "GIS"}],
   "params": [
       {
       "type": "VoyagerResults",

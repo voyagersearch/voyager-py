@@ -3,6 +3,9 @@
   "runner": "python",
   "categories": ["Managing Data and Files"],
   "security": ["_ADMIN"],
+  "constraints": [
+    {"format_type": "File"}
+  ],
   "params": [
     {
       "type": "VoyagerResults",

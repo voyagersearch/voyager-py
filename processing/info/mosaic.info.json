@@ -2,6 +2,9 @@
   "name": "mosaic",
   "runner": "python",
   "categories": ["Managing Raster"],
+  "constraints": [
+    {"geometry_type": "Raster"}
+  ],
   "params": [
     {
       "type": "VoyagerResults",

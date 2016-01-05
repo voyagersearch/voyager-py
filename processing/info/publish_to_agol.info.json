@@ -2,6 +2,7 @@
   "name": "publish_to_agol",
   "runner": "python",
   "categories": ["Publishing Services"],
+  "constraints": [{"format_category": "GIS"}],
   "params": [
     {
       "type": "VoyagerResults",

@@ -2,6 +2,9 @@
   "name": "zip_files",
   "runner": "python",
   "categories": ["Extracting Data"],
+  "constraints": [
+    {"format_type": "File"}
+  ],
   "params": [
     {
       "type": "VoyagerResults",
