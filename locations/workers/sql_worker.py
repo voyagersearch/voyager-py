@@ -93,7 +93,7 @@ def run_job(job):
         # Get the columns that have indexes.
         qry = "SELECT COL_NAME(ic.object_id,ic.column_id) AS column_name " \
               "FROM sys.indexes AS i INNER JOIN sys.index_columns AS ic ON i.object_id = ic.object_id " \
-              "AND i.index_id = ic.index_id WHERE i.object_id = OBJECT_ID('STATES')"
+              "AND i.index_id = ic.index_id WHERE i.object_id = OBJECT_ID('{0}')".format(tbl)
         cols = job.execute_query(qry).fetchall()
         indexed_cols = []
         if cols:
