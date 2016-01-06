@@ -76,7 +76,7 @@ def execute(request):
             result = delete_files(input_items)
             deleted += result[0]
             skipped += result[1]
-            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'delete_files')
+            status_writer.send_percent(i / num_results, '{0}: {1:.0f}%'.format("Processed", i / num_results * 100), 'delete_files')
     else:
         input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], True, True)
         deleted, skipped = delete_files(input_items, True)

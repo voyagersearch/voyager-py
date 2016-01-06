@@ -118,7 +118,7 @@ def execute(request):
         updated += result[0]
         errors += result[1]
         skipped += result[2]
-        status_writer.send_percent(i / result_count, '{0}: {1:%}'.format("Processed", i / result_count), 'write_metadata')
+        status_writer.send_percent(i / result_count, '{0}: {1:.0f}%'.format("Processed", i / result_count * 100), 'write_metadata')
 
     # Report state.
     if skipped > 0 or errors > 0:

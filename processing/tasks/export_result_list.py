@@ -321,10 +321,10 @@ def execute(request):
                     export_to_shp(jobs, file_name, task_folder)
                 exported_cnt += chunk_size
                 if exported_cnt > num_results:
-                    status_writer.send_percent(100, '{0}: {1:%}'.format("exported", 1.0), 'export_results')
+                    status_writer.send_percent(100, 'exported: 100%', 'export_results')
                 else:
-                    status_writer.send_percent(exported_cnt / num_results,
-                                               '{0}: {1:%}'.format("exported", exported_cnt / num_results), 'export_results')
+                    percent_done = exported_cnt / num_results
+                    status_writer.send_percent(percent_done, '{0}: {1:.0f}%'.format("exported", percent_done * 100), 'export_results')
     else:
         # Voyager Search Portal/Cart UI
         ids = []
@@ -345,8 +345,8 @@ def execute(request):
                 export_to_xml(jobs, file_name, task_folder)
             elif out_format == 'SHP':
                 export_to_shp(jobs, file_name, task_folder)
-            status_writer.send_percent(float(i) / num_results,
-                                       '{0}: {1:%}'.format("exported", float(i) / num_results), 'export_features')
+            percent_done = float(i) / num_results
+            status_writer.send_percent(percent_done, '{0}: {1:.0f}%'.format("exported", percent_done * 100), 'export_results')
 
     # Zip up outputs.
     if exported_count == 0:

@@ -124,7 +124,7 @@ def execute(request):
         result = replace_data_source(input_items, old_data_source, new_workspace, new_dataset, wks_type, backup, headers)
         updated += result[0]
         skipped += result[1]
-        status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'replace_data_source')
+        status_writer.send_percent(i / num_results, '{0}: {1:.0f}%'.format("Processed", i / num_results * 100), 'replace_data_source')
 
     # Update state if necessary.
     if skipped > 0:

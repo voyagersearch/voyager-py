@@ -94,7 +94,7 @@ def execute(request):
             result = calculate_raster_statistics(input_items, extent, horizontal_skip_factor, vertical_skip_factor, ignore_pixel_values)
             processed += result[0]
             skipped += result[1]
-            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'calculate_raster_statistics')
+            status_writer.send_percent(i / num_results, '{0}: {1:.0f}%'.format("Processed", i / num_results * 100), 'calculate_raster_statistics')
     else:
         input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
         processed, skipped = calculate_raster_statistics(input_items, extent, horizontal_skip_factor,

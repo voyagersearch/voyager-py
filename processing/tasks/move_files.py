@@ -105,7 +105,7 @@ def execute(request):
             moved += result[0]
             errors += result[1]
             skipped += result[2]
-            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'move_files')
+            status_writer.send_percent(i / num_results, '{0}: {1:.0f}%'.format("Processed", i / num_results * 100), 'move_files')
     else:
         input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], True, True)
         moved, errors, skipped = move_files(input_items, target_folder, flatten_results, True)

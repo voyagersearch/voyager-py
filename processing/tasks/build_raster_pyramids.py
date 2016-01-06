@@ -80,7 +80,7 @@ def execute(request):
             result = build_pyramids(input_items, compression_method, compression_quality, resampling_method)
             processed += result[0]
             skipped += result[1]
-            status_writer.send_percent(i / num_results, '{0}: {1:%}'.format("Processed", i / num_results), 'build_raster_pyramids')
+            status_writer.send_percent(i / num_results, '{0}: {1:.0f}%'.format("Processed", i / num_results * 100), 'build_raster_pyramids')
     else:
         input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
         processed, skipped = build_pyramids(input_items, compression_method, compression_quality, resampling_method, True)
