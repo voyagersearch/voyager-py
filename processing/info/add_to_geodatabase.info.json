@@ -2,6 +2,7 @@
   "name": "add_to_geodatabase",
   "runner": "python",
   "categories": ["Managing Data and Files"],
+  "constraints": [{"format_category": "GIS"}],
   "params": [
     {
       "type": "VoyagerResults",

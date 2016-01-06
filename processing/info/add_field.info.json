@@ -4,6 +4,10 @@
   "categories": ["Managing Data and Files"],
   "security": ["_ADMIN"],
   "fields": "links",
+  "constraints": [{"format": "application/vnd.esri.shp"},
+    {"format": "application/vnd.esri.gdb.personal.data"},
+    {"format": "application/vnd.esri.gdb.file"}
+  ],
   "params": [
     {
       "type": "VoyagerResults",

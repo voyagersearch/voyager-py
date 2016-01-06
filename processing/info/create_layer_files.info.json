@@ -2,6 +2,7 @@
   "name": "create_layer_files",
   "runner": "python",
   "categories": ["Managing Data and Files"],
+  "constraints": [{"format_category": "GIS"}],
   "security": ["_ADMIN"],
   "params": [
     {

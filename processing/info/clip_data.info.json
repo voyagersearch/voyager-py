@@ -2,7 +2,6 @@
   "name": "clip_data",
   "runner": "python",
   "categories": ["Extracting Data"],
-  "constraints": [{"format_category": "GIS"}],
   "params": [
     {
       "type": "VoyagerResults",

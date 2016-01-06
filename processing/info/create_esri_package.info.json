@@ -2,6 +2,7 @@
   "name": "create_esri_package",
   "runner": "python",
   "categories": ["Extracting Data"],
+  "constraints": [{"format_category": "GIS"}, {"format_category": "File"}],
   "params": [
     {
       "type": "VoyagerResults",
