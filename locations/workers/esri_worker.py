@@ -519,8 +519,9 @@ def worker(data_path, esri_service=False):
                     for i, row in enumerate(rows):
                         if job.domains:
                             row = update_row(dsc.fields, rows, list(row))
-                        geo['lon'] = row[0].firstPoint.X
-                        geo['lat'] = row[0].firstPoint.Y
+                        if row[0]:
+                            geo['lon'] = row[0].firstPoint.X
+                            geo['lat'] = row[0].firstPoint.Y
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['meta_table_name'] = dsc.name
@@ -550,16 +551,17 @@ def worker(data_path, esri_service=False):
                     for i, row in enumerate(rows):
                         if job.domains:
                             row = update_row(dsc.fields, rows, list(row))
-                        if generalize_value == 0 or generalize_value == 0.0:
-                            geo['wkt'] = row[0].WKT
-                        else:
-                            if geometry_ops:
-                                geo['wkt'] = geometry_ops.generalize_geometry(row[0].WKT, generalize_value)
+                        if row[0]:
+                            if generalize_value == 0 or generalize_value == 0.0:
+                                geo['wkt'] = row[0].WKT
                             else:
-                                geo['xmin'] = row[0].extent.XMin
-                                geo['xmax'] = row[0].extent.XMax
-                                geo['ymin'] = row[0].extent.YMin
-                                geo['ymax'] = row[0].extent.YMax
+                                if geometry_ops:
+                                    geo['wkt'] = geometry_ops.generalize_geometry(row[0].WKT, generalize_value)
+                                else:
+                                    geo['xmin'] = row[0].extent.XMin
+                                    geo['xmax'] = row[0].extent.XMax
+                                    geo['ymin'] = row[0].extent.YMin
+                                    geo['ymax'] = row[0].extent.YMax
                         mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['meta_table_name'] = dsc.name
