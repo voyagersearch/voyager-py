@@ -450,30 +450,33 @@ def worker(data_path, esri_service=False):
                     ordered_fields[f] = None
                 increment = job.get_increment(row_count)
                 for i, row in enumerate(rows, 1):
-                    if job.domains:
-                        row = update_row(dsc.fields, rows, list(row))
-                    mapped_fields = dict(zip(ordered_fields.keys(), row))
-                    mapped_fields['_discoveryID'] = job.discovery_id
-                    mapped_fields['meta_table_name'] = dsc.name
-                    # mapped_fields['format'] = "{0} Record".format(dsc.dataType)
-                    for nf in new_fields:
-                        if nf['name'] == '*' or nf['name'] == dsc.name:
-                            for k, v in nf['new_fields'].iteritems():
-                                mapped_fields[k] = v
-                    oid_field = filter(lambda x: x in ('FID', 'OID', 'OBJECTID'), rows.fields)
-                    if oid_field:
-                        fld_index = rows.fields.index(oid_field[0])
-                    else:
-                        fld_index = i
-                    if global_id_field:
-                         mapped_fields['meta_{0}'.format(global_id_field)] = mapped_fields.pop('fi_{0}'.format(global_id_field))
-                    entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), row[fld_index])
-                    entry['location'] = job.location_id
-                    entry['action'] = job.action_type
-                    entry['entry'] = {'fields': mapped_fields}
-                    job.send_entry(entry)
-                    if (i % increment) == 0:
-                        status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
+                    try:
+                        if job.domains:
+                            row = update_row(dsc.fields, rows, list(row))
+                        mapped_fields = dict(zip(ordered_fields.keys(), row))
+                        mapped_fields['_discoveryID'] = job.discovery_id
+                        mapped_fields['meta_table_name'] = dsc.name
+                        # mapped_fields['format'] = "{0} Record".format(dsc.dataType)
+                        for nf in new_fields:
+                            if nf['name'] == '*' or nf['name'] == dsc.name:
+                                for k, v in nf['new_fields'].iteritems():
+                                    mapped_fields[k] = v
+                        oid_field = filter(lambda x: x in ('FID', 'OID', 'OBJECTID'), rows.fields)
+                        if oid_field:
+                            fld_index = rows.fields.index(oid_field[0])
+                        else:
+                            fld_index = i
+                        if global_id_field:
+                             mapped_fields['meta_{0}'.format(global_id_field)] = mapped_fields.pop('fi_{0}'.format(global_id_field))
+                        entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), row[fld_index])
+                        entry['location'] = job.location_id
+                        entry['action'] = job.action_type
+                        entry['entry'] = {'fields': mapped_fields}
+                        job.send_entry(entry)
+                        if (i % increment) == 0:
+                            status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
+                    except (AttributeError, RuntimeError):
+                        continue
         else:
             generalize_value = job.generalize_value
             sr = arcpy.SpatialReference(4326)
@@ -517,29 +520,32 @@ def worker(data_path, esri_service=False):
                         ordered_fields[f] = None
                     increment = job.get_increment(row_count)
                     for i, row in enumerate(rows):
-                        if job.domains:
-                            row = update_row(dsc.fields, rows, list(row))
-                        if row[0]:
-                            geo['lon'] = row[0].firstPoint.X
-                            geo['lat'] = row[0].firstPoint.Y
-                        mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
-                        mapped_fields['_discoveryID'] = job.discovery_id
-                        mapped_fields['meta_table_name'] = dsc.name
-                        mapped_fields['geometry_type'] = 'Point'
-                        # mapped_fields['format'] = "{0} Record".format(dsc.dataType)
-                        for nf in new_fields:
-                            if nf['name'] == '*' or nf['name'] == dsc.name:
-                                for k, v in nf['new_fields'].iteritems():
-                                    mapped_fields[k] = v
-                        if global_id_field:
-                             mapped_fields['meta_{0}'.format(global_id_field)] = mapped_fields.pop('fi_{0}'.format(global_id_field))
-                        entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
-                        entry['location'] = job.location_id
-                        entry['action'] = job.action_type
-                        entry['entry'] = {'geo': geo, 'fields': mapped_fields}
-                        job.send_entry(entry)
-                        if (i % increment) == 0:
-                            status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
+                        try:
+                            if job.domains:
+                                row = update_row(dsc.fields, rows, list(row))
+                            if row[0]:
+                                geo['lon'] = row[0].firstPoint.X
+                                geo['lat'] = row[0].firstPoint.Y
+                            mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
+                            mapped_fields['_discoveryID'] = job.discovery_id
+                            mapped_fields['meta_table_name'] = dsc.name
+                            mapped_fields['geometry_type'] = 'Point'
+                            # mapped_fields['format'] = "{0} Record".format(dsc.dataType)
+                            for nf in new_fields:
+                                if nf['name'] == '*' or nf['name'] == dsc.name:
+                                    for k, v in nf['new_fields'].iteritems():
+                                        mapped_fields[k] = v
+                            if global_id_field:
+                                 mapped_fields['meta_{0}'.format(global_id_field)] = mapped_fields.pop('fi_{0}'.format(global_id_field))
+                            entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
+                            entry['location'] = job.location_id
+                            entry['action'] = job.action_type
+                            entry['entry'] = {'geo': geo, 'fields': mapped_fields}
+                            job.send_entry(entry)
+                            if (i % increment) == 0:
+                                status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
+                        except (AttributeError, RuntimeError):
+                            continue
             else:
                 with arcpy.da.SearchCursor(lyr, ['SHAPE@'] + fields, expression, sr) as rows:
                     increment = job.get_increment(row_count)
@@ -549,37 +555,40 @@ def worker(data_path, esri_service=False):
                     for f in mapped_fields:
                         ordered_fields[f] = None
                     for i, row in enumerate(rows):
-                        if job.domains:
-                            row = update_row(dsc.fields, rows, list(row))
-                        if row[0]:
-                            if generalize_value == 0 or generalize_value == 0.0:
-                                geo['wkt'] = row[0].WKT
-                            else:
-                                if geometry_ops:
-                                    geo['wkt'] = geometry_ops.generalize_geometry(row[0].WKT, generalize_value)
+                        try:
+                            if job.domains:
+                                row = update_row(dsc.fields, rows, list(row))
+                            if row[0]:
+                                if generalize_value == 0 or generalize_value == 0.0:
+                                    geo['wkt'] = row[0].WKT
                                 else:
-                                    geo['xmin'] = row[0].extent.XMin
-                                    geo['xmax'] = row[0].extent.XMax
-                                    geo['ymin'] = row[0].extent.YMin
-                                    geo['ymax'] = row[0].extent.YMax
-                        mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
-                        mapped_fields['_discoveryID'] = job.discovery_id
-                        mapped_fields['meta_table_name'] = dsc.name
-                        for nf in new_fields:
-                            if nf['name'] == '*' or nf['name'] == dsc.name:
-                                for k, v in nf['new_fields'].iteritems():
-                                    mapped_fields[k] = v
-                        if global_id_field:
-                            mapped_fields['meta_{0}'.format(global_id_field)] = mapped_fields.pop('fi_{0}'.format(global_id_field))
-                        mapped_fields['geometry_type'] = dsc.shapeType
-                        # mapped_fields['format'] = "{0} Record".format(dsc.dataType)
-                        entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.splitext(os.path.basename(data_path))[0], i)
-                        entry['location'] = job.location_id
-                        entry['action'] = job.action_type
-                        entry['entry'] = {'geo': geo, 'fields': mapped_fields}
-                        job.send_entry(entry)
-                        if (i % increment) == 0:
-                            status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
+                                    if geometry_ops:
+                                        geo['wkt'] = geometry_ops.generalize_geometry(row[0].WKT, generalize_value)
+                                    else:
+                                        geo['xmin'] = row[0].extent.XMin
+                                        geo['xmax'] = row[0].extent.XMax
+                                        geo['ymin'] = row[0].extent.YMin
+                                        geo['ymax'] = row[0].extent.YMax
+                            mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
+                            mapped_fields['_discoveryID'] = job.discovery_id
+                            mapped_fields['meta_table_name'] = dsc.name
+                            for nf in new_fields:
+                                if nf['name'] == '*' or nf['name'] == dsc.name:
+                                    for k, v in nf['new_fields'].iteritems():
+                                        mapped_fields[k] = v
+                            if global_id_field:
+                                mapped_fields['meta_{0}'.format(global_id_field)] = mapped_fields.pop('fi_{0}'.format(global_id_field))
+                            mapped_fields['geometry_type'] = dsc.shapeType
+                            # mapped_fields['format'] = "{0} Record".format(dsc.dataType)
+                            entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.splitext(os.path.basename(data_path))[0], i)
+                            entry['location'] = job.location_id
+                            entry['action'] = job.action_type
+                            entry['entry'] = {'geo': geo, 'fields': mapped_fields}
+                            job.send_entry(entry)
+                            if (i % increment) == 0:
+                                status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
+                        except (AttributeError, RuntimeError):
+                            continue
 
         # Add and entry for the table and it's schema.
         schema['rows'] = row_count
@@ -669,7 +678,10 @@ def run_job(esri_job):
         pool.join()
     else:
         for i, tbl in enumerate(tables, 1):
-            global_job(job)
-            worker(tbl)
-            status_writer.send_percent(i / len(tables), "{0} {1:%}".format(tbl, i / len(tables)), 'esri_worker')
+            try:
+                global_job(job)
+                worker(tbl)
+                status_writer.send_percent(i / len(tables), "{0} {1:%}".format(tbl, i / len(tables)), 'esri_worker')
+            except Exception:
+                continue
     return
