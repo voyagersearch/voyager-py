@@ -183,7 +183,11 @@ def index_service(connection_info):
 
         # Get the list of fields and field types.
         fields_types = {}
-        fields = ags_helper.get_item_fields(url, layer_id, ags_helper.token)
+        try:
+            fields = ags_helper.get_item_fields(url, layer_id, ags_helper.token)
+        except KeyError:
+            status_writer.send_status("Layer {0} has no fields.".format(layer_name))
+            continue
         for f in fields:
             fields_types[f['name']] = f['type']
 
