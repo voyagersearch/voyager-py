@@ -314,7 +314,7 @@ def index_service(connection_info):
                     for x, feature in enumerate(features):
                         try:
                             geometry = make_feature(feature)  # Catch possible null geometries.
-                        except NullGeometry:
+                        except RuntimeError:
                             continue
 
                         if generalize_value > 0.9:
