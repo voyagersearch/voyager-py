@@ -2,7 +2,7 @@
   "name": "replace_data_source",
   "runner": "python",
   "categories": ["Managing Data and Files"],
-  "constraints": [{"format": "application/vnd.esri.mxd"}, {"format": "application/vnd.esri.lyr"}],
+  "constraints": [{"format": "(application/vnd.esri.mxd application/vnd.esri.lyr)"}],
   "params": [
     {
       "type": "VoyagerResults",
