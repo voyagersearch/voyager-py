@@ -40,7 +40,7 @@ class InvalidToken(Exception):
 
 class ArcGISServiceHelper(object):
     """ArcGIS Server and Portal helper class."""
-    def __init__(self, portal_url, username, password, referer='', token_expiration=60):
+    def __init__(self, portal_url, username, password, referer='', token_expiration=60, instance=''):
         self._username = username
         self._password = password
         self._portal_url = portal_url
@@ -50,7 +50,11 @@ class ArcGISServiceHelper(object):
         else:
             self._referer = self._portal_url
         self._service_types = {"Map Service": "MapServer", "Feature Service": "FeatureServer"}
-        self._http = "{0}/arcgis/rest/services".format(self._portal_url)
+        self._instance = instance
+        if self._instance == 'arcgis':
+            self._http = "{0}/arcgis/rest/services".format(self._portal_url)
+        else:
+            self._http = "{0}/{1}/rest/services".format(self._portal_url, self._instance)
         self.oid_field_name = 'objectid'
         self.token = self._generate_token()
 
@@ -63,7 +67,7 @@ class ArcGISServiceHelper(object):
                           'expiration': str(self._token_expiration)}
 
             query_string = urllib.urlencode(query_dict)
-            url = "{0}/arcgis/tokens/generateToken".format(self._portal_url)
+            url = "{0}/{1}/tokens/generateToken".format(self._portal_url, self._instance)
             token = json.loads(urllib.urlopen(url + "?f=json", query_string).read())
 
             if "token" not in token:
@@ -105,9 +109,9 @@ class ArcGISServiceHelper(object):
                     raise IndexError
         else:
             if folder_name:
-                search_url = self._portal_url + '/arcgis/rest/services/{0}/{1}/{2}'.format(folder_name, service_name, self._service_types[service_type])
+                search_url = self._portal_url + '/{3}/rest/services/{0}/{1}/{2}'.format(folder_name, service_name, self._service_types[service_type], self._instance)
             else:
-                search_url = self._portal_url + '/arcgis/rest/services/{0}/{1}'.format(service_name, self._service_types[service_type])
+                search_url = self._portal_url + '/{3}/rest/services/{0}/{1}'.format(service_name, self._service_types[service_type], self._instance)
 
         if not service_url:
             if not self._service_types[service_type] in search_url:
@@ -119,6 +123,11 @@ class ArcGISServiceHelper(object):
         else:
             r = urllib.urlopen(service_url, urllib.urlencode({'f': 'json'}))
         items = json.loads(r.read())
+        if 'error' in items:
+            if items['error']['message'] == "Invalid Token":
+                raise InvalidToken(items['error']['message'])
+            else:
+                raise Exception(items['error']['message'])
         return service_url, items
 
 

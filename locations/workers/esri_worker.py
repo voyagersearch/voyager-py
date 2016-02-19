@@ -135,9 +135,13 @@ def index_service(connection_info):
     service_name = connection_info['service_name']
     service_type = connection_info['service_type']
     folder_name = connection_info['folder_name']
+    if 'instance' in connection_info:
+        instance = connection_info['instance']
+    else:
+        instance = 'arcgis'
 
     # Create the ArcGIS service helper and get the service url and the service items (layers/tables).
-    ags_helper = worker_utils.ArcGISServiceHelper(connection_url, user_name, password)
+    ags_helper = worker_utils.ArcGISServiceHelper(connection_url, user_name, password, instance=instance)
     try:
         if token == '' and generate_token == 'false':
             url, items = ags_helper.find_item_url(service_name, service_type, folder_name)
@@ -145,6 +149,8 @@ def index_service(connection_info):
             url, items = ags_helper.find_item_url(service_name, service_type, folder_name, token=token)
         elif token:
             url, items = ags_helper.find_item_url(service_name, service_type, token=token)
+        elif generate_token and folder_name:
+            url, items = ags_helper.find_item_url(service_name, service_type, folder_name, token=token)
         elif generate_token == 'true':
             url, items = ags_helper.find_item_url(service_name, service_type, token=ags_helper.token)
     except IndexError:
