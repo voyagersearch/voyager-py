@@ -209,7 +209,9 @@ def index_service(connection_info):
         for group in objectid_groups:
             group = [oid for oid in group if not oid == None]
             rows = ags_helper.get_item_rows(url, layer_id, ags_helper.token, where='{0} IN {1}'.format(oid_field_name, tuple(group)))
-            features = rows['features']
+            features = None
+            if 'features' in rows:
+                features = rows['features']
             if not features:
                 status_writer.send_status("Layer {0} has no features.".format(layer_name))
                 continue
