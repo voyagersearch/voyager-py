@@ -311,7 +311,8 @@ def index_service(connection_info):
                         for df in date_fields:
                             try:
                                 mapped_fields[df] = datetime.datetime.fromtimestamp(mapped_fields[df] / 1e3)
-                            except (KeyError, TypeError):
+                            except (KeyError, TypeError, ValueError):
+                                mapped_fields[df] = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=(mapped_fields[df] / 1e3))
                                 pass
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['title'] = layer_name
