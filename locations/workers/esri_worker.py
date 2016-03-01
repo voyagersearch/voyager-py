@@ -37,6 +37,19 @@ def global_job(*args):
     job = args[0]
 
 
+def get_date(date_long):
+    """Convert longs to datetime."""
+    dt = None
+    try:
+        dt = datetime.datetime.fromtimestamp(date_long / 1e3)
+    except (KeyError, TypeError, ValueError):
+        try:
+            dt = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=(date_long / 1e3))
+        except TypeError:
+            pass
+    return dt
+
+
 def make_feature(feature):
     """Makes a feature from a arcrest.geometry object."""
     geometry = None
@@ -124,7 +137,7 @@ def index_service(connection_info):
     items = {}
     url = ''
 
-    if 'portal_url'  in connection_info:
+    if 'portal_url' in connection_info:
         connection_url = connection_info['portal_url']
     else:
         connection_url = connection_info['server_url']
@@ -285,10 +298,7 @@ def index_service(connection_info):
                     mapped_fields = dict(zip(mapped_attributes.keys(), row['attributes'].values()))
                     # Convert longs to datetime.
                     for df in date_fields:
-                        try:
-                            mapped_fields[df] = datetime.datetime.fromtimestamp(mapped_fields[df] / 1e3)
-                        except (KeyError, TypeError):
-                            pass
+                        mapped_fields[df] = get_date(mapped_fields[df])
                     mapped_fields['title'] = layer_name
                     mapped_fields['meta_table_name'] = layer_name
                     mapped_fields['_discoveryID'] = job.discovery_id
@@ -309,11 +319,7 @@ def index_service(connection_info):
                         mapped_fields = dict(zip(mapped_attributes.keys(), feature['attributes'].values()))
                         # Convert longs to datetime.
                         for df in date_fields:
-                            try:
-                                mapped_fields[df] = datetime.datetime.fromtimestamp(mapped_fields[df] / 1e3)
-                            except (KeyError, TypeError, ValueError):
-                                mapped_fields[df] = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=(mapped_fields[df] / 1e3))
-                                pass
+                            mapped_fields[df] = get_date(mapped_fields[df])
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['title'] = layer_name
                         mapped_fields['geometry_type'] = 'Point'
@@ -348,13 +354,12 @@ def index_service(connection_info):
                         mapped_fields = dict(zip(mapped_attributes.keys(), OrderedDict(feature['attributes']).values()))
                         # Convert longs to datetime.
                         for df in date_fields:
-                            try:
-                                mapped_fields[df] = datetime.datetime.fromtimestamp(mapped_fields[df] / 1e3)
-                            except (KeyError, TypeError):
-                                pass
+                            mapped_fields[df] = get_date(mapped_fields[df])
                         mapped_fields['title'] = layer_name
                         mapped_fields['geometry_type'] = geometry.type
                         mapped_fields['meta_table_name'] = layer_name
+                        mapped_fields['meta_table_path'] = layer['path']
+                        mapped_fields['meta_table_location'] = os.path.dirname(layer['path'])
                         mapped_fields['_discoveryID'] = job.discovery_id
                         entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                         job.send_entry(entry)
