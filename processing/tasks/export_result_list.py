@@ -265,6 +265,9 @@ def execute(request):
     fields = task_utils.get_parameter_value(request['params'], 'fields', 'value')
     out_format = task_utils.get_parameter_value(request['params'], 'output_format', 'value')
 
+    if not 'path' in fields and 'path:[absolute]' in fields:
+        fields.append('path')
+
     # Create the temporary workspace.
     task_folder = os.path.join(request['folder'], 'temp')
     if not os.path.exists(task_folder):
