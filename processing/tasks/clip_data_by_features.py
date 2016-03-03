@@ -232,7 +232,10 @@ def clip_data(input_items, out_workspace, clip_polygon, out_format):
                     name = task_utils.create_unique_name(dsc.name, out_workspace)
                 else:
                     name = task_utils.create_unique_name(out_name, out_workspace)
-                extent = arcpy.Describe(clip_polygon).extent
+                if type(clip_polygon) is arcpy.Polygon:
+                    extent = clip_polygon.extent
+                else:
+                    extent = arcpy.Describe(clip_polygon).extent
                 ext = '{0} {1} {2} {3}'.format(extent.XMin, extent.YMin, extent.XMax, extent.YMax)
                 arcpy.Clip_management(ds, ext, name, in_template_dataset=clip_polygon, clipping_geometry="ClippingGeometry")
 
