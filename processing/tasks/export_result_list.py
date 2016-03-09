@@ -155,6 +155,10 @@ def export_to_csv(jobs, file_name, output_folder, fields):
             i = fields.index('location:[localize]')
             fields.remove('location:[localize]')
             fields.insert(i, 'location')
+        if 'path[absolute]' in fields:
+            i = fields.index('path[absolute]')
+            fields.remove('path[absolute]')
+            fields.insert(i, '[absolute]')
         writer = csv.DictWriter(csv_file, fieldnames=fields)
         if write_keys:
             writer.writeheader()
