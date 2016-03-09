@@ -272,6 +272,12 @@ def execute(request):
     if not 'path' in fields and 'path:[absolute]' in fields:
         fields.append('path')
 
+    if 'geo' in fields:
+        i_geo = fields.index('geo')
+        fields.remove('geo')
+        fields.insert(i_geo, '[geo]')
+
+
     # Create the temporary workspace.
     task_folder = os.path.join(request['folder'], 'temp')
     if not os.path.exists(task_folder):
@@ -317,7 +323,7 @@ def execute(request):
         query += '&rows={0}&start={1}'
         exported_cnt = 0.
         for i in xrange(0, num_results, chunk_size):
-            req = urllib2.Request(query.format(chunk_size, i), headers=headers)
+            req = urllib2.Request(query.replace('{0}', str(chunk_size)).replace('{1}', str(i)), headers=headers)
             for n in urllib2.urlopen(req):
                 jobs = eval(n.replace('null', '"null"'))['response']['docs']
                 if out_format == 'CSV':
