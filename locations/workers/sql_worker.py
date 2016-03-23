@@ -203,6 +203,7 @@ def run_job(job):
         cur_id = -1
         entry = {}
         link = {}
+        wkt_col = -1
         action_type = job.action_type
         discovery_id = job.discovery_id
         location_id = job.location_id
@@ -222,12 +223,13 @@ def run_job(job):
         # -----------------------------------------------
         # Add an entry for the table itself with schema.
         # -----------------------------------------------
+        mapped_cols = {}
         schema['rows'] = row_count
         table_entry = {}
         table_entry['id'] = '{0}_{1}'.format(location_id, tbl)
         table_entry['location'] = location_id
         table_entry['action'] = action_type
-        table_entry['entry'] = {'fields': {'_discoveryID': discovery_id, 'name': tbl, 'path': job.sql_server_connection_str}}
+        table_entry['entry'] = {'fields': {'_discoveryID': discovery_id, 'name': tbl, 'path': job.sql_server_connection_str, 'format_type': 'Schema'}}
         table_entry['entry']['fields']['schema'] = schema
         job.send_entry(table_entry)
 
@@ -280,6 +282,8 @@ def run_job(job):
                     mapped_cols = dict(zip(mapped_fields, row))
 
                 # Create an entry to send to ZMQ for indexing.
+                mapped_cols['format_type'] = 'Record'
+                mapped_cols['format'] = 'application/vnd.sqlserver.record'
                 if 'id' in mapped_cols:
                     mapped_cols['id'] = '{0}{1}'.format(random.randint(0, 1000000), mapped_cols['id'])
                 else:

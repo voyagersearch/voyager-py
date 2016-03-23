@@ -422,6 +422,7 @@ def run_job(oracle_job):
         table_entry['id'] = '{0}_{1}'.format(location_id, tbl)
         table_entry['location'] = location_id
         table_entry['action'] = action_type
+        table_entry['format_type'] = 'Schema'
         table_entry['entry'] = {'fields': {'_discoveryID': discovery_id, 'name': tbl, 'path': rows.connection.dsn}}
         table_entry['entry']['fields']['schema'] = table_schema
         job.send_entry(table_entry)
@@ -435,6 +436,8 @@ def run_job(oracle_job):
                         [mapped_cols.pop(name) for name in geom_fields]
                     mapped_cols['_discoveryID'] = discovery_id
                     mapped_cols['meta_table_name'] = tbl
+                    mapped_cols['format_type'] = 'Record'
+                    mapped_cols['format'] = 'application/vnd.oracle.record'
                     entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
                     entry['location'] = location_id
                     entry['action'] = action_type
@@ -493,6 +496,8 @@ def run_job(oracle_job):
                     [mapped_cols.pop(name) for name in geom_fields]
                     mapped_cols['_discoveryID'] = discovery_id
                     mapped_cols['meta_table_name'] = tbl
+                    mapped_cols['format_type'] = 'Record'
+                    mapped_cols['format'] = 'application/vnd.oracle.record'
                     entry['id'] = '{0}_{1}_{2}'.format(location_id, tbl, i)
                     entry['location'] = location_id
                     entry['action'] = action_type

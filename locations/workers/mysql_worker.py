@@ -193,6 +193,7 @@ def run_job(mysql_job):
         table_entry['id'] = '{0}_{1}'.format(location_id, table)
         table_entry['location'] = location_id
         table_entry['action'] = action_type
+        table_entry['format_type'] = 'Schema'
         table_entry['entry'] = {'fields': {'_discoveryID': discovery_id, 'name': table, 'path': job.sql_server_connection_str}}
         table_entry['entry']['fields']['schema'] = schema
         job.send_entry(table_entry)
@@ -239,6 +240,8 @@ def run_job(mysql_job):
 
             # Create an entry to send to ZMQ for indexing.
             mapped_cols['title'] = table
+            mapped_cols['format_type'] = 'Record'
+            mapped_cols['format'] = 'application/vnd.mysql.record'
             entry['id'] = '{0}_{1}_{2}'.format(location_id, table, i)
             entry['location'] = location_id
             entry['action'] = action_type

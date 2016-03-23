@@ -123,6 +123,8 @@ def run_job(mongodb_job):
             mapped_fields = dict(zip(mapped_fields, values))
             mapped_fields['_discoveryID'] = job.discovery_id
             mapped_fields['title'] = col.name
+            mapped_fields['format_type'] = 'Record'
+            mapped_fields['format'] = 'application/vnd.mongodb.record'
             entry['id'] = str(doc['_id'])
             entry['location'] = job.location_id
             entry['action'] = job.action_type
@@ -168,6 +170,7 @@ def run_job(mongodb_job):
         table_entry['id'] = '{0}_{1}'.format(job.location_id, collection_name)
         table_entry['location'] = job.location_id
         table_entry['action'] = job.action_type
+        table_entry['format_type'] = 'Schema'
         table_entry['entry'] = {'fields': {'_discoveryID': job.discovery_id, 'name': collection_name, 'path': job.mongodb_client_info}}
         table_entry['entry']['fields']['schema'] = schema
         job.send_entry(table_entry)

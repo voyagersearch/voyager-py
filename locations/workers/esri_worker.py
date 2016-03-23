@@ -302,6 +302,8 @@ def index_service(connection_info):
                     mapped_fields['title'] = layer_name
                     mapped_fields['meta_table_name'] = layer_name
                     mapped_fields['_discoveryID'] = job.discovery_id
+                    mapped_fields['format_type'] = 'Record'
+                    mapped_fields['format'] = 'application/vnd.esri.service.layer.record'
                     entry['entry'] = {'fields': mapped_fields}
                     job.send_entry(entry)
                     if (i % increment) == 0:
@@ -324,6 +326,8 @@ def index_service(connection_info):
                         mapped_fields['title'] = layer_name
                         mapped_fields['geometry_type'] = 'Point'
                         mapped_fields['meta_table_name'] = layer_name
+                        mapped_fields['format_type'] = 'Record'
+                        mapped_fields['format'] = 'application/vnd.esri.service.layer.feature'
                         entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                         job.send_entry(entry)
                         if (i % increment) == 0:
@@ -352,17 +356,21 @@ def index_service(connection_info):
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
                         mapped_fields = dict(zip(mapped_attributes.keys(), OrderedDict(feature['attributes']).values()))
-                        # Convert longs to datetime.
-                        for df in date_fields:
-                            mapped_fields[df] = get_date(mapped_fields[df])
-                        mapped_fields['title'] = layer_name
-                        mapped_fields['geometry_type'] = geometry.type
-                        mapped_fields['meta_table_name'] = layer_name
-                        mapped_fields['meta_table_path'] = layer['path']
-                        mapped_fields['meta_table_location'] = os.path.dirname(layer['path'])
-                        mapped_fields['_discoveryID'] = job.discovery_id
-                        entry['entry'] = {'geo': geo, 'fields': mapped_fields}
-                        job.send_entry(entry)
+                        try:
+                            # Convert longs to datetime.
+                            for df in date_fields:
+                                mapped_fields[df] = get_date(mapped_fields[df])
+                            mapped_fields['title'] = layer_name
+                            mapped_fields['geometry_type'] = geometry.type
+                            mapped_fields['meta_table_name'] = layer_name
+                            mapped_fields['meta_table_path'] = layer['path']
+                            mapped_fields['meta_table_location'] = os.path.dirname(layer['path'])
+                            mapped_fields['format_type'] = 'Record'
+                            mapped_fields['format'] = 'application/vnd.esri.service.layer.feature'
+                            mapped_fields['_discoveryID'] = job.discovery_id
+                            entry['entry'] = {'geo': geo, 'fields': mapped_fields}
+                        except KeyError:
+                            job.send_entry(entry)
                         if (i % increment) == 0:
                             status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer_name, i / row_count), 'esri_worker')
 
@@ -474,7 +482,8 @@ def worker(data_path, esri_service=False):
                         mapped_fields = dict(zip(ordered_fields.keys(), row))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['meta_table_name'] = dsc.name
-                        # mapped_fields['format'] = "{0} Record".format(dsc.dataType)
+                        mapped_fields['format_type'] = "Record"
+                        mapped_fields['format'] = "application/vnd.esri.{0}.record".format(dsc.dataType.lower())
                         for nf in new_fields:
                             if nf['name'] == '*' or nf['name'] == dsc.name:
                                 for k, v in nf['new_fields'].iteritems():
@@ -548,7 +557,8 @@ def worker(data_path, esri_service=False):
                             mapped_fields['_discoveryID'] = job.discovery_id
                             mapped_fields['meta_table_name'] = dsc.name
                             mapped_fields['geometry_type'] = 'Point'
-                            # mapped_fields['format'] = "{0} Record".format(dsc.dataType)
+                            mapped_fields['format_type'] = 'Record'
+                            mapped_fields['format'] = "application/vnd.esri.{0}.feature".format(dsc.dataType.lower())
                             for nf in new_fields:
                                 if nf['name'] == '*' or nf['name'] == dsc.name:
                                     for k, v in nf['new_fields'].iteritems():
@@ -597,7 +607,8 @@ def worker(data_path, esri_service=False):
                             if global_id_field:
                                 mapped_fields['meta_{0}'.format(global_id_field)] = mapped_fields.pop('fi_{0}'.format(global_id_field))
                             mapped_fields['geometry_type'] = dsc.shapeType
-                            # mapped_fields['format'] = "{0} Record".format(dsc.dataType)
+                            mapped_fields['format_type'] = 'Record'
+                            mapped_fields['format'] = "application/vnd.esri.{0}.feature".format(dsc.dataType.lower())
                             entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.splitext(os.path.basename(data_path))[0], i)
                             entry['location'] = job.location_id
                             entry['action'] = job.action_type
@@ -613,6 +624,7 @@ def worker(data_path, esri_service=False):
         table_entry['id'] = '{0}_{1}'.format(job.location_id, dsc.name)
         table_entry['location'] = job.location_id
         table_entry['action'] = job.action_type
+        table_entry['format_type'] = 'Schema'
         table_entry['entry'] = {'fields': {'_discoveryID': job.discovery_id, 'name': dsc.name, 'path': dsc.catalogPath}}
         table_entry['entry']['fields']['schema'] = schema
         job.send_entry(table_entry)
