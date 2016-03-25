@@ -327,7 +327,7 @@ def index_service(connection_info):
                         mapped_fields['geometry_type'] = 'Point'
                         mapped_fields['meta_table_name'] = layer_name
                         mapped_fields['format_type'] = 'Record'
-                        mapped_fields['format'] = 'application/vnd.esri.service.layer.feature'
+                        mapped_fields['format'] = 'application/vnd.esri.service.layer.record'
                         entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                         job.send_entry(entry)
                         if (i % increment) == 0:
@@ -366,7 +366,7 @@ def index_service(connection_info):
                             mapped_fields['meta_table_path'] = layer['path']
                             mapped_fields['meta_table_location'] = os.path.dirname(layer['path'])
                             mapped_fields['format_type'] = 'Record'
-                            mapped_fields['format'] = 'application/vnd.esri.service.layer.feature'
+                            mapped_fields['format'] = 'application/vnd.esri.service.layer.record'
                             mapped_fields['_discoveryID'] = job.discovery_id
                             entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                         except KeyError:
