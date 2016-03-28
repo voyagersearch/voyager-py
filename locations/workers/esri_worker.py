@@ -302,6 +302,7 @@ def index_service(connection_info):
                     mapped_fields['title'] = layer_name
                     mapped_fields['meta_table_name'] = layer_name
                     mapped_fields['_discoveryID'] = job.discovery_id
+                    mapped_fields['format_category'] = 'GIS'
                     mapped_fields['format_type'] = 'Record'
                     mapped_fields['format'] = 'application/vnd.esri.service.layer.record'
                     entry['entry'] = {'fields': mapped_fields}
@@ -326,6 +327,7 @@ def index_service(connection_info):
                         mapped_fields['title'] = layer_name
                         mapped_fields['geometry_type'] = 'Point'
                         mapped_fields['meta_table_name'] = layer_name
+                        mapped_fields['format_category'] = 'GIS'
                         mapped_fields['format_type'] = 'Record'
                         mapped_fields['format'] = 'application/vnd.esri.service.layer.record'
                         entry['entry'] = {'geo': geo, 'fields': mapped_fields}
@@ -365,6 +367,7 @@ def index_service(connection_info):
                             mapped_fields['meta_table_name'] = layer_name
                             mapped_fields['meta_table_path'] = layer['path']
                             mapped_fields['meta_table_location'] = os.path.dirname(layer['path'])
+                            mapped_fields['format_category'] = 'GIS'
                             mapped_fields['format_type'] = 'Record'
                             mapped_fields['format'] = 'application/vnd.esri.service.layer.record'
                             mapped_fields['_discoveryID'] = job.discovery_id
@@ -482,6 +485,7 @@ def worker(data_path, esri_service=False):
                         mapped_fields = dict(zip(ordered_fields.keys(), row))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['meta_table_name'] = dsc.name
+                        mapped_fields['format_category'] = 'GIS'
                         mapped_fields['format_type'] = "Record"
                         mapped_fields['format'] = "application/vnd.esri.{0}.record".format(dsc.dataType.lower())
                         for nf in new_fields:
@@ -556,6 +560,7 @@ def worker(data_path, esri_service=False):
                             mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                             mapped_fields['_discoveryID'] = job.discovery_id
                             mapped_fields['meta_table_name'] = dsc.name
+                            mapped_fields['format_category'] = 'GIS'
                             mapped_fields['geometry_type'] = 'Point'
                             mapped_fields['format_type'] = 'Record'
                             mapped_fields['format'] = "application/vnd.esri.{0}.feature".format(dsc.dataType.lower())
@@ -607,6 +612,7 @@ def worker(data_path, esri_service=False):
                             if global_id_field:
                                 mapped_fields['meta_{0}'.format(global_id_field)] = mapped_fields.pop('fi_{0}'.format(global_id_field))
                             mapped_fields['geometry_type'] = dsc.shapeType
+                            mapped_fields['format_category'] = 'GIS'
                             mapped_fields['format_type'] = 'Record'
                             mapped_fields['format'] = "application/vnd.esri.{0}.feature".format(dsc.dataType.lower())
                             entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.splitext(os.path.basename(data_path))[0], i)
