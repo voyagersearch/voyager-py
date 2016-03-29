@@ -38,7 +38,10 @@ def execute(request):
     if not os.path.exists(zip_file_location):
         os.makedirs(request['folder'])
 
-    zip_file = os.path.join(zip_file_location, 'output.zip')
+    output_file_name = task_utils.get_parameter_value(parameters, 'output_file_name', 'value')
+    if not output_file_name:
+        output_file_name = 'output'
+    zip_file = os.path.join(zip_file_location, '{0}.zip'.format(output_file_name))
     zipper = task_utils.ZipFileManager(zip_file, 'w', zipfile.ZIP_DEFLATED)
     num_results, response_index = task_utils.get_result_count(parameters)
     headers = {'x-access-token': task_utils.get_security_token(request['owner'])}

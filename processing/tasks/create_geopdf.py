@@ -49,6 +49,9 @@ def execute(request):
     map_title = task_utils.get_parameter_value(parameters, 'map_title', 'value')
     attribute_setting = task_utils.get_parameter_value(parameters, 'attribute_settings', 'value')
     author = task_utils.get_parameter_value(parameters, 'map_author', 'value')
+    output_file_name = task_utils.get_parameter_value(parameters, 'output_file_name', 'value')
+    if not output_file_name:
+        output_file_name = 'output_pdf'
     try:
         map_view = task_utils.get_parameter_value(parameters, 'map_view', 'extent')
     except KeyError:
@@ -227,7 +230,7 @@ def execute(request):
     if added_to_map > 0:
         status_writer.send_status(_('Exporting to PDF...'))
         arcpy.mapping.ExportToPDF(mxd,
-                                  os.path.join(request['folder'], 'output.pdf'),
+                                  os.path.join(request['folder'], '{0}.pdf'.format(output_file_name)),
                                   layers_attributes=attribute_setting)
         # Create a thumbnail size PNG of the mxd.
         task_utils.make_thumbnail(mxd, os.path.join(request['folder'], '_thumb.png'), False)

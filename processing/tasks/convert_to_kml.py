@@ -64,6 +64,11 @@ def execute(request):
     except KeyError:
         pass
 
+    # Get the output file name.
+    output_file_name = task_utils.get_parameter_value(parameters, 'output_file_name', 'value')
+    if not output_file_name:
+        output_file_name = 'kml_results'
+
     result_count, response_index = task_utils.get_result_count(parameters)
     # Query the index for results in groups of 25.
     query_index = task_utils.QueryIndex(parameters[response_index])
@@ -117,7 +122,7 @@ def execute(request):
     # Zip up kmz files if more than one.
     if converted > 1:
         status_writer.send_status("Converted: {}".format(converted))
-        zip_file = task_utils.zip_data(out_workspace, 'output.zip')
+        zip_file = task_utils.zip_data(out_workspace, '{0}.zip'.format(output_file_name))
         shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
         shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
     elif converted == 1:

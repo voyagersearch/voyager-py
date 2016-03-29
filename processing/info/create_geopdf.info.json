@@ -48,6 +48,11 @@
       "value": "Your Name"
     },
     {
+      "type": "String",
+      "name": "output_file_name",
+      "value": "output_pdf"
+    },
+    {
       "type": "StringChoice",
       "name": "attribute_settings",
       "choices": [
@@ -86,6 +91,10 @@
         "map_author": {
           "display": "Map Author",
           "description": "The author's name."
+        },
+        "output_file_name": {
+          "display": "Output File Name",
+          "description": "Output PDF name"
         },
         "attribute_settings": {
           "display": "Attribute Settings",

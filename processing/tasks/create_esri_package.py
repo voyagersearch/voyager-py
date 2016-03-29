@@ -129,6 +129,9 @@ def execute(request):
     out_format = task_utils.get_parameter_value(parameters, 'output_format', 'value')
     summary = task_utils.get_parameter_value(parameters, 'summary')
     tags = task_utils.get_parameter_value(parameters, 'tags')
+    output_file_name = task_utils.get_parameter_value(parameters, 'output_file_name')
+    if not output_file_name:
+        output_file_name = 'package_results'
 
     # Get the clip region as an extent object.
     clip_area = None
@@ -193,12 +196,12 @@ def execute(request):
             status_writer.send_status(_('Generating {0}. Large input {1} will take longer to process.'.format('MPK', 'results')))
             if arcpy.GetInstallInfo()['Version'] == '10.0':
                 arcpy.PackageMap_management(mxd.filePath,
-                                            os.path.join(os.path.dirname(out_workspace), 'output.mpk'),
+                                            os.path.join(os.path.dirname(out_workspace), '{0}.mpk'.format(output_file_name)),
                                             'PRESERVE',
                                             extent=clip_area)
             elif arcpy.GetInstallInfo()['Version'] == '10.1':
                 arcpy.PackageMap_management(mxd.filePath,
-                                            os.path.join(os.path.dirname(out_workspace), 'output.mpk'),
+                                            os.path.join(os.path.dirname(out_workspace), '{0}.mpk'.format(output_file_name)),
                                             'PRESERVE',
                                             extent=clip_area,
                                             ArcGISRuntime='RUNTIME',
@@ -208,7 +211,7 @@ def execute(request):
                                             tags=tags)
             else:
                 arcpy.PackageMap_management(mxd.filePath,
-                                            os.path.join(os.path.dirname(out_workspace), 'output.mpk'),
+                                            os.path.join(os.path.dirname(out_workspace), '{0}.mpk'.format(output_file_name)),
                                             'PRESERVE',
                                             extent=clip_area,
                                             arcgisruntime='RUNTIME',
@@ -225,13 +228,13 @@ def execute(request):
                     layer.description = layer.name
             if arcpy.GetInstallInfo()['Version'] == '10.0':
                 arcpy.PackageLayer_management(layers,
-                                              os.path.join(os.path.dirname(out_workspace), 'output.lpk'),
+                                              os.path.join(os.path.dirname(out_workspace), '{0}.lpk'.format(output_file_name)),
                                               'PRESERVE',
                                               extent=clip_area,
                                               version='10')
             else:
                 arcpy.PackageLayer_management(layers,
-                                              os.path.join(os.path.dirname(out_workspace), 'output.lpk'),
+                                              os.path.join(os.path.dirname(out_workspace), '{0}.lpk'.format(output_file_name)),
                                               'PRESERVE',
                                               extent=clip_area,
                                               version='10',

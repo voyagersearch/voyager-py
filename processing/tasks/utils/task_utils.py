@@ -188,9 +188,10 @@ def create_unique_name(name, gdb):
     return unique_name
 
 
-def create_lpk(data_location, additional_files=None):
+def create_lpk(data_location, lpk_name, additional_files=None):
     """Creates a layer package (.lpk) for all datasets in the data location.
     :param data_location: location of data to packaged
+    :param lpk_name: name of the layer package
     :param additional_files: list of additional files to include in the package
     """
     import arcpy
@@ -207,7 +208,7 @@ def create_lpk(data_location, additional_files=None):
 
     # Package all layer files.
     layer_files = glob.glob(os.path.join(data_location, '*.lyr'))
-    arcpy.PackageLayer_management(layer_files, os.path.join(os.path.dirname(data_location), 'output.lpk'),
+    arcpy.PackageLayer_management(layer_files, os.path.join(os.path.dirname(data_location), '{0}.lpk'.format(lpk_name)),
                                   'PRESERVE', version='10', additional_files=additional_files)
     make_thumbnail(layer_files[0], os.path.join(os.path.dirname(data_location), '_thumb.png'))
 

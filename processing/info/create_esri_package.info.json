@@ -30,6 +30,11 @@
     {
       "type": "String",
       "name": "tags"
+    },
+    {
+      "type": "String",
+      "name": "output_file_name",
+      "value": "package_results"
     }
   ],
   "display":
@@ -64,7 +69,11 @@
 		{
 		    "display": "Tags",
 		    "description": "Keywords that can be used to search for this package on ArcGIS Online."
-		}
+		},
+        "output_file_name": {
+          "display": "Output File Name",
+          "description": "Name of the output package file"
+        }
       }
     }
   }

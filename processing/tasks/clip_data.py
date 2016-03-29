@@ -365,9 +365,12 @@ def execute(request):
     # Retrieve the coordinate system code.
     out_coordinate_system = int(task_utils.get_parameter_value(parameters, 'output_projection', 'code'))
 
-    # Retrieve the output format and create mxd parameter values.
+    # Retrieve the output format, create mxd parameter and output file name values.
     out_format = task_utils.get_parameter_value(parameters, 'output_format', 'value')
     create_mxd = task_utils.get_parameter_value(parameters, 'create_mxd', 'value')
+    output_file_name = task_utils.get_parameter_value(parameters, 'output_file_name', 'value')
+    if not output_file_name:
+        output_file_name = 'clip_results'
 
     # Create the temporary workspace if clip_feature_class:
     out_workspace = os.path.join(request['folder'], 'temp')
@@ -452,10 +455,10 @@ def execute(request):
                 status_writer.send_status(_("Packaging results..."))
                 task_utils.create_mpk(out_workspace, mxd, files_to_package)
                 shutil.move(os.path.join(out_workspace, 'output.mpk'),
-                            os.path.join(os.path.dirname(out_workspace), 'output.mpk'))
+                            os.path.join(os.path.dirname(out_workspace), '{0}.mpk'.format(output_file_name)))
             elif out_format == 'LPK':
                 status_writer.send_status(_("Packaging results..."))
-                task_utils.create_lpk(out_workspace, files_to_package)
+                task_utils.create_lpk(out_workspace,output_file_name, files_to_package)
             elif out_format == 'KML':
                 task_utils.convert_to_kml(os.path.join(out_workspace, "output.gdb"))
                 arcpy.env.workspace = ''
@@ -463,13 +466,13 @@ def execute(request):
                     arcpy.Delete_management(os.path.join(out_workspace, "output.gdb"))
                 except arcpy.ExecuteError:
                     pass
-                zip_file = task_utils.zip_data(out_workspace, 'output.zip')
+                zip_file = task_utils.zip_data(out_workspace, '{0}.zip'.format(output_file_name))
                 shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
             else:
                 if create_mxd:
                     mxd_template = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'MapTemplate.mxd')
                     task_utils.create_mxd(out_workspace, mxd_template, 'output')
-                zip_file = task_utils.zip_data(out_workspace, 'output.zip')
+                zip_file = task_utils.zip_data(out_workspace, '{0}.zip'.format(output_file_name))
                 shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
         except arcpy.ExecuteError as ee:
             status_writer.send_state(status.STAT_FAILED, _(ee))
