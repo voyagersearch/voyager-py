@@ -21,9 +21,9 @@
 	      "fq":["geometry_type:Polygon"]
       },
 	  "fields": [
-	  "thumb:[thumbURL]",
-        "name",
-	    "path"
+		"thumb",
+        	"name",
+		"path"
 	  ]
 	},
     {
