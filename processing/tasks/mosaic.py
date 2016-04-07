@@ -71,6 +71,7 @@ def execute(request):
     output_raster_format = task_utils.get_parameter_value(parameters, 'raster_format', 'value')
     compression_method = task_utils.get_parameter_value(parameters, 'compression_method', 'value')
     compression_quality = task_utils.get_parameter_value(parameters, 'compression_quality', 'value')
+    output_file_name = task_utils.get_parameter_value(parameters, 'output_file_name', 'value')
     arcpy.env.compression = '{0} {1}'.format(compression_method, compression_quality)
 
     clip_area = None
@@ -202,7 +203,7 @@ def execute(request):
 
     if arcpy.env.workspace.endswith('.gdb'):
         out_workspace = os.path.dirname(arcpy.env.workspace)
-    zip_file = task_utils.zip_data(out_workspace, 'output.zip')
+    zip_file = task_utils.zip_data(out_workspace, '{0}.zip'.format(output_file_name))
     shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
 
     # Update state if necessary.
