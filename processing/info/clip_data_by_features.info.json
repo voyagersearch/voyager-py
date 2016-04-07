@@ -14,15 +14,16 @@
 	  "name": "clip_features",
       "required": true,
 	  "query": {
-	      "fl":"id,name,path:[absolute]",
+	      "fl":"id,thumb:[thumbURL],name,path:[absolute]",
 	      "indent":"true",
 	      "facet":true,
 	      "facet.field":["format", "location"],
 	      "fq":["geometry_type:Polygon"]
       },
 	  "fields": [
-        "name",
-	    "path"
+		"thumb",
+        	"name",
+		"path"
 	  ]
 	},
     {
