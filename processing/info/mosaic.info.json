@@ -71,7 +71,7 @@
     {
       "type": "String",
       "name": "output_file_name",
-      "value": "clip_results"
+      "value": "mosaic_results"
     }
   ],
   "display":

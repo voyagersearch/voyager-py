@@ -72,6 +72,8 @@ def execute(request):
     compression_method = task_utils.get_parameter_value(parameters, 'compression_method', 'value')
     compression_quality = task_utils.get_parameter_value(parameters, 'compression_quality', 'value')
     output_file_name = task_utils.get_parameter_value(parameters, 'output_file_name', 'value')
+    if not output_file_name:
+        output_file_name = 'output'
     arcpy.env.compression = '{0} {1}'.format(compression_method, compression_quality)
 
     clip_area = None
