@@ -111,7 +111,7 @@ class ArcGISServiceHelper(object):
             if folder_name:
                 search_url = self._portal_url + '/{3}/rest/services/{0}/{1}/{2}'.format(folder_name, service_name, self._service_types[service_type], self._instance)
             else:
-                search_url = self._portal_url + '/{3}/rest/services/{0}/{1}'.format(service_name, self._service_types[service_type], self._instance)
+                search_url = self._portal_url + '/{2}/rest/services/{0}/{1}'.format(service_name, self._service_types[service_type], self._instance)
 
         if not service_url:
             if not self._service_types[service_type] in search_url:
