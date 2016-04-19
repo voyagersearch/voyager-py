@@ -631,7 +631,7 @@ def worker(data_path, esri_service=False):
         table_entry['location'] = job.location_id
         table_entry['action'] = job.action_type
         table_entry['format_type'] = 'Schema'
-        table_entry['entry'] = {'fields': {'_discoveryID': job.discovery_id, 'name': dsc.name, 'path': dsc.catalogPath}}
+        table_entry['entry'] = {'fields': {'_discoveryID': job.discovery_id, 'name': dsc.name, 'path': dsc.catalogPath, 'format': 'schema'}}
         table_entry['entry']['fields']['schema'] = schema
         job.send_entry(table_entry)
 
