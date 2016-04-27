@@ -60,8 +60,8 @@ class ObjectEncoder(json.JSONEncoder):
                     return None
             elif isinstance(obj, cx_Oracle.CLOB):
                 return str(obj)
-        except ImportError as ie:
-            return obj
+        except ImportError:
+            return
 
 
 class Job(object):
