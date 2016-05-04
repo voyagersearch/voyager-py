@@ -16,6 +16,7 @@ def run(entry):
         sys.exit(1)
     meta_folder = 'c:/voyager/data/meta'
     vmoptions = os.path.join(os.path.abspath(os.path.join(__file__, "../../../..")), 'Voyager.vmoptions')
+    mxd_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'GroupLayerTemplate.mxd')
     with open(vmoptions, 'rb') as fp:
         for i, line in enumerate(fp):
             if line.startswith('-Ddata.dir'):
@@ -41,6 +42,20 @@ def run(entry):
                     arcpy.SaveToLayerFile_management(raster_layer, os.path.join(layer_folder, '{0}.layer.lyr'.format(id)))
                     new_entry['entry']['fields']['hasLayerFile'] = True
                     new_entry['entry']['fields']['path_to_lyr'] = '{0}/{1}/{2}.layer.lyr'.format(id[0], id[1:4], id)
+                elif dsc.dataType in ('CadDrawingDataset', 'FeatureDataset'):
+                    arcpy.env.workspace = path
+                    lyr_mxd = arcpy.mapping.MapDocument(mxd_path)
+                    data_frame = arcpy.mapping.ListDataFrames(lyr_mxd)[0]
+                    group_layer = arcpy.mapping.ListLayers(lyr_mxd, 'Group Layer', data_frame)[0]
+                    for fc in arcpy.ListFeatureClasses():
+                        dataset_name = os.path.splitext(os.path.basename(path))[0]
+                        l = arcpy.MakeFeatureLayer_management(fc,
+                                                              '{0}_{1}'.format(dataset_name, os.path.basename(fc)))
+                        arcpy.mapping.AddLayerToGroup(data_frame, group_layer, l.getOutput(0))
+                    arcpy.ResetEnvironments()
+                    group_layer.saveACopy(os.path.join(layer_folder, '{0}.layer.lyr'.format(id)))
+                    new_entry['entry']['fields']['hasLayerFile'] = True
+                    new_entry['entry']['fields']['path_to_lyr'] = '{0}/{1}/{2}.layer.lyr'.format(id[0], id[1:4], id)
                 else:
                     return
             except arcpy.ExecuteError:
@@ -57,6 +72,20 @@ def run(entry):
                     elif dsc.dataType == 'RasterDataset':
                         raster_layer = arcpy.MakeRasterLayer_management(path, os.path.basename(path))
                         arcpy.SaveToLayerFile_management(raster_layer, os.path.join(layer_folder, '{0}.layer.lyr'.format(id)))
+                        new_entry['entry']['fields']['hasLayerFile'] = True
+                        new_entry['entry']['fields']['path_to_lyr'] = '{0}/{1}/{2}.layer.lyr'.format(id[0], id[1:4], id)
+                    elif dsc.dataType in ('CadDrawingDataset', 'FeatureDataset'):
+                        arcpy.env.workspace = path
+                        lyr_mxd = arcpy.mapping.MapDocument(mxd_path)
+                        data_frame = arcpy.mapping.ListDataFrames(lyr_mxd)[0]
+                        group_layer = arcpy.mapping.ListLayers(lyr_mxd, 'Group Layer', data_frame)[0]
+                        for fc in arcpy.ListFeatureClasses():
+                            dataset_name = os.path.splitext(os.path.basename(path))[0]
+                            l = arcpy.MakeFeatureLayer_management(fc,
+                                                                  '{0}_{1}'.format(dataset_name, os.path.basename(fc)))
+                            arcpy.mapping.AddLayerToGroup(data_frame, group_layer, l.getOutput(0))
+                        arcpy.ResetEnvironments()
+                        group_layer.saveACopy(os.path.join(layer_folder, '{0}.layer.lyr'.format(id)))
                         new_entry['entry']['fields']['hasLayerFile'] = True
                         new_entry['entry']['fields']['path_to_lyr'] = '{0}/{1}/{2}.layer.lyr'.format(id[0], id[1:4], id)
                     else:
