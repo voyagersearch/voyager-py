@@ -268,7 +268,7 @@ def create_mxd(data_location, map_template, output_name):
             # Add all layer files to the mxd template.
             arcpy.mapping.AddLayer(df, arcpy.mapping.Layer(ds))
     mxd.save()
-    return  mxd.filePath
+    return mxd.filePath
 
 
 def convert_to_kml(geodatabase):

@@ -2,7 +2,7 @@
   "name": "create_layer_files",
   "runner": "python",
   "categories": ["Managing Data and Files"],
-  "constraints": [{"geometry_type": "(Point Polygon Polyline Raster Multipoint MultiPatch)"}],
+  "constraints": [{"format_category": "(GIS CAD)"}],
   "security": ["_ADMIN"],
   "params": [
     {

@@ -27,6 +27,8 @@ processed_count = 0.
 skipped_reasons = {}
 errors_reasons = {}
 arcpy.env.overwriteOutput = True
+mxd_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'GroupLayerTemplate.mxd')
+
 
 def update_index(file_location, layer_file, item_id, name, location):
     """Update the index by re-indexng an item."""
@@ -116,6 +118,7 @@ def create_layer_file(input_items, meta_folder, show_progress=False):
             name = input_item[2]
             location = input_item[3]
             layer_folder = os.path.join(meta_folder, id[0], id[1:4])
+            lyr_mxd = arcpy.mapping.MapDocument(mxd_path)
             dsc = arcpy.Describe(path)
             if not os.path.exists(layer_folder):
                 os.makedirs(layer_folder)
@@ -126,6 +129,17 @@ def create_layer_file(input_items, meta_folder, show_progress=False):
                     elif dsc.dataType == 'RasterDataset':
                         raster_layer = arcpy.MakeRasterLayer_management(path, os.path.splitext(os.path.basename(path))[0])
                         lyr = arcpy.SaveToLayerFile_management(raster_layer, os.path.join(layer_folder, '{0}.layer.lyr'.format(id)))
+                    elif dsc.dataType in ('CadDrawingDataset', 'FeatureDataset'):
+                        arcpy.env.workspace = path
+                        lyr_mxd = arcpy.mapping.MapDocument(mxd_path)
+                        data_frame = arcpy.mapping.ListDataFrames(lyr_mxd)[0]
+                        group_layer = arcpy.mapping.ListLayers(lyr_mxd, 'Group Layer', data_frame)[0]
+                        for fc in arcpy.ListFeatureClasses():
+                            dataset_name = os.path.splitext(os.path.basename(path))[0]
+                            l = arcpy.MakeFeatureLayer_management(fc, '{0}_{1}'.format(dataset_name, os.path.basename(fc)))
+                            arcpy.mapping.AddLayerToGroup(data_frame, group_layer, l.getOutput(0))
+                        arcpy.ResetEnvironments()
+                        group_layer.saveACopy(os.path.join(layer_folder, '{0}.layer.lyr'.format(id)))
                     else:
                         skipped +=1
                         status_writer.send_status(_('Invalid input type: {0}').format(dsc.name))
@@ -146,6 +160,18 @@ def create_layer_file(input_items, meta_folder, show_progress=False):
                         elif dsc.dataType == 'RasterDataset':
                             raster_layer = arcpy.MakeRasterLayer_management(path, os.path.splitext(os.path.basename(path))[0])
                             lyr = arcpy.SaveToLayerFile_management(raster_layer, os.path.join(layer_folder, '{0}.layer.lyr'.format(id)))
+                        elif dsc.dataType in ('CadDrawingDataset', 'FeatureDataset'):
+                            arcpy.env.workspace = path
+                            data_frame = arcpy.mapping.ListDataFrames(lyr_mxd)[0]
+                            group_layer = arcpy.mapping.ListLayers(lyr_mxd, 'Group Layer', data_frame)[0]
+                            for fc in arcpy.ListFeatureClasses():
+                                dataset_name = os.path.splitext(os.path.basename(path))[0]
+                                l = arcpy.MakeFeatureLayer_management(fc,
+                                                                      '{0}_{1}'.format(dataset_name,
+                                                                                       os.path.basename(fc)))
+                                arcpy.mapping.AddLayerToGroup(data_frame, group_layer, l.getOutput(0))
+                            arcpy.ResetEnvironments()
+                            group_layer.saveACopy(os.path.join(layer_folder, '{0}.layer.lyr'.format(id)))
                         else:
                             skipped +=1
                             status_writer.send_status(_('Invalid input type: {0}').format(dsc.name))
