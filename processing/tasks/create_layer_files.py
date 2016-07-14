@@ -27,7 +27,7 @@ processed_count = 0.
 skipped_reasons = {}
 errors_reasons = {}
 arcpy.env.overwriteOutput = True
-mxd_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'GroupLayerTemplate.mxd')
+mxd_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'supportfiles', 'GroupLayerTemplate.mxd')
 
 
 def update_index(file_location, layer_file, item_id, name, location):
@@ -120,8 +120,13 @@ def create_layer_file(input_items, meta_folder, show_progress=False):
             layer_folder = os.path.join(meta_folder, id[0], id[1:4])
             lyr_mxd = arcpy.mapping.MapDocument(mxd_path)
             dsc = arcpy.Describe(path)
+
+            # Create layer folder if it does not exist.
             if not os.path.exists(layer_folder):
                 os.makedirs(layer_folder)
+
+            if not os.path.exists(os.path.join(layer_folder, '{0}.layer.lyr'.format(id))):
+                # os.makedirs(layer_folder)
                 try:
                     if dsc.dataType in ('FeatureClass', 'Shapefile', 'ShapeFile'):
                         feature_layer = arcpy.MakeFeatureLayer_management(path, os.path.basename(path))
@@ -140,8 +145,12 @@ def create_layer_file(input_items, meta_folder, show_progress=False):
                             arcpy.mapping.AddLayerToGroup(data_frame, group_layer, l.getOutput(0))
                         arcpy.ResetEnvironments()
                         group_layer.saveACopy(os.path.join(layer_folder, '{0}.layer.lyr'.format(id)))
+                        lyr = '{0}.layer.lyr'.format(id)
+                    elif dsc.catalogPath.lower().endswith('.tab') or dsc.catalogPath.lower().endswith('.mif'):
+                        arcpy.ImportToolbox(r"C:\Program Files (x86)\DataEast\TAB Reader\Toolbox\TAB Reader.tbx")
+                        lyr = arcpy.GPTabsToArcGis_TR(dsc.catalogPath, False, '', True, True, os.path.join(layer_folder, '{0}.layer.lyr'.format(id)))
                     else:
-                        skipped +=1
+                        skipped += 1
                         status_writer.send_status(_('Invalid input type: {0}').format(dsc.name))
                         skipped_reasons[name] = _('Invalid input type: {0}').format(dsc.dataType)
                         continue
@@ -150,45 +159,21 @@ def create_layer_file(input_items, meta_folder, show_progress=False):
                     status_writer.send_status(arcpy.GetMessages(2))
                     errors_reasons[name] = arcpy.GetMessages(2)
                     continue
+                except RuntimeError as re:
+                    errors += 1
+                    status_writer.send_status(re.message)
+                    errors_reasons[name] = re.message
+                    continue
+                except AssertionError as ae:
+                    status_writer.send_status(_('FAIL: {0}. MXD - {1}').format(repr(ae), mxd_path))
             else:
-                # Does the layer already exist?
-                if not os.path.exists(os.path.join(layer_folder, '{0}.layer.lyr'.format(id))):
-                    try:
-                        if dsc.dataType in ('FeatureClass', 'Shapefile', 'ShapeFile'):
-                            feature_layer = arcpy.MakeFeatureLayer_management(path, os.path.basename(path))
-                            lyr = arcpy.SaveToLayerFile_management(feature_layer, os.path.join(layer_folder, '{0}.layer.lyr'.format(id)))
-                        elif dsc.dataType == 'RasterDataset':
-                            raster_layer = arcpy.MakeRasterLayer_management(path, os.path.splitext(os.path.basename(path))[0])
-                            lyr = arcpy.SaveToLayerFile_management(raster_layer, os.path.join(layer_folder, '{0}.layer.lyr'.format(id)))
-                        elif dsc.dataType in ('CadDrawingDataset', 'FeatureDataset'):
-                            arcpy.env.workspace = path
-                            data_frame = arcpy.mapping.ListDataFrames(lyr_mxd)[0]
-                            group_layer = arcpy.mapping.ListLayers(lyr_mxd, 'Group Layer', data_frame)[0]
-                            for fc in arcpy.ListFeatureClasses():
-                                dataset_name = os.path.splitext(os.path.basename(path))[0]
-                                l = arcpy.MakeFeatureLayer_management(fc,
-                                                                      '{0}_{1}'.format(dataset_name,
-                                                                                       os.path.basename(fc)))
-                                arcpy.mapping.AddLayerToGroup(data_frame, group_layer, l.getOutput(0))
-                            arcpy.ResetEnvironments()
-                            group_layer.saveACopy(os.path.join(layer_folder, '{0}.layer.lyr'.format(id)))
-                        else:
-                            skipped +=1
-                            status_writer.send_status(_('Invalid input type: {0}').format(dsc.name))
-                            skipped_reasons[name] = _('Invalid input type: {0}').format(dsc.dataType)
-                            continue
-                    except arcpy.ExecuteError:
-                        errors += 1
-                        status_writer.send_status(arcpy.GetMessages(2))
-                        errors_reasons[name] = arcpy.GetMessages(2)
-                        continue
-                else:
-                    lyr = [os.path.join(layer_folder, '{0}.layer.lyr'.format(id))]
+                lyr = os.path.join(layer_folder, '{0}.layer.lyr'.format(id))
             created += 1
+
             # Update the index.
             if lyr:
                 try:
-                    update_index(path, lyr[0], id, name, location)
+                    update_index(path, lyr, id, name, location)
                 except (IndexError, ImportError) as ex:
                     status_writer.send_state(status.STAT_FAILED, ex)
                 processed_count += 1
