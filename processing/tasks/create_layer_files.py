@@ -14,6 +14,7 @@
 # limitations under the License.
 import os
 import sys
+import json
 import shutil
 import requests
 import arcpy
@@ -30,6 +31,13 @@ arcpy.env.overwriteOutput = True
 mxd_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'supportfiles', 'GroupLayerTemplate.mxd')
 
 
+class ObjectEncoder(json.JSONEncoder):
+    """Support non-native Python types for JSON serialization."""
+    def default(self, obj):
+        if isinstance(obj, (list, dict, str, unicode, int, float, bool, type(None))):
+            return json.JSONEncoder.default(self, obj)
+
+
 def update_index(file_location, layer_file, item_id, name, location):
     """Update the index by re-indexng an item."""
     import zmq
@@ -37,7 +45,7 @@ def update_index(file_location, layer_file, item_id, name, location):
     zmq_socket = zmq.Context.instance().socket(zmq.PUSH)
     zmq_socket.connect(indexer)
     entry = {"action": "UPDATE", "id": item_id, "location": location, "entry": {"fields": {"path_to_lyr": layer_file, "name": name}}}
-    zmq_socket.send_json(entry)
+    zmq_socket.send_json(entry, cls=ObjectEncoder)
 
 
 def execute(request):
