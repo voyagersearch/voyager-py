@@ -28,10 +28,15 @@ for module in os.listdir(os.path.dirname(__file__)):
 dll_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'arch', 'win32_x86'))
 gdal_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'gdal'))
 ogr2ogr = os.path.join(dll_path, 'ogr2ogr.exe')
-if os.environ['PATH'].endswith(';'):
-    os.environ['PATH'] += dll_path
-else:
-    os.environ['PATH'] += os.pathsep + dll_path
+
+try:
+    if os.environ['PATH'].endswith(';'):
+        os.environ['PATH'] += dll_path
+    else:
+        os.environ['PATH'] += os.pathsep + dll_path
+except KeyError:
+    os.environ['PATH'] = dll_path
+
 os.environ['GDAL_DATA'] = gdal_path
 
 egg_path = os.path.join(dll_path, 'py')
