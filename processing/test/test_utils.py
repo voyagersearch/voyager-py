@@ -24,7 +24,7 @@ class TestTaskUtils(unittest.TestCase):
         self.qi = task_utils.QueryIndex(self.parameters[self.response_index])
         self.fq = self.qi.get_fq()
         self.query += self.fq
-        self.service_layer = task_utils.ServiceLayer("https://sampleserver6.arcgisonline.com/arcgis/rest/services/SampleWorldCities/MapServer/0")
+        self.service_layer = task_utils.ServiceLayer("http://sampleserver1.arcgisonline.com/ArcGIS/rest/services/PublicSafety/PublicSafetyOperationalLayers/MapServer/5")
 
 
     @classmethod
@@ -84,7 +84,7 @@ class TestTaskUtils(unittest.TestCase):
         """Test get the service layer objectids"""
         ids = self.service_layer.object_ids
         id_count = sum([len(group) for group in ids])
-        expected_count = 2300
+        expected_count = 100
         self.assertEqual(expected_count, id_count)
 
     def test_service_layer_oid_field_name(self):
