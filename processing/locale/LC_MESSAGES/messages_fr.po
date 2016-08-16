@@ -247,6 +247,11 @@ msgstr "Trames d'entrée doivent avoir le même nombre de bandes"
 msgid "Target workspace does not exist"
 msgstr "N'existe pas espace de travail cible"
 
+#: mosiac_to_workspace.py:83
+#, python-format
+msgid "Output dataset already exists"
+msgstr "ensemble de données de sortie existe déjà"
+
 #: mosaic_to_workspace.py:55
 #, python-format
 msgid "Target workspace must be a geodatabase"

@@ -79,6 +79,9 @@ def execute(request):
         if not os.path.splitext(target_workspace)[1] in ('.gdb', '.mdb', '.sde'):
             status_writer.send_state(status.STAT_FAILED, _('Target workspace must be a geodatabase'))
             return
+        if arcpy.Exists(os.path.join(target_workspace, output_name)):
+            status_writer.send_state(status.STAT_FAILED, _('Output dataset already exists.'))
+            return
 
     task_folder = request['folder']
     if not os.path.exists(task_folder):
@@ -173,8 +176,8 @@ def execute(request):
             layer_object = arcpy.mapping.Layer('mosaic_layer')
             task_utils.make_thumbnail(layer_object, os.path.join(request['folder'], '_thumb.png'))
         except arcpy.ExecuteError:
-            status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
-            return
+            skipped += 1
+            skipped_reasons['All Items'] = arcpy.GetMessages(2)
     else:
         try:
             if len(bands) > 1:
@@ -208,8 +211,8 @@ def execute(request):
             layer_object = arcpy.mapping.Layer('mosaic_layer')
             task_utils.make_thumbnail(layer_object, os.path.join(request['folder'], '_thumb.png'))
         except arcpy.ExecuteError:
-            status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
-            return
+            skipped += 1
+            skipped_reasons['All Items'] = arcpy.GetMessages(2)
 
     # Update state if necessary.
     if skipped > 0:
