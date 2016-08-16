@@ -18,20 +18,24 @@ import glob
 import platform
 
 
+def append_or_set_path(path):
+  try:
+    p = os.environ['PATH']
+    if len(p) > 0 and not p.endswith(os.pathsep):
+        p += os.pathsep 
+    p += path
+    os.environ['PATH'] = p
+  except KeyError:
+    os.environ['PATH'] = path
+
 # Add Python dependent libraries to the system paths.
 if platform.system() == 'Darwin':
     dll_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'arch', 'darwin_x86_64'))
-    os.environ['PATH'] += os.pathsep + dll_path
+    append_or_set_path(dll_path)
 else:
     dll_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'arch', 'win32_x86'))
-    dll_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'arch', 'win32_x86'))
-    try:
-        if os.environ['PATH'].endswith(';'):
-            os.environ['PATH'] += dll_path
-        else:
-            os.environ['PATH'] += os.pathsep + dll_path
-    except KeyError:
-        os.environ['PATH'] += os.pathsep + dll_path
+    append_or_set_path(dll_path)
+
 egg_path = os.path.join(dll_path, 'py')
 sys.path.append(egg_path)
 sys.path.append(os.path.dirname(dll_path))
