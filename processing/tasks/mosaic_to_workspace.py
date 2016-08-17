@@ -64,6 +64,8 @@ def execute(request):
     """Mosaics input raster datasets into a new raster dataset or mosaic dataset.
     :param request: json as a dict.
     """
+    import time
+    time.sleep(10)
     status_writer = status.Writer()
     parameters = request['params']
     target_workspace = task_utils.get_parameter_value(parameters, 'target_workspace', 'value')
@@ -114,7 +116,8 @@ def execute(request):
         # Query the index for results in groups of 25.
         query_index = task_utils.QueryIndex(parameters[response_index])
         fl = query_index.fl
-        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+        # query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+        query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
         fq = query_index.get_fq()
         if fq:
             groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
@@ -191,7 +194,7 @@ def execute(request):
                 tmp_mosaic = arcpy.MosaicToNewRaster_management(
                     raster_items,
                     target_workspace,
-                    'tempMosaic',
+                    'tmpMosaic',
                     out_coordinate_system,
                     pixel_type,
                     number_of_bands=bands.keys()[0]
