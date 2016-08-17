@@ -79,9 +79,6 @@ def execute(request):
         if not os.path.splitext(target_workspace)[1] in ('.gdb', '.mdb', '.sde'):
             status_writer.send_state(status.STAT_FAILED, _('Target workspace must be a geodatabase'))
             return
-        if arcpy.Exists(os.path.join(target_workspace, output_name)):
-            status_writer.send_state(status.STAT_FAILED, _('Output dataset already exists.'))
-            return
 
     task_folder = request['folder']
     if not os.path.exists(task_folder):
@@ -158,6 +155,10 @@ def execute(request):
         output_name = arcpy.ValidateTableName(output_name, target_workspace)
     else:
         output_name = '{0}.{1}'.format(arcpy.ValidateTableName(output_name, target_workspace), output_raster_format.lower())
+
+    if arcpy.Exists(os.path.join(target_workspace, output_name)):
+        status_writer.send_state(status.STAT_FAILED, _('Output dataset already exists.'))
+        return
 
     if output_raster_format == 'MosaicDataset':
         try:
