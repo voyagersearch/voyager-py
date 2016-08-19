@@ -79,6 +79,7 @@ def execute(request):
         new_workspace = dsc.catalogPath
         wks_type = get_workspace_type(new_workspace)
     elif dsc.dataType == 'Folder':
+        dsc = arcpy.Describe(new_data_source)
         new_workspace = dsc.catalogPath
         if new_dataset.endswith('.shp'):
             wks_type = 'SHAPEFILE_WORKSPACE'
