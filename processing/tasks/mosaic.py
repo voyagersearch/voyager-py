@@ -148,7 +148,8 @@ def execute(request):
     if output_raster_format in ('FileGDB', 'GRID', 'MosaicDataset'):
         output_name = arcpy.ValidateTableName('mosaic', out_workspace)
     else:
-        output_name = '{0}.{1}'.format(arcpy.ValidateTableName('mosaic', out_workspace), output_raster_format.lower())
+        output_name = '{0}.{1}'.format(arcpy.ValidateTableName('mosaic', out_workspace)[:9], output_raster_format.lower())
+        status_writer.send_status(output_name)
 
     if output_raster_format == 'MosaicDataset':
         try:
