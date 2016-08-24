@@ -592,7 +592,9 @@ def get_data_frame_name(path):
         match = re.search('[[0-9]]', map_frame_name)
         if match:
             map_frame_name = map_frame_name.replace(map_frame_name[match.start()-1:match.end()], '').strip()
-    return map_frame_name
+        if '\\' in map_frame_name:
+            map_frame_name = os.path.dirname(map_frame_name)
+    return map_frame_name.strip()
 
 
 def from_wkt(wkt, sr):
