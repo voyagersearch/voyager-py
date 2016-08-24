@@ -2,12 +2,9 @@ import unittest
 import json
 import os
 import sys
-
-
-sys.path.append(os.getcwd())
-sys.path.append(os.path.dirname(os.getcwd()))
-sys.path.append(os.path.join(os.path.dirname(os.getcwd()), 'tasks'))
+sys.path.append('../')
 from tasks.utils import task_utils
+
 
 class TestTaskUtils(unittest.TestCase):
     """Test case for testing the processing task utility functions."""
@@ -70,9 +67,14 @@ class TestTaskUtils(unittest.TestCase):
         self.assertEqual(increment, 1000)
 
     def test_data_frame_name(self):
-        """Test getting a map docmment data frame name"""
+        """Test getting a map docmment data frame name without a layer name in the path"""
         expected_name = task_utils.get_data_frame_name(r"C:\GISData\mxds\USRivers.mxd | Layers").strip()
         self.assertEqual(expected_name, "Layers")
+
+    def test_data_frame_name_with_layer(self):
+        """Test getting a map docmment data frame name with a layer name in the path"""
+        name = task_utils.get_data_frame_name('C:\GISData\mxds\USRivers.mxd | Layers\Rivers')
+        self.assertEqual(name, 'Layers')
 
     def test_service_layer_wkid(self):
         """Test getting the service layer WKID"""
@@ -92,3 +94,34 @@ class TestTaskUtils(unittest.TestCase):
         oid_field_name = self.service_layer.oid_field_name
         expected_name = "OBJECTID"
         self.assertEqual(expected_name, oid_field_name)
+
+    def test_grouper(self):
+        """Test grouping a list into chunks"""
+        groups = task_utils.grouper(range(0, self.result_count), task_utils.CHUNK_SIZE, '')
+        self.assertEqual(len(list(groups)), 5)
+
+    def test_get_parameter_value(self):
+        """Test to get a tasks parameter value"""
+        param_value = task_utils.get_parameter_value(self.parameters, 'output_format')
+        self.assertEqual(param_value, 'SHP')
+
+    def test_get_geodatabase_path(self):
+        """Test get geodatabase path with no feature dataset"""
+        gdb_path = task_utils.get_geodatabase_path(r'c:\testdata\gdb1.gdb\tablename')
+        self.assertEqual(gdb_path, r'c:\testdata\gdb1.gdb')
+
+    def test_get_geodatabase_path_fds(self):
+        """Test get geodatabase path with a feature dataset"""
+        gdb_path = task_utils.get_geodatabase_path(r'c:\testdata\gdb1.gdb\fds\tablename')
+        self.assertEqual(gdb_path, r'c:\testdata\gdb1.gdb')
+
+    def test_get_unique_strings(self):
+        """Test get unique strings from a list of strings"""
+        tags = ['TEST', 'test', 'Test', 'TESTER', 'tester', 'Tester', 'VOYAGER']
+        unique_strings = task_utils.get_unique_strings(tags)
+        self.assertEqual(sorted(unique_strings), ['TEST', 'TESTER', 'VOYAGER'])
+
+    def test_dd_to_dms(self):
+        """Test converting decimal degrees to degrees minutes seconds"""
+        dms = task_utils.dd_to_dms(-56.553191)
+        self.assertEqual(dms, (56, 33, 11.49))
