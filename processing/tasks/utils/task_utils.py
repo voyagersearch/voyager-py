@@ -608,6 +608,7 @@ def from_wkt(wkt, sr):
     coordinates = wkt[wkt.find('(') + 2: wkt.find(')')].split(',')
     array = arcpy.Array()
     for p in coordinates:
+        p = p.replace('(', '')
         pt = p.strip().split(' ')
         array.add(arcpy.Point(float(pt[0]), float(pt[1])))
     poly = arcpy.Polygon(array, sr)
