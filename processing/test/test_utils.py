@@ -121,11 +121,11 @@ class TestTaskUtils(unittest.TestCase):
         unique_strings = task_utils.get_unique_strings(tags)
         self.assertEqual(sorted(unique_strings), ['TEST', 'TESTER', 'VOYAGER'])
 
-    def test_dd_to_dms(self):
-        """Test converting decimal degrees to degrees minutes seconds"""
-        import arcview
-        dms = task_utils.dd_to_dms(-56.553191)
-        self.assertEqual(dms, (56, 33, 11.49))
+    # def test_dd_to_dms(self):
+    #     """Test converting decimal degrees to degrees minutes seconds"""
+    #     import arcview
+    #     dms = task_utils.dd_to_dms(-56.553191)
+    #     self.assertEqual(dms, (56, 33, 11.49))
 
     # def test_from_wkt_to_polygon(self):
     #     """Test converting WKT to a polygon object"""
