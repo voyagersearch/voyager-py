@@ -137,18 +137,33 @@ def execute(request):
                     arcpy.mapping.AddLayer(data_frame, layer)
                     mxd.save()
                     create_service(request_folder, mxd, server_conn, service_name, folder_name)
+
+                elif data_type in ('CadDrawingDataset', 'FeatureDataset'):
+                    arcpy.env.workspace = item
+                    mxd = arcpy.mapping.MapDocument(map_template)
+                    data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
+                    for fc in arcpy.ListFeatureClasses():
+                        dataset_name = os.path.splitext(os.path.basename(item))[0]
+                        l = arcpy.MakeFeatureLayer_management(fc, '{0}_{1}'.format(dataset_name, os.path.basename(fc)))
+                        arcpy.mapping.AddLayer(data_frame, l.getOutput(0))
+                    mxd.save()
+                    arcpy.ResetEnvironments()
+                    create_service(request_folder, mxd, server_conn, service_name, folder_name)
                 published += 1
-        except task_utils.AnalyzeServiceException as ase:
-            status_writer.send_state(status.STAT_FAILED, _(ase))
-            errors_reasons[item] = repr(ase)
+        except task_utils.AnalyzeServiceException as ex:
             errors += 1
-        except arcpy.ExecuteError as ee:
-            status_writer.send_state(status.STAT_FAILED, _(ee))
-            errors_reasons[item] = repr(ee)
-            errors += 1
-        except Exception as ex:
-            status_writer.send_state(status.STAT_FAILED, _(ex))
             errors_reasons[item] = repr(ex)
+            status_writer.send_state(status.STAT_FAILED)
+        except arcpy.ExecuteError as ex:
             errors += 1
+            errors_reasons[item] = repr(ex)
+            status_writer.send_state(status.STAT_FAILED)
+        except Exception as ex:
+            errors += 1
+            errors_reasons[item] = repr(ex)
+            status_writer.send_state(status.STAT_FAILED)
         finally:
+            if errors:
+                errors_reasons[item] = repr(ex)
+                status_writer.send_status(_('FAIL: {0}').format(errors_reasons[item]))
             task_utils.report(os.path.join(request['folder'], '__report.json'), published, 0, errors, errors_reasons)
