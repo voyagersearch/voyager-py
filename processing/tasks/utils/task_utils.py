@@ -594,8 +594,10 @@ def get_data_frame_name(path):
             map_frame_name = map_frame_name.replace(map_frame_name[match.start()-1:match.end()], '').strip()
         if '\\' in map_frame_name:
             map_frame_name = os.path.dirname(map_frame_name)
-    return map_frame_name.strip()
-
+    if map_frame_name:
+        return map_frame_name.strip()
+    else:
+        return map_frame_name
 
 def from_wkt(wkt, sr):
     """Creates a polygon geometry from a list of well-known text coordinates.
