@@ -22,7 +22,7 @@
         "id",
         "name",
         "path",
-        "path[absolute]",
+        "[absolute]",
         "location:[localize]",
         "format",
         "[geo]"
