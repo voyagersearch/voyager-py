@@ -3,7 +3,7 @@ import sys
 import platform
 import glob
 
-__all__ = ['base_job', 'esri_worker', 'gdal_worker', 'mongodb_worker',
+__all__ = ['base_job', 'esri_worker', 'dynamodb_worker', 'gdal_worker', 'mongodb_worker',
            'sql_worker', 'oracle_worker', 'mysql_worker']
 
 # Add dependent libraries to the system paths.

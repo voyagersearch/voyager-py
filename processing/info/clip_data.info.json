@@ -2,6 +2,7 @@
   "name": "clip_data",
   "runner": "python",
   "categories": ["Extracting Data"],
+  "constraints": [{"format_category": "GIS"}],
   "params": [
     {
       "type": "VoyagerResults",
@@ -32,6 +33,11 @@
     {
       "type": "CheckBox",
       "name": "create_mxd"
+    },
+    {
+      "type": "String",
+      "name": "output_file_name",
+      "value": "clip_results"
     }
   ],
   "display": {
@@ -55,6 +61,10 @@
         "create_mxd": {
           "display": "Create Map Document",
           "description": "Add clip results to a new map document (.mxd)"
+        },
+        "output_file_name": {
+          "display": "Output File Name",
+          "description": "Name of the output zip file containing the clip results"
         }
       }
     },

@@ -18,6 +18,7 @@ import glob
 import collections
 import shutil
 import urllib2
+import requests
 from utils import status
 from utils import task_utils
 
@@ -63,6 +64,11 @@ def execute(request):
     except KeyError:
         pass
 
+    # Get the output file name.
+    output_file_name = task_utils.get_parameter_value(parameters, 'output_file_name', 'value')
+    if not output_file_name:
+        output_file_name = 'kml_results'
+
     result_count, response_index = task_utils.get_result_count(parameters)
     # Query the index for results in groups of 25.
     query_index = task_utils.QueryIndex(parameters[response_index])
@@ -79,15 +85,16 @@ def execute(request):
 
     # Begin processing
     status_writer.send_percent(0.0, _('Starting to process...'), 'convert_to_kml')
+    headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     for group in groups:
         if fq:
-            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
         elif 'ids' in parameters[response_index]:
-            results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
         else:
-            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
 
-        docs = eval(results.read().replace('false', 'False').replace('true', 'True').replace('null', 'None'))['response']['docs']
+        docs = results.json()['response']['docs']
         input_items = task_utils.get_input_items(docs)
         if not input_items:
             input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
@@ -115,7 +122,7 @@ def execute(request):
     # Zip up kmz files if more than one.
     if converted > 1:
         status_writer.send_status("Converted: {}".format(converted))
-        zip_file = task_utils.zip_data(out_workspace, 'output.zip')
+        zip_file = task_utils.zip_data(out_workspace, '{0}.zip'.format(output_file_name))
         shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
         shutil.copy2(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', '_thumb.png'), request['folder'])
     elif converted == 1:

@@ -15,7 +15,7 @@
 import os
 import sys
 import collections
-import urllib2
+import requests
 from utils import status
 from utils import task_utils
 
@@ -121,15 +121,16 @@ def execute(request):
         else:
             groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
 
+        headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
         for group in groups:
             if fq:
-                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+                results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
             elif 'ids' in parameters[response_index]:
-                results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+                results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
             else:
-                results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+                results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
 
-            input_items = task_utils.get_input_items(eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs'])
+            input_items = task_utils.get_input_items(results.json()['response']['docs'])
             if not input_items:
                 input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
             raster_items, pixels, bands, skipped = get_items(input_items)
@@ -155,6 +156,10 @@ def execute(request):
     else:
         output_name = '{0}.{1}'.format(arcpy.ValidateTableName(output_name, target_workspace), output_raster_format.lower())
 
+    if arcpy.Exists(os.path.join(target_workspace, output_name)):
+        status_writer.send_state(status.STAT_FAILED, _('Output dataset already exists.'))
+        return
+
     if output_raster_format == 'MosaicDataset':
         try:
             status_writer.send_status(_('Generating {0}. Large input {1} will take longer to process.'.format('Mosaic', 'rasters')))
@@ -172,8 +177,8 @@ def execute(request):
             layer_object = arcpy.mapping.Layer('mosaic_layer')
             task_utils.make_thumbnail(layer_object, os.path.join(request['folder'], '_thumb.png'))
         except arcpy.ExecuteError:
-            status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
-            return
+            skipped += 1
+            skipped_reasons['All Items'] = arcpy.GetMessages(2)
     else:
         try:
             if len(bands) > 1:
@@ -187,7 +192,7 @@ def execute(request):
                 tmp_mosaic = arcpy.MosaicToNewRaster_management(
                     raster_items,
                     target_workspace,
-                    'tempMosaic',
+                    'tmpMosaic',
                     out_coordinate_system,
                     pixel_type,
                     number_of_bands=bands.keys()[0]
@@ -207,8 +212,8 @@ def execute(request):
             layer_object = arcpy.mapping.Layer('mosaic_layer')
             task_utils.make_thumbnail(layer_object, os.path.join(request['folder'], '_thumb.png'))
         except arcpy.ExecuteError:
-            status_writer.send_state(status.STAT_FAILED, arcpy.GetMessages(2))
-            return
+            skipped += 1
+            skipped_reasons['All Items'] = arcpy.GetMessages(2)
 
     # Update state if necessary.
     if skipped > 0:

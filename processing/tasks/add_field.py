@@ -14,7 +14,7 @@
 # limitations under the License.
 import os
 import sys
-import shutil
+import requests
 import urllib2
 import arcpy
 from utils import status
@@ -26,6 +26,7 @@ result_count = 0
 processed_count = 0.
 skipped_reasons = {}
 errors_reasons = {}
+warnings_reasons = {}
 arcpy.env.overwriteOutput = True
 
 
@@ -45,6 +46,7 @@ def execute(request):
     created = 0
     skipped = 0
     errors = 0
+    warnings = 0
     global result_count
     parameters = request['params']
 
@@ -57,11 +59,11 @@ def execute(request):
     field_value = task_utils.get_parameter_value(parameters, 'field_value', 'value')
 
     # Query the index for results in groups of 25.
+    headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     result_count, response_index = task_utils.get_result_count(parameters)
     query_index = task_utils.QueryIndex(parameters[response_index])
     fl = query_index.fl + ',links'
     query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
-    # query = '{0}{1}{2}'.format("http://localhost:8888/solr/v0", '/select?&wt=json', fl)
     fq = query_index.get_fq()
     if fq:
         groups = task_utils.grouper(range(0, result_count), task_utils.CHUNK_SIZE, '')
@@ -75,13 +77,13 @@ def execute(request):
     status_writer.send_percent(0.0, _('Starting to process...'), 'add_field')
     for group in groups:
         if fq:
-            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
         elif 'ids' in parameters[response_index]:
-             results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
         else:
-            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
 
-        docs = eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs']
+        docs = results.json()['response']['docs']
         input_items = []
         for doc in docs:
             if 'path' in doc:
@@ -95,11 +97,12 @@ def execute(request):
         created += result[0]
         errors += result[1]
         skipped += result[2]
+        warnings += result[3]
 
     # Update state if necessary.
     if errors > 0 or skipped > 0:
         status_writer.send_state(status.STAT_WARNING, _('{0} results could not be processed').format(skipped + errors))
-    task_utils.report(os.path.join(request['folder'], '__report.json'), created, skipped, errors, errors_reasons, skipped_reasons)
+    task_utils.report(os.path.join(request['folder'], '__report.json'), created, skipped, errors, errors_reasons, skipped_reasons, warnings, warnings_reasons)
 
 
 def add_field(input_items, field_name, field_type, field_value):
@@ -107,6 +110,7 @@ def add_field(input_items, field_name, field_type, field_value):
     updated = 0
     skipped = 0
     errors = 0
+    warnings = 0
     global processed_count
 
     for input_item in input_items:
@@ -117,7 +121,9 @@ def add_field(input_items, field_name, field_type, field_value):
                 id = input_item[2]
             dsc = arcpy.Describe(path)
             try:
-                if dsc.dataType in ('FeatureClass', 'Shapefile', 'ShapeFile', 'Table'):
+                if dsc.dataType in ('FeatureClass', 'Shapefile', 'ShapeFile', 'Table', 'RasterDataset'):
+                    if dsc.dataType == 'RasterDataset' and not dsc.isInteger:
+                        raise arcpy.ExecuteError(_('Invalid input type. Pixel type must be Integer.'))
                     field_name = arcpy.ValidateFieldName(field_name, task_utils.get_geodatabase_path(path))
                     arcpy.AddField_management(path, field_name, field_type)
                     try:
@@ -130,14 +136,18 @@ def add_field(input_items, field_name, field_type, field_value):
                     if file_ext in ('.sdc', '.dxf', '.dwg', '.dgn'):
                         status_writer.send_status(_('Format is not editable') + dsc.name)
                         skipped_reasons[dsc.name] = _('Format is not editable')
+                        warnings += 1
+                        warnings_reasons[dsc.name] = _('Invalid input type: {0}').format(dsc.dataType)
                     else:
                         status_writer.send_status(_('Invalid input type: {0}').format(dsc.name))
                         skipped_reasons[dsc.name] = _('Invalid input type: {0}').format(dsc.dataType)
+                        warnings += 1
+                        warnings_reasons[dsc.name] = _('Invalid input type: {0}').format(dsc.dataType)
                     continue
-            except arcpy.ExecuteError:
+            except arcpy.ExecuteError as ee:
                 errors += 1
-                status_writer.send_status(arcpy.GetMessages(2))
-                errors_reasons[dsc.name] = arcpy.GetMessages(2)
+                status_writer.send_status(ee.message)
+                errors_reasons[dsc.name] = ee.message
                 continue
             updated += 1
 
@@ -157,4 +167,4 @@ def add_field(input_items, field_name, field_type, field_value):
             errors_reasons[input_item] = repr(io_err)
             errors += 1
             pass
-    return updated, errors, skipped
+    return updated, errors, skipped, warnings

@@ -3,6 +3,9 @@
   "parent": "mosaic",
   "runner": "python",
   "categories": ["Managing Raster"],
+  "constraints": [
+    {"format_keyword": "Raster"}
+  ],
   "params": [
     {
       "type": "VoyagerResults",

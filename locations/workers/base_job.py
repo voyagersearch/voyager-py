@@ -60,8 +60,8 @@ class ObjectEncoder(json.JSONEncoder):
                     return None
             elif isinstance(obj, cx_Oracle.CLOB):
                 return str(obj)
-        except ImportError as ie:
-            return obj
+        except ImportError:
+            return
 
 
 class Job(object):
@@ -169,6 +169,7 @@ class Job(object):
                     long: 'fl_',
                     int: 'fl_',
                     float: 'fu_',
+                    decimal.Decimal: 'fu_',
                     datetime.datetime: 'fd_',
                     bson.objectid.ObjectId: 'fl_',
                     "Date": "fd_",
@@ -283,6 +284,22 @@ class Job(object):
             return False
 
     @property
+    def dynamodb_endpoint_url(self):
+        """The DynamoDB endpoint URL"""
+        try:
+            return self.job['location']['config']['dynamodb']['endpoint_url']
+        except KeyError:
+            return ''
+
+    @property
+    def dynamodb_region(self):
+        """The DynamoDB region."""
+        try:
+            return self.job['location']['config']['dynamodb']['region']
+        except KeyError:
+            return ''
+
+    @property
     def mongodb_client_info(self):
         """The mongoDB client connection string."""
         try:
@@ -353,6 +370,12 @@ class Job(object):
             import bson
             client = pymongo.MongoClient(self.mongodb_client_info)
             self.db_connection = client[self.mongodb_database]
+        elif 'dynamodb' in self.job['location']['config']:
+            import boto3
+            if self.dynamodb_endpoint_url:
+                self.dynamodb = boto3.resource('dynamodb', region_name=self.dynamodb_region, endpoint_url=self.dynamodb_endpoint_url)
+            else:
+                self.dynamodb = boto3.resource('dynamodb', region_name=self.dynamodb_region)
         else:
             self.drvr = self.sql_connection_info['connection']['driver']
             srvr = self.sql_connection_info['connection']['server']
@@ -592,7 +615,10 @@ class Job(object):
 
     def send_entry(self, entry):
         """Sends an entry to be indexed using pyzmq."""
-        self.zmq_socket.send_json(entry, cls=ObjectEncoder)
+        try:
+            self.zmq_socket.send_json(entry, cls=ObjectEncoder)
+        except Exception as ex:
+            print(ex)
 
     def search_fields(self, dataset):
         """Returns a valid list of existing fields for the search cursor."""

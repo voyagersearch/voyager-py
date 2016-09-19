@@ -155,6 +155,10 @@ def export_to_csv(jobs, file_name, output_folder, fields):
             i = fields.index('location:[localize]')
             fields.remove('location:[localize]')
             fields.insert(i, 'location')
+        if 'path[absolute]' in fields:
+            i = fields.index('path[absolute]')
+            fields.remove('path[absolute]')
+            fields.insert(i, '[absolute]')
         writer = csv.DictWriter(csv_file, fieldnames=fields)
         if write_keys:
             writer.writeheader()
@@ -265,11 +269,21 @@ def execute(request):
     fields = task_utils.get_parameter_value(request['params'], 'fields', 'value')
     out_format = task_utils.get_parameter_value(request['params'], 'output_format', 'value')
 
+    if not 'path' in fields and 'path:[absolute]' in fields:
+        fields.append('path')
+
+    if 'geo' in fields:
+        i_geo = fields.index('geo')
+        fields.remove('geo')
+        fields.insert(i_geo, '[geo]')
+
+
     # Create the temporary workspace.
     task_folder = os.path.join(request['folder'], 'temp')
     if not os.path.exists(task_folder):
         os.makedirs(task_folder)
 
+    headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     num_results, response_index = task_utils.get_result_count(request['params'])
     query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
     if 'query' in request['params'][response_index]:
@@ -309,7 +323,8 @@ def execute(request):
         query += '&rows={0}&start={1}'
         exported_cnt = 0.
         for i in xrange(0, num_results, chunk_size):
-            for n in urllib2.urlopen(query.format(chunk_size, i)):
+            req = urllib2.Request(query.replace('{0}', str(chunk_size)).replace('{1}', str(i)), headers=headers)
+            for n in urllib2.urlopen(req):
                 jobs = eval(n.replace('null', '"null"'))['response']['docs']
                 if out_format == 'CSV':
                     export_to_csv(jobs, file_name, task_folder, fields)
@@ -319,10 +334,10 @@ def execute(request):
                     export_to_shp(jobs, file_name, task_folder)
                 exported_cnt += chunk_size
                 if exported_cnt > num_results:
-                    status_writer.send_percent(100, '{0}: {1:%}'.format("exported", 1.0), 'export_results')
+                    status_writer.send_percent(100, 'exported: 100%', 'export_results')
                 else:
-                    status_writer.send_percent(exported_cnt / num_results,
-                                               '{0}: {1:%}'.format("exported", exported_cnt / num_results), 'export_results')
+                    percent_done = exported_cnt / num_results
+                    status_writer.send_percent(percent_done, '{0}: {1:.0f}%'.format("exported", percent_done * 100), 'export_results')
     else:
         # Voyager Search Portal/Cart UI
         ids = []
@@ -334,7 +349,8 @@ def execute(request):
         i = 0
         for group in groups:
             i += len([v for v in group if not v == ''])
-            results = urllib2.urlopen(query + '&ids={0}'.format(','.join(group)))
+            req = urllib2.Request(query + '&ids={0}'.format(','.join(group)), headers=headers)
+            results = urllib2.urlopen(req)
             jobs = eval(results.read())['response']['docs']
             if out_format == 'CSV':
                 export_to_csv(jobs, file_name, task_folder, fields)
@@ -342,8 +358,8 @@ def execute(request):
                 export_to_xml(jobs, file_name, task_folder)
             elif out_format == 'SHP':
                 export_to_shp(jobs, file_name, task_folder)
-            status_writer.send_percent(float(i) / num_results,
-                                       '{0}: {1:%}'.format("exported", float(i) / num_results), 'export_features')
+            percent_done = float(i) / num_results
+            status_writer.send_percent(percent_done, '{0}: {1:.0f}%'.format("exported", percent_done * 100), 'export_results')
 
     # Zip up outputs.
     if exported_count == 0:

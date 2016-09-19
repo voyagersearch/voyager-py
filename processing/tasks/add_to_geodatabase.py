@@ -16,7 +16,7 @@ import os
 import sys
 import collections
 import tempfile
-import urllib2
+import requests
 import arcpy
 from utils import status
 from utils import task_utils
@@ -31,6 +31,7 @@ layer_name = ""
 existing_fields = []
 new_fields = []
 field_values = []
+# arcpy.env.overwriteOutput = True
 
 
 def is_feature_dataset(workspace):
@@ -126,7 +127,7 @@ def add_to_geodatabase(input_items, out_gdb, is_fds):
                                 else:
                                     arcpy.env.outputCoordinateSystem = 4326
                                     arcpy.CreateFeatureclass_management(out_gdb, os.path.basename(name), geom.type.upper())
-                                layer_name = arcpy.MakeFeatureLayer_management(name, 'flayer')
+                                layer_name = arcpy.MakeFeatureLayer_management(name, 'flayer_{0}'.format(os.path.basename(name)))
                                 existing_fields = [f.name for f in arcpy.ListFields(layer_name)]
                                 new_fields = []
                                 field_values = []
@@ -143,7 +144,7 @@ def add_to_geodatabase(input_items, out_gdb, is_fds):
                                     else:
                                         arcpy.env.outputCoordinateSystem = 4326
                                         arcpy.CreateFeatureclass_management(out_gdb, os.path.basename(name), geom.type.upper())
-                                    layer_name = arcpy.MakeFeatureLayer_management(name, 'flayer')
+                                    layer_name = arcpy.MakeFeatureLayer_management(name, 'flayer_{0}'.format(os.path.basename(name)))
                                     existing_fields = [f.name for f in arcpy.ListFields(layer_name)]
                                     new_fields = []
                                     field_values = []
@@ -385,6 +386,7 @@ def execute(request):
     status_writer.send_status(_('Setting the output workspace...'))
     arcpy.env.workspace = out_gdb
 
+    headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     result_count, response_index = task_utils.get_result_count(parameters)
     # Query the index for results in groups of 25.
     query_index = task_utils.QueryIndex(parameters[response_index])
@@ -403,13 +405,13 @@ def execute(request):
     status_writer.send_percent(0.0, _('Starting to process...'), 'add_to_geodatabase')
     for group in groups:
         if fq:
-            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
         elif 'ids' in parameters[response_index]:
-            results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
         else:
-            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
 
-        docs = eval(results.read().replace('false', 'False').replace('true', 'True').replace('null', 'None'))['response']['docs']
+        docs = results.json()['response']['docs']
         input_items = task_utils.get_input_items(docs)
         if not input_items:
             input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])

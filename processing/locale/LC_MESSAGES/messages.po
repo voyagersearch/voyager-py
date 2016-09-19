@@ -250,6 +250,11 @@ msgstr ""
 msgid "Target workspace does not exist"
 msgstr ""
 
+#: mosiac_to_workspace.py:83
+#, python-format
+msgid "Output dataset already exists"
+msgstr ""
+
 #: mosaic_to_workspace.py:55
 #, python-format
 msgid "Target workspace must be a geodatabase"

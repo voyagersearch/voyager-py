@@ -18,14 +18,24 @@ import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), 'steps'))
 import steps
+import inspect
 
 
-def run_pipeline_step(pipeline_name, entry_file):
+def run_pipeline_step(pipeline_name, entry_file, *args):
     """Main function for running pipeline steps."""
     with open(entry_file) as data_file:
         try:
-            __import__(pipeline_name)
-            getattr(sys.modules[pipeline_name], "run")(entry_file)
+            mod = __import__(pipeline_name)
+            run = getattr(mod, "run")
+
+            if len(args) > 0:
+                # inspect the function, if it doesn't declare varargs don't 
+                # pass any through
+                argspec = inspect.getargspec(run)
+                if argspec.varargs is None:
+                    args = []
+
+            run(entry_file, *args)
         except (ImportError, ValueError) as ex:
             sys.stderr.write(repr(ex))
             sys.exit(1)
@@ -44,5 +54,5 @@ if __name__ == '__main__':
         sys.stdout.write(json.dumps(pipeline_info, indent=2))
         sys.stdout.flush()
     else:
-        run_pipeline_step(sys.argv[1], sys.argv[2])
+        run_pipeline_step(sys.argv[1], sys.argv[2], *sys.argv[3:])
     sys.exit(0)

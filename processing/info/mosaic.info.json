@@ -2,6 +2,9 @@
   "name": "mosaic",
   "runner": "python",
   "categories": ["Managing Raster"],
+  "constraints": [
+    {"format_keyword": "Raster"}
+  ],
   "params": [
     {
       "type": "VoyagerResults",
@@ -64,6 +67,11 @@
       "name": "processing_extent",
       "extentParam": true,
       "initWithResultsExtent": true
+    },
+    {
+      "type": "String",
+      "name": "output_file_name",
+      "value": "mosaic_results"
     }
   ],
   "display":
@@ -94,7 +102,11 @@
     		"compression_quality": {
   		    "display": "Compression Quality",
   		    "description": "When JPEG, JPEG_2000, or JPEG_YCbCr, compression quality (1-100) can be chosen."
-    		}
+    		},
+            "output_file_name": {
+            "display": "Output File Name",
+            "description": "Name of the output zip file containing the mosaic results"
+            }
 	    }
 	  }
   }

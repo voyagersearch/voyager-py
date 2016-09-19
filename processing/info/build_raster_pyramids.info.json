@@ -2,6 +2,9 @@
   "name": "build_raster_pyramids",
   "runner": "python",
   "categories": ["Managing Raster"],
+  "constraints": [
+    {"format_keyword": "Raster"}
+  ],
   "params": [
     {
       "type": "VoyagerResults",

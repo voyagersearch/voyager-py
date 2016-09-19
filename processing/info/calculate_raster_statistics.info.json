@@ -2,6 +2,9 @@
   "name": "calculate_raster_statistics",
   "runner": "python",
   "categories": ["Managing Raster"],
+  "constraints": [
+    {"format_keyword": "Raster"}
+  ],
   "params": [
     {
       "type": "Geometry",

@@ -2,6 +2,7 @@
   "name": "clip_data_by_features",
   "runner": "python",
   "categories": ["Extracting Data"],
+  "constraints": [{"format_category": "GIS"}],
   "params": [
     {
       "type": "VoyagerResults",
@@ -13,15 +14,16 @@
 	  "name": "clip_features",
       "required": true,
 	  "query": {
-	      "fl":"id,name,path:[absolute]",
+	      "fl":"id,thumb:[thumbURL],name,path:[absolute]",
 	      "indent":"true",
 	      "facet":true,
 	      "facet.field":["format", "location"],
 	      "fq":["geometry_type:Polygon"]
       },
 	  "fields": [
-        "name",
-	    "path"
+		"thumb",
+        	"name",
+		"path"
 	  ]
 	},
     {
@@ -43,6 +45,11 @@
     {
       "type": "CheckBox",
       "name": "create_mxd"
+    },
+    {
+      "type": "String",
+      "name": "output_file_name",
+      "value": "clip_results"
     }
   ],
   "display": {
@@ -66,6 +73,10 @@
         "create_mxd": {
           "display": "Create Map Document",
           "description": "Add clip results to a new map document (.mxd)"
+        },
+        "output_file_name": {
+          "display": "Output File Name",
+          "description": "Name of the output zip file containing the clip results"
         }
       }
     }

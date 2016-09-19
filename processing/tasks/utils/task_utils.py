@@ -65,7 +65,7 @@ class QueryIndex(object):
 
     @property
     def fl(self):
-        return '&fl=id,name:[name],title,format,path:[absolute],f*,[lyrFile],[lyrURL],[downloadURL],[lyrURL],[geo],location'
+        return '&fl=id,name:[name],title,format,path:[absolute],f*,[lyrFile],[lyrURL],[downloadURL],[lyrURL],[geo],location,component_files'
 
     def get_fq(self):
         """Return the query request string if the results are from a
@@ -188,9 +188,10 @@ def create_unique_name(name, gdb):
     return unique_name
 
 
-def create_lpk(data_location, additional_files=None):
+def create_lpk(data_location, lpk_name, additional_files=None):
     """Creates a layer package (.lpk) for all datasets in the data location.
     :param data_location: location of data to packaged
+    :param lpk_name: name of the layer package
     :param additional_files: list of additional files to include in the package
     """
     import arcpy
@@ -207,7 +208,7 @@ def create_lpk(data_location, additional_files=None):
 
     # Package all layer files.
     layer_files = glob.glob(os.path.join(data_location, '*.lyr'))
-    arcpy.PackageLayer_management(layer_files, os.path.join(os.path.dirname(data_location), 'output.lpk'),
+    arcpy.PackageLayer_management(layer_files, os.path.join(os.path.dirname(data_location), '{0}.lpk'.format(lpk_name)),
                                   'PRESERVE', version='10', additional_files=additional_files)
     make_thumbnail(layer_files[0], os.path.join(os.path.dirname(data_location), '_thumb.png'))
 
@@ -267,7 +268,7 @@ def create_mxd(data_location, map_template, output_name):
             # Add all layer files to the mxd template.
             arcpy.mapping.AddLayer(df, arcpy.mapping.Layer(ds))
     mxd.save()
-    return  mxd.filePath
+    return mxd.filePath
 
 
 def convert_to_kml(geodatabase):
@@ -547,7 +548,7 @@ def get_data_path(item):
     """
     try:
         # If input is a Geodatabase feature class.
-        if [any(ext) for ext in ('.sde', '.gdb', '.mdb') if ext in item['path']]:
+        if [any(ext) for ext in ('.sde', '.gdb', '.mdb', '.lyr') if ext in item['path']]:
             import arcpy
             if arcpy.Exists(item['path']):
                 return item['path']
@@ -591,8 +592,12 @@ def get_data_frame_name(path):
         match = re.search('[[0-9]]', map_frame_name)
         if match:
             map_frame_name = map_frame_name.replace(map_frame_name[match.start()-1:match.end()], '').strip()
-    return map_frame_name
-
+        if '\\' in map_frame_name:
+            map_frame_name = os.path.dirname(map_frame_name)
+    if map_frame_name:
+        return map_frame_name.strip()
+    else:
+        return map_frame_name
 
 def from_wkt(wkt, sr):
     """Creates a polygon geometry from a list of well-known text coordinates.
@@ -605,6 +610,7 @@ def from_wkt(wkt, sr):
     coordinates = wkt[wkt.find('(') + 2: wkt.find(')')].split(',')
     array = arcpy.Array()
     for p in coordinates:
+        p = p.replace('(', '')
         pt = p.strip().split(' ')
         array.add(arcpy.Point(float(pt[0]), float(pt[1])))
     poly = arcpy.Polygon(array, sr)
@@ -624,6 +630,16 @@ def get_spatial_reference(factory_code):
         sr = arcpy.SpatialReference(get_projection_file(factory_code))
     return sr
 
+
+def get_security_token(owner_info):
+    """Get the security token value.
+    :param owner_info: dictionary containing token value
+    :return: string
+    """
+    if 'token' in owner_info:
+        return owner_info['token']
+    else:
+        return ''
 
 def get_projection_file(factory_code):
     """Returns a projection file using the factory code as a lookup.
@@ -678,7 +694,7 @@ def make_thumbnail(layer_or_mxd, output_png_file, use_data_frame=True):
         arcpy.mapping.ExportToPNG(mxd, output_png_file, '', 150, 150, 10)
 
 
-def report(report_file, num_processed=0, num_skipped=0, num_errors=0, errors_details=None, skipped_details=None):
+def report(report_file, num_processed=0, num_skipped=0, num_errors=0, errors_details=None, skipped_details=None, num_warnings=0, warnings_details=None):
     """Create a markdown report of inputs processed or skipped.
     :param report_file: path of the .json file
     :param num_processed: number of items processed
@@ -688,8 +704,15 @@ def report(report_file, num_processed=0, num_skipped=0, num_errors=0, errors_det
     report_dict = {}
     summary_list = [{'Action': 'Processed', 'Count': num_processed},
                     {'Action': 'Skipped', 'Count': num_skipped},
-                    {'Action': 'Errors', 'Count': num_errors}]
+                    {'Action': 'Errors', 'Count': num_errors},
+                    {'Action': 'Warnings', 'Count': num_warnings}]
     report_dict['Summary'] = summary_list
+
+    if warnings_details:
+        warnings_list = []
+        for k, v in warnings_details.iteritems():
+            warnings_list.append({'Item': k, 'Reason': v})
+        report_dict['Warnings'] = warnings_list
 
     if skipped_details:
         skipped_list = []

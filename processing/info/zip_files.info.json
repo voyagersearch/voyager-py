@@ -2,6 +2,9 @@
   "name": "zip_files",
   "runner": "python",
   "categories": ["Extracting Data"],
+  "constraints": [
+    {"format_type": "File"}
+  ],
   "params": [
     {
       "type": "VoyagerResults",
@@ -11,6 +14,11 @@
     {
       "type": "CheckBox",
       "name": "flatten_results"
+    },
+    {
+      "type": "String",
+      "name": "output_file_name",
+      "value": "output_results"
     }
   ],
   "display":
@@ -22,11 +30,15 @@
       "helpURL": "https://voyagersearch.zendesk.com/entries/92846633-Zip-Files",
       "params":
       {
-    		"flatten_results":
-    		{
-    			"display": "Flatten Results",
-    			"description": "Place all items in the root folder"
-    		}
+        "flatten_results":
+        {
+          "display": "Flatten Results",
+          "description": "Place all items in the root folder"
+        },
+        "output_file_name": {
+          "display": "Output File Name",
+          "description": "Name of the output zip file"
+        }
       }
     }
   }

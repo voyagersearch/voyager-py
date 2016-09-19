@@ -4,6 +4,7 @@
   "categories": ["Managing Data and Files"],
   "security": ["_ADMIN"],
   "fields": "links",
+  "constraints": [{"format": "(application/vnd.esri.shapefile application/vnd.esri.gdb.personal.data application/vnd.esri.gdb.file.data)"}],
   "params": [
     {
       "type": "VoyagerResults",

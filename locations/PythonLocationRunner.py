@@ -17,6 +17,11 @@ import json
 import collections
 import workers
 
+modules = {'arcpy': 'esri_worker', 'cx_Oracle': 'oracle_worker',
+           'pyodbc': 'sql_worker', 'pyodbc': 'mysql_worker',
+           'boto3': 'dynamodb_worker', 'pymongo': 'mongodb_worker',
+           'ogr': 'gdal_worker'}
+
 
 if __name__ == '__main__':
     if sys.argv[1] == '--info':
@@ -27,8 +32,7 @@ if __name__ == '__main__':
             sys.stdout.write('{0}. Please contact Voyager Search support.'.format(ie.message))
             sys.exit(1)
 
-        for module, worker in {'arcpy': 'esri_worker', 'cx_Oracle': 'oracle_worker',
-                       'pyodbc': 'sql_worker', 'pyodbc':'mysql_worker', 'pymongo': 'mongodb_worker', 'ogr': 'gdal_worker'}.iteritems():
+        for module, worker in modules.items():
             try:
                 __import__(module)
                 worker_info['workers'].append({'name': worker, 'available': True})
@@ -46,6 +50,9 @@ if __name__ == '__main__':
         elif job.url:
             from workers import gdal_worker
             gdal_worker.run_job(job.job_file)
+        elif job.dynamodb_region:
+            from workers import dynamodb_worker
+            dynamodb_worker.run_job(job)
         elif job.mongodb_client_info:
             from workers import mongodb_worker
             mongodb_worker.run_job(job)

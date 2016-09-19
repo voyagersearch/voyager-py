@@ -16,7 +16,7 @@ import os
 import sys
 import collections
 import shutil
-import urllib2
+import requests
 import arcpy
 from utils import status
 from utils import task_utils
@@ -365,9 +365,12 @@ def execute(request):
     # Retrieve the coordinate system code.
     out_coordinate_system = int(task_utils.get_parameter_value(parameters, 'output_projection', 'code'))
 
-    # Retrieve the output format and create mxd parameter values.
+    # Retrieve the output format, create mxd parameter and output file name values.
     out_format = task_utils.get_parameter_value(parameters, 'output_format', 'value')
     create_mxd = task_utils.get_parameter_value(parameters, 'create_mxd', 'value')
+    output_file_name = task_utils.get_parameter_value(parameters, 'output_file_name', 'value')
+    if not output_file_name:
+        output_file_name = 'clip_results'
 
     # Create the temporary workspace if clip_feature_class:
     out_workspace = os.path.join(request['folder'], 'temp')
@@ -392,6 +395,7 @@ def execute(request):
     arcpy.env.workspace = out_workspace
 
     # Query the index for results in groups of 25.
+    headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     result_count, response_index = task_utils.get_result_count(parameters)
     query_index = task_utils.QueryIndex(parameters[response_index])
     fl = query_index.fl
@@ -409,13 +413,14 @@ def execute(request):
     status_writer.send_percent(0.0, _('Starting to process...'), 'clip_data')
     for group in groups:
         if fq:
-            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
         elif 'ids' in parameters[response_index]:
-            results = urllib2.urlopen(query + '{0}&ids={1}'.format(fl, ','.join(group)))
+            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
         else:
-            results = urllib2.urlopen(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]))
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
 
-        docs = eval(results.read().replace('false', 'False').replace('true', 'True').replace('null', 'None'))['response']['docs']
+        # docs = eval(results.read().replace('false', 'False').replace('true', 'True').replace('null', 'None'))['response']['docs']
+        docs = results.json()['response']['docs']
         input_items = task_utils.get_input_items(docs)
         if not input_items:
             input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
@@ -450,10 +455,10 @@ def execute(request):
                 status_writer.send_status(_("Packaging results..."))
                 task_utils.create_mpk(out_workspace, mxd, files_to_package)
                 shutil.move(os.path.join(out_workspace, 'output.mpk'),
-                            os.path.join(os.path.dirname(out_workspace), 'output.mpk'))
+                            os.path.join(os.path.dirname(out_workspace), '{0}.mpk'.format(output_file_name)))
             elif out_format == 'LPK':
                 status_writer.send_status(_("Packaging results..."))
-                task_utils.create_lpk(out_workspace, files_to_package)
+                task_utils.create_lpk(out_workspace,output_file_name, files_to_package)
             elif out_format == 'KML':
                 task_utils.convert_to_kml(os.path.join(out_workspace, "output.gdb"))
                 arcpy.env.workspace = ''
@@ -461,13 +466,13 @@ def execute(request):
                     arcpy.Delete_management(os.path.join(out_workspace, "output.gdb"))
                 except arcpy.ExecuteError:
                     pass
-                zip_file = task_utils.zip_data(out_workspace, 'output.zip')
+                zip_file = task_utils.zip_data(out_workspace, '{0}.zip'.format(output_file_name))
                 shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
             else:
                 if create_mxd:
                     mxd_template = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'MapTemplate.mxd')
                     task_utils.create_mxd(out_workspace, mxd_template, 'output')
-                zip_file = task_utils.zip_data(out_workspace, 'output.zip')
+                zip_file = task_utils.zip_data(out_workspace, '{0}.zip'.format(output_file_name))
                 shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
         except arcpy.ExecuteError as ee:
             status_writer.send_state(status.STAT_FAILED, _(ee))
