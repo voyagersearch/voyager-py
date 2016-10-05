@@ -3,7 +3,7 @@
   "runner": "python",
   "categories": ["Extracting Data"],
   "fields": "[geo]",
-  "constraints": [{"format_category": "GIS"}],
+  "constraints": [{"format_type": "(Other File Database Layer)"}],
   "params": [
     {
       "type": "VoyagerResults",

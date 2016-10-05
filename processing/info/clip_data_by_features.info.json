@@ -2,7 +2,7 @@
   "name": "clip_data_by_features",
   "runner": "python",
   "categories": ["Extracting Data"],
-  "constraints": [{"format_category": "GIS"}],
+  "constraints": [{"format_category": "(GIS CAD)"}],
   "params": [
     {
       "type": "VoyagerResults",

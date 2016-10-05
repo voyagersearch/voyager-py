@@ -2,7 +2,7 @@
   "name": "publish_to_ags",
   "runner": "python",
   "categories": ["Publishing Services"],
-  "constraints": [{"format_category": "GIS"}],
+  "constraints": [{"format_category": "(GIS CAD)"}],
   "params": [
     {
       "type": "VoyagerResults",

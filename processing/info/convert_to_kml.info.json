@@ -2,7 +2,7 @@
   "name": "convert_to_kml",
   "runner": "python",
   "categories": ["Extracting Data"],
-  "constraints": [{"format_category": "GIS"}],
+  "constraints": [{"format_category": "(GIS CAD)"}],
   "params": [
     {
       "type": "Geometry",
