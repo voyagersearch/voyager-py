@@ -1,0 +1,43 @@
+{
+  "name": "create_snapshot",
+  "runner": "python",
+  "categories": ["Managing Data and Files"],
+  "security": ["_ADMIN"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "String",
+      "name": "snapshot_name",
+      "required": true,
+      "value": ""
+    },
+    {
+      "type": "FolderLocation",
+      "name": "data_folder",
+      "required": false
+    }
+  ],
+  "display":
+  {
+    "en":
+    {
+      "display": "Create Snapshot",
+      "description": "Creates a snapshot of items",
+      "params":
+  	  {
+  	    "snapshot_name": {
+  	      "display": "Snapshot name",
+  	      "description": "The name of the snapshot. It will be prefixed with the current date and located in the backup folder."
+  	    },
+        "data_folder": {
+  	      "display": "Voyager Data Folder",
+  	      "description": "The path to the Voyager data folder."
+  	    }
+   	  }
+    }
+  }
+}
