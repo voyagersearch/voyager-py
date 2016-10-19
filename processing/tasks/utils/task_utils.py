@@ -184,7 +184,8 @@ def create_unique_name(name, gdb):
         valid_name = arcpy.ValidateTableName(name, gdb)
         unique_name = arcpy.CreateUniqueName(valid_name, gdb)
     else:
-        unique_name = arcpy.CreateUniqueName(name + '.shp', gdb)
+        valid_name = arcpy.ValidateTableName(name, gdb)
+        unique_name = arcpy.CreateUniqueName(valid_name + '.shp', gdb)
     return unique_name
 
 
