@@ -16,7 +16,7 @@ def run(entry):
         sys.exit(1)
     meta_folder = 'c:/voyager/data/meta'
     vmoptions = os.path.join(os.path.abspath(os.path.join(__file__, "../../../..")), 'Voyager.vmoptions')
-    mxd_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'GroupLayerTemplate.mxd')
+    mxd_path = os.path.join(os.path.abspath(os.path.join(__file__, "../../..")), 'processing/supportfiles/GroupLayerTemplate.mxd') #os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'GroupLayerTemplate.mxd')
     with open(vmoptions, 'rb') as fp:
         for i, line in enumerate(fp):
             if line.startswith('-Ddata.dir'):
@@ -24,7 +24,7 @@ def run(entry):
                 meta_folder = os.path.normpath('{0}\meta'.format(data_path.strip()))
                 break
     new_entry = json.load(open(entry, "rb"))
-    if 'job' in new_entry and 'id' in new_entry['entry']['fields']:
+    if 'job' in new_entry and 'id' in new_entry['entry']['fields'] and 'path' in new_entry['job']:
         path = new_entry['job']['path']
         id = new_entry['entry']['fields']['id']
         dsc = arcpy.Describe(path)
