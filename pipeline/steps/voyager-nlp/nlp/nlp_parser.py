@@ -11,16 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import sys
-import os
 import codecs
-import argparse
-import ujson as json
 import logging
+import os
+import sys
+import ujson as json
+
+import argparse
 from spacy.en import English
+
 import linguistic_features as lf
 import settings
-
 
 sys.setrecursionlimit(10000)
 

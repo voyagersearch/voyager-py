@@ -11,14 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from bottle import route, run, request
-from spacy.en import English
-import linguistic_features as lf
-import logging
 import json
+import logging
 import urllib
-import settings
 
+from spacy.en import English
+
+import linguistic_features as lf
+import settings
+from bottle import route, run, request
 
 logging.basicConfig(filename="{0}/nlp_service.log".format(settings.LOG_FILE_PATH), level=logging.DEBUG)
 
