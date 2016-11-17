@@ -1,5 +1,4 @@
 ujson==1.33
 spacy==0.101.0
-scipy==0.15.1
 numpy==1.9.2
 unidecode

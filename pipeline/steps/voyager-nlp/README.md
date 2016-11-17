@@ -1,7 +1,9 @@
 # Voyager Natural Language Processing
 
-This repository contains code for extracting named entities (place names, etc...) from text through
-the use of natural language processing (NLP)l.
+This folder contains code for supporting Voyager NLP pipeline step for extracting named entities (place names, etc...) from text through
+the use of natural language processing (NLP). 
+
+This folder (voyager-nlp) can actually be copied to a different location which includes a different computer where the service can be run.
 
 
 ## Dependencies
@@ -13,10 +15,19 @@ The primary dependency to perform NLP is the [spacy](https://spacy.io/) library.
 
 To install the Python dependencies required for NLP:
 
-1. Run the setup.bat file located in the voyager-nlp folder.
+1. Ensure Python 2.7.10, 2.7.11 or 2.7.12 is installed.
+2. After confirming Python is installed, run the setup.bat file located in the voyager-nlp folder. By running the setup.bat, the Python libraries with the requirements.text will be installed as well as the English language model that spacy requires:
+3. Run the nlp_service.py to start 
 
-By running the setup.bat, the Python libaries with the requirements.text will be installed as well as the English language model that spacy requires:
+## Contents
 
+* <i>bottle.py</i> -- A fast and simple micro-framework for small web applications. Required for the nlp_service.py.
+
+* <i>nlp_service.py</i> -- A web-based service for parsing text with spacy. 
+ 
+* <i>setttings.py</i> -- Contains settings for service address (i.e. localhost), service port and log file location.
+
+* <i>lingustic_features.py</i> -- Includes functions to parse text and tag the entities. 
 
 ## Named Entity Types
 
