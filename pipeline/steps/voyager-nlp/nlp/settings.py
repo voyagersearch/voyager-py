@@ -20,6 +20,6 @@ SERVICE_PORT = 8081
 
 base_path = os.path.dirname(__file__)
 """ Change this path to the location you would like the logs to be written to. """
-LOG_FILE_PATH = os.path.join(base_path, 'Volumes/Untitled/tmp')
+LOG_FILE_PATH = os.path.join(base_path, 'logs')
 if not os.path.exists(LOG_FILE_PATH):
     os.makedirs(LOG_FILE_PATH)
