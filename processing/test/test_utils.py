@@ -128,28 +128,28 @@ class TestTaskUtils(unittest.TestCase):
         dms = task_utils.dd_to_dms(-56.553191)
         self.assertEqual(dms, (56, 33, 11.49))
 
-    # def test_from_wkt_to_polygon(self):
-    #     """Test converting WKT to a polygon object"""
-    #     poly = task_utils.from_wkt('POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))', 4326)
-    #     extent_min = ('{0:.1f}'.format(poly.extent.XMax), '{0:.1f}'.format(poly.extent.YMax))
-    #     self.assertEqual(extent_min, ('180.0', '90.0'))
-    #
-    # def test_get_spatial_reference(self):
-    #     """Test getting a spatial reference from SR code"""
-    #     sr = task_utils.get_spatial_reference(4326)
-    #     self.assertEqual(sr.name, 'GCS_WGS_1984')
-    #
-    # def test_get_projection_file(self):
-    #     """Test get the projection file name from SR code"""
-    #     pf = task_utils.get_projection_file(4326)
-    #     self.assertEqual(os.path.basename(pf), 'WGS 1984.prj')
-    #
-    # def test_get_clip_region(self):
-    #     """Test getting a clip region from WKT"""
-    #     wkt = 'MULTIPOLYGON (((-75.759298375698563 41.391337611891402, -75.759298375698563 49.022078452247342, -92.303148066299968 49.022078452247342, -92.303148066299968 41.391337611891402, -75.759298375698563 41.391337611891402)))'
-    #     clip_region = task_utils.get_clip_region(wkt, 3857)
-    #     extent_min = ('{0:.1f}'.format(clip_region.XMax), '{0:.1f}'.format(clip_region.YMax))
-    #     self.assertEqual(extent_min, ('-8433486.5', '6278608.5'))
+    def test_from_wkt_to_polygon(self):
+        """Test converting WKT to a polygon object"""
+        poly = task_utils.from_wkt('POLYGON ((-180 -90, -180 90, 180 90, 180 -90, -180 -90))', 4326)
+        extent_min = ('{0:.1f}'.format(poly.extent.XMax), '{0:.1f}'.format(poly.extent.YMax))
+        self.assertEqual(extent_min, ('180.0', '90.0'))
+
+    def test_get_spatial_reference(self):
+        """Test getting a spatial reference from SR code"""
+        sr = task_utils.get_spatial_reference(4326)
+        self.assertEqual(sr.name, 'GCS_WGS_1984')
+
+    def test_get_projection_file(self):
+        """Test get the projection file name from SR code"""
+        pf = task_utils.get_projection_file(4326)
+        self.assertEqual(os.path.basename(pf), 'WGS 1984.prj')
+
+    def test_get_clip_region(self):
+        """Test getting a clip region from WKT"""
+        wkt = 'MULTIPOLYGON (((-75.759298375698563 41.391337611891402, -75.759298375698563 49.022078452247342, -92.303148066299968 49.022078452247342, -92.303148066299968 41.391337611891402, -75.759298375698563 41.391337611891402)))'
+        clip_region = task_utils.get_clip_region(wkt, 3857)
+        extent_min = ('{0:.1f}'.format(clip_region.XMax), '{0:.1f}'.format(clip_region.YMax))
+        self.assertEqual(extent_min, ('-8433486.5', '6278608.5'))
 
     def test_get_local_date(self):
         """Test gettting local date"""
