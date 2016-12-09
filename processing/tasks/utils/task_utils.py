@@ -360,23 +360,30 @@ def clip_mxd_layers(mxd_path, aoi, workspace, map_frame=None):
         layers = df_layers
     for layer in layers:
         try:
-            out_name = arcpy.CreateUniqueName(layer.datasetName, arcpy.env.workspace)
-            if layer.isFeatureLayer:
-                arcpy.Clip_analysis(layer.dataSource, aoi, out_name)
-                if arcpy.env.workspace.endswith('.gdb'):
-                    layer.replaceDataSource(arcpy.env.workspace, 'FILEGDB_WORKSPACE', out_name, False)
-                else:
-                    layer.replaceDataSource(arcpy.env.workspace, 'SHAPEFILE_WORKSPACE', out_name, False)
-
-            elif layer.isRasterLayer:
-                ext = '{0} {1} {2} {3}'.format(aoi.extent.XMin, aoi.extent.YMin, aoi.extent.XMax, aoi.extent.YMax)
-                arcpy.Clip_management(layer.dataSource, ext, out_name)
-                if arcpy.env.workspace.endswith('.gdb'):
-                    layer.replaceDataSource(arcpy.env.workspace, 'FILEGDB_WORKSPACE', out_name, False)
-                else:
-                    layer.replaceDataSource(arcpy.env.workspace, 'RASTER_WORKSPACE', out_name, False)
+            if not layer.isGroupLayer:
+                out_name = arcpy.CreateUniqueName(layer.datasetName, arcpy.env.workspace)
+                if layer.isFeatureLayer:
+                    arcpy.Clip_analysis(layer.dataSource, aoi, out_name)
+                    if arcpy.env.workspace.endswith('.gdb'):
+                        layer.replaceDataSource
+                        layer.replaceDataSource(arcpy.env.workspace, 'FILEGDB_WORKSPACE', os.path.basename(out_name), False)
+                    else:
+                        layer.replaceDataSource(arcpy.env.workspace, 'SHAPEFILE_WORKSPACE', os.path.basename(out_name), False)
+                elif layer.isRasterLayer:
+                    ext = '{0} {1} {2} {3}'.format(aoi.extent.XMin, aoi.extent.YMin, aoi.extent.XMax, aoi.extent.YMax)
+                    if arcpy.env.workspace.endswith('.gdb'):
+                        if out_name[-4:].startswith('.'):
+                            out_name = out_name[:-4]
+                        arcpy.Clip_management(layer.dataSource, ext, out_name)
+                        layer.replaceDataSource(arcpy.env.workspace, 'FILEGDB_WORKSPACE', os.path.basename(out_name), False)
+                    else:
+                        arcpy.Clip_management(layer.dataSource, ext, out_name)
+                        layer.replaceDataSource(arcpy.env.workspace, 'RASTER_WORKSPACE', os.path.basename(out_name), False)
         except arcpy.ExecuteError:
-            status_writer.send_state(status.STAT_WARNING, arcpy.GetMessages(2))
+            status_writer.send_state(status.STAT_WARNING, '{0}: {1}'.format(layer.name, arcpy.GetMessages(2)))
+            continue
+        except ValueError:
+            continue
 
     # Save a new copy of the mxd with all layers clipped and re-sourced.
     if mxd.description == '':
@@ -385,6 +392,7 @@ def clip_mxd_layers(mxd_path, aoi, workspace, map_frame=None):
         new_mxd = os.path.join(os.path.dirname(arcpy.env.workspace), os.path.basename(mxd.filePath))
     else:
         new_mxd = os.path.join(arcpy.env.workspace, os.path.basename(mxd.filePath))
+    mxd.activeDataFrame.panToExtent(aoi.extent)
     mxd.saveACopy(new_mxd)
     del mxd
 
