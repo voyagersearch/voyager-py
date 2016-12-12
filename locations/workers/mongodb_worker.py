@@ -47,6 +47,7 @@ def get_collections(job):
 
     return collection_names
 
+
 def run_job(mongodb_job):
     """Worker function to index each document in each collection in the database."""
     job = mongodb_job
@@ -68,7 +69,11 @@ def run_job(mongodb_job):
             documents = col.find()
 
         # Index each document -- get a suitable base 10 increment for reporting percentage.
-        increment = job.get_increment(documents.count())
+        try:
+            increment = job.get_increment(documents.count())
+        except ValueError:
+            status_writer.send_status('No documents found in collection, {0}'.format(collection_name))
+            continue
         geometry_ops = worker_utils.GeometryOps()
         generalize_value = job.generalize_value
         for i, doc in enumerate(documents):
@@ -119,6 +124,8 @@ def run_job(mongodb_job):
                     geo['ymin'] = doc['loc'][1][0]
                     geo['ymax'] = doc['loc'][1][1]
                 fields.remove('loc')
+                doc.pop('loc')
+                values = doc.values()
             mapped_fields = job.map_fields(col.name, fields, field_types)
             mapped_fields = dict(zip(mapped_fields, values))
             mapped_fields['_discoveryID'] = job.discovery_id
