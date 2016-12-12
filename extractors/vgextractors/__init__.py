@@ -29,12 +29,14 @@ def append_or_set_path(path):
     os.environ['PATH'] = path
 
 # Add Python dependent libraries to the system paths.
+arch_dir = 'win32_x86'
 if platform.system() == 'Darwin':
-    dll_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'arch', 'darwin_x86_64'))
-    append_or_set_path(dll_path)
-else:
-    dll_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'arch', 'win32_x86'))
-    append_or_set_path(dll_path)
+    arch_dir = 'darwin_x86_64'
+elif platform.system() == 'Linux':
+    arch_dir = 'linux_amd64'
+
+dll_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'arch', arch_dir))
+append_or_set_path(dll_path)
 
 egg_path = os.path.join(dll_path, 'py')
 sys.path.append(egg_path)
