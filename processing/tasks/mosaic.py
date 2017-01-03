@@ -177,13 +177,13 @@ def execute(request):
                 return
             status_writer.send_status(_('Generating {0}. Large input {1} will take longer to process.'.format('Mosaic', 'rasters')))
             if out_coordinate_system == '0':
-               out_coordinate_system = None
+                out_coordinate_system = None
             if clip_area:
                 ext = '{0} {1} {2} {3}'.format(clip_area.XMin, clip_area.YMin, clip_area.XMax, clip_area.YMax)
                 tmp_mosaic = arcpy.MosaicToNewRaster_management(
                     raster_items,
                     out_workspace,
-                    'tmpMosaic',
+                    'tm',
                     out_coordinate_system,
                     pixel_type,
                     number_of_bands=bands.keys()[0]
