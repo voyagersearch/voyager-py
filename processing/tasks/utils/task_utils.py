@@ -370,7 +370,9 @@ def clip_mxd_layers(mxd_path, aoi, workspace, map_frame=None):
                     else:
                         layer.replaceDataSource(arcpy.env.workspace, 'SHAPEFILE_WORKSPACE', os.path.basename(out_name), False)
                 elif layer.isRasterLayer:
-                    ext = '{0} {1} {2} {3}'.format(aoi.extent.XMin, aoi.extent.YMin, aoi.extent.XMax, aoi.extent.YMax)
+                    if isinstance(aoi, unicode):
+                        clip_src = arcpy.Describe(aoi)
+                    ext = '{0} {1} {2} {3}'.format(clip_src.extent.XMin, clip_src.extent.YMin, clip_src.extent.XMax, clip_src.extent.YMax)
                     if arcpy.env.workspace.endswith('.gdb'):
                         if out_name[-4:].startswith('.'):
                             out_name = out_name[:-4]
@@ -392,7 +394,11 @@ def clip_mxd_layers(mxd_path, aoi, workspace, map_frame=None):
         new_mxd = os.path.join(os.path.dirname(arcpy.env.workspace), os.path.basename(mxd.filePath))
     else:
         new_mxd = os.path.join(arcpy.env.workspace, os.path.basename(mxd.filePath))
-    mxd.activeDataFrame.panToExtent(aoi.extent)
+    if isinstance(aoi, unicode):
+        e = arcpy.Describe(aoi).extent
+    else:
+        e = aoi.extent
+    mxd.activeDataFrame.panToExtent(e)
     mxd.saveACopy(new_mxd)
     del mxd
 
