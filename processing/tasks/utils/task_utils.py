@@ -22,6 +22,7 @@ import datetime
 import itertools
 import urllib
 import time
+import tempfile
 import zipfile
 import status
 
@@ -576,8 +577,20 @@ def get_data_path(item):
             return item['[absolute]']
         elif item['format'] == 'application/vnd.esri.map.data.frame':
             return item['path']
-        elif os.path.exists(item['[lyrFile]']):
+        elif '[lyrFile]' in item and os.path.exists(item['[lyrFile]']):
             return item['[lyrFile]']
+
+        elif item['path'].startswith('s3:'):
+            base_name = os.path.basename(item['path'])
+            temp_folder = tempfile.mkdtemp()
+            if '[downloadURL]' in item:
+                download = urllib.urlretrieve(item['[downloadURL]'])[0]
+                if download.endswith('.zip'):
+                    zip = zipfile.ZipFile(download)
+                    zip.extractall(temp_folder)
+                    return os.path.join(temp_folder, base_name)
+                else:
+                    return download
         else:
             layer_file = urllib.urlretrieve(item['[lyrURL]'])[0]
             return layer_file
