@@ -24,7 +24,7 @@ warnings.filterwarnings('ignore', '.*narrow Python.*')
 def tagSentences(doc, data):
     data["sentences"] = []
     for d1 in doc.sents:
-        data["sentences"].append(d1.text)
+        data["sentences"].append(d1.text.strip())
 
 
 def tagPOSTags(doc, data):
@@ -45,13 +45,13 @@ def tagNamedEntities(doc, data):
             for word in e1:
                 if word.pos_ != "DET":
                     entity = entity + " " + word.text
-            data["named_entities"][e1.label_].append(entity)
+            data["named_entities"][e1.label_].append(entity.strip())
 
 
 def tagNounChunks(doc, data):
     data["noun_chunks"] = []
     for np in doc.noun_chunks:
-        data["noun_chunks"].append(np.text)
+        data["noun_chunks"].append(np.text.strip())
 
 
 def tagWordCase(doc, data):
