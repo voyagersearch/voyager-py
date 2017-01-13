@@ -23,7 +23,7 @@ from utils import settings
 NLP_FIELDS = ['description', 'text']
 NLP_GEO_KEYS = ['GPE', 'LOC', 'FAC']
 
-logging.basicConfig(filename="{0}/nlp_worker.log".format(settings.LOG_FILE_PATH), level=logging.DEBUG)
+# logging.basicConfig(filename="{0}/nlp_worker.log".format(settings.LOG_FILE_PATH), level=logging.DEBUG)
 
 
 def post_to_nlp_service(text):
