@@ -62,7 +62,7 @@ def run(entry, *args):
 
     try:
         for nlp_item_key in nlp_items.keys():
-            nlp_text_field_name = "ftt_NLP_{0}".format(nlp_item_key)
+            nlp_text_field_name = "fss_NLP_{0}".format(nlp_item_key)
             new_entry['entry']['fields'][nlp_text_field_name] = nlp_items[nlp_item_key]
 
         geo_text = ""
