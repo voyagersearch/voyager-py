@@ -518,19 +518,26 @@ def get_input_items(parameters, list_ids=False, list_components=False):
         for i in docs:
             try:
                 if list_ids:
-                    results[get_data_path(i)] = (i['name'], i['id'])
+                    data_path = get_data_path(i)
+                    results[data_path] = (i['name'], i['id'])
                 else:
-                    results[get_data_path(i)] = i['name']
+                    data_path = get_data_path(i)
+                    results[data_path] = i['name']
             except KeyError:
                 if list_ids:
-                    results[get_data_path(i)] = ('', i['id'])
+                    data_path = get_data_path(i)
+                    results[data_path] = ('', i['id'])
                 else:
-                    results[get_data_path(i)] = ''
+                    data_path = get_data_path(i)
+                    results[data_path] = ''
             except IOError:
                 continue
             if list_components and 'component_files' in i:
                     for c in i['component_files']:
-                        results[os.path.join(os.path.dirname(i['path']), c)] = ''
+                        if not i['path'].startswith('s3'):
+                            results[os.path.join(os.path.dirname(i['path']), c)] = ''
+                        else:
+                            results[os.path.join(os.path.dirname(data_path), c)] = ''
     except IOError:
         pass
     return results
@@ -588,7 +595,7 @@ def get_data_path(item):
                 if download.endswith('.zip'):
                     zip = zipfile.ZipFile(download)
                     zip.extractall(temp_folder)
-                    return os.path.join(temp_folder, base_name)
+                    return os.path.join(temp_folder, urllib.unquote(base_name))
                 else:
                     return download
         else:
