@@ -655,6 +655,22 @@ def run_job(esri_job):
         worker(job.path)
         return
 
+    # A folder (for shapefiles).
+    elif dsc.dataType == 'Folder':
+        arcpy.env.workspace = job.path
+        tables = []
+        tables_to_keep = job.tables_to_keep()
+        tables_to_skip = job.tables_to_skip()
+        if job.tables_to_keep:
+            for t in tables_to_keep:
+                [tables.append(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(t)]
+        else:
+            [tables.append(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses()]
+
+        if tables_to_skip:
+            for t in tables_to_keep:
+                [tables.remove(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(t)]
+
     # A geodatabase (.mdb, .gdb, or .sde).
     elif dsc.dataType == 'Workspace':
         arcpy.env.workspace = job.path
