@@ -17,6 +17,9 @@ import sys
 import collections
 import shutil
 import requests
+import tempfile
+import urllib
+import zipfile
 import arcpy
 from utils import status
 from utils import task_utils
@@ -358,12 +361,23 @@ def execute(request):
     clip_query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', "&fl=id,path:[absolute],[lyrFile],[geo]&q=id:{0}".format(id))
     clip_result = requests.get(clip_query, headers=headers)
     clipper = clip_result.json()['response']['docs'][0]
-    if 'path' in clipper:
+    if 'path' in clipper and not clipper['path'].startswith('s3'):
         clip_features = clipper['path']
     elif '[lyrFile]' in clipper:
         clip_features = clipper['[lyrFile]']
     elif '[geo]' in clipper:
         clip_features = arcpy.AsShape(clipper['[geo]']).projectAs(arcpy.SpatialReference(4326))
+    elif 'path' in clipper and clipper['path'].startswith('s3'):
+        base_name = os.path.basename(clipper['path'])
+        temp_folder = tempfile.mkdtemp()
+        if '[downloadURL]' in clipper:
+            download = urllib.urlretrieve(clipper['[downloadURL]'])[0]
+            if download.endswith('.zip'):
+                zip = zipfile.ZipFile(download)
+                zip.extractall(temp_folder)
+                clip_features = os.path.join(temp_folder, urllib.unquote(base_name))
+            else:
+                clip_features = download
     else:
         bbox = clipper['bbox'].split()
         extent = arcpy.Extent(*bbox)
