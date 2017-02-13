@@ -325,7 +325,7 @@ def execute(request):
         for i in xrange(0, num_results, chunk_size):
             req = urllib2.Request(query.replace('{0}', str(chunk_size)).replace('{1}', str(i)), headers=headers)
             for n in urllib2.urlopen(req):
-                jobs = eval(n.replace('null', '"null"'))['response']['docs']
+                jobs = eval(n.replace('null', '"null"').replace('true', 'True').replace('false', 'False'))['response']['docs']
                 if out_format == 'CSV':
                     export_to_csv(jobs, file_name, task_folder, fields)
                 elif out_format == 'XML':
