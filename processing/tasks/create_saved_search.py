@@ -25,7 +25,7 @@ status_writer = status.Writer()
 errors_reasons = {}
 
 
-def create_saved_search(search_name, owner, query, query_type='fq'):
+def create_saved_search(search_name, groups, owner, query, query_type='fq'):
     """Create the saved search using Voyager API."""
     try:
         voyager_server = sys.argv[2].split('=')[1].split('solr')[0][:-1]
@@ -39,14 +39,14 @@ def create_saved_search(search_name, owner, query, query_type='fq'):
                 "title": search_name,
                 "owner": owner['name'],
                 "path": path,
-                "share": ["_EVERYONE"]
+                "share": groups
             }
         else:
             query = {
                 "title": search_name,
                 "owner": owner['name'],
                 "path": "",
-                "share": ["_EVERYONE"]
+                "share": groups
             }
         response = requests.post(url, json.dumps(query), headers={'Content-type': 'application/json', 'x-access-token': task_utils.get_security_token(owner)})
         if response.status_code == 200:
@@ -74,6 +74,7 @@ def execute(request):
 
     # Parameter values
     search_name = task_utils.get_parameter_value(parameters, 'search_name', 'value')
+    groups = task_utils.get_parameter_value(parameters, 'groups', 'value')
     request_owner = request['owner']
 
     result_count, response_index = task_utils.get_result_count(parameters)
@@ -101,9 +102,9 @@ def execute(request):
         qtype = 'q'
 
     if query:
-        result = create_saved_search(search_name, request_owner, query, qtype)
+        result = create_saved_search(search_name, groups, request_owner, query, qtype)
     else:
-        result = create_saved_search(search_name, request_owner, "")
+        result = create_saved_search(search_name, groups, request_owner, "")
     if not result[0]:
         errors += 1
         errors_reasons[search_name] = result[1]

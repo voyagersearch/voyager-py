@@ -1,8 +1,7 @@
 {
   "name": "create_saved_search",
   "runner": "python",
-  "categories": ["Managing Data and Files"],
-  "security": ["_ADMIN"],
+  "categories": ["Voyager Tools"],
   "params": [
     {
       "type": "VoyagerResults",
@@ -12,9 +11,14 @@
     {
       "type": "String",
       "name": "search_name",
-      "required": true,
-      "value": ""
-    }
+      "required": true
+    },
+    {
+      "type": "List",
+      "name": "groups",
+      "required": false,
+      "value": []
+ 	}
   ],
   "display":
   {
@@ -24,9 +28,13 @@
       "description": "Creates a saved search of items",
       "params":
   	  {
-  	    "snapshot_name": {
+  	    "search_name": {
   	      "display": "Search name",
-  	      "description": "The name of the saved search."
+  	      "description": "The name of the saved search"
+  	    },
+        "groups": {
+  	      "display": "Share",
+  	      "description": "Groups to share with"
   	    }
    	  }
     }

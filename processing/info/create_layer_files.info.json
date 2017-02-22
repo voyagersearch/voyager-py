@@ -1,8 +1,8 @@
 {
   "name": "create_layer_files",
   "runner": "python",
-  "categories": ["Managing Data and Files"],
-  "constraints": [{"format_category": "(GIS CAD)"}],
+  "categories": ["Voyager Tools"],
+  "constraints": [{"format_type": "(Other File Database Layer)"}],
   "security": ["_ADMIN"],
   "params": [
     {
