@@ -37,7 +37,7 @@ def post_to_nlp_service(text):
         # logging.debug("\n\n--> sent to NLP %s \n\nGOT BACK: %s" % (text, result))
         return result
     except Exception as e:
-        logging.error("NLP error: \n {1}".format(e))
+        logging.error("NLP error: \n {0}".format(e))
 
 
 def run(entry, *args):
@@ -60,31 +60,32 @@ def run(entry, *args):
                 else:
                     text = u'{0}, {1}'.format(text, v)
 
+    nlp_items = dict()
+
     if len(text) > 0:
-        # logging.info('sending {0} chars to nlp'.format(len(text)))
-        nlp_items = json.loads(post_to_nlp_service(text))
+        try:
+            logging.info('sending {0} chars to nlp'.format(len(text)))
+            nlp_items = json.loads(post_to_nlp_service(text))
+            for nlp_item_key in nlp_items.keys():
+                nlp_text_field_name = "fss_NLP_{0}".format(nlp_item_key)
+                new_entry['entry']['fields'][nlp_text_field_name] = nlp_items[nlp_item_key]
+
+            geo_text = ""
+            for field in NLP_GEO_KEYS:
+                if field in nlp_items.keys():
+                    v = nlp_items[field]
+                    geo_text = "{0} {1}".format(geo_text, ' '.join(v))
+
+            new_entry['entry']['fields']['ft_NLP_Geo'] = geo_text
+
+        except Exception as e:
+            logging.error("could not get response from NLP parser. ")
+            logging.error(e)
+
     else:
-        # logging.info('no text found to send to NLP in entry \n {0}'.format(json.dumps(new_entry,indent=4)))
-        nlp_items = dict()
+        logging.info('no text found to send to NLP in entry \n {0}'.format(json.dumps(new_entry,indent=4)))
 
-    try:
-        for nlp_item_key in nlp_items.keys():
-            nlp_text_field_name = "fss_NLP_{0}".format(nlp_item_key)
-            new_entry['entry']['fields'][nlp_text_field_name] = nlp_items[nlp_item_key]
-
-        geo_text = ""
-        for field in NLP_GEO_KEYS:
-            if field in nlp_items.keys():
-                v = nlp_items[field]
-                geo_text = "{0} {1}".format(geo_text, ' '.join(v))
-
-        new_entry['entry']['fields']['ft_NLP_Geo'] = geo_text
-
-    except Exception as e:
-        logging.error("could not get response from NLP parser. ")
-        logging.error(e)
-
+    
     sys.stdout.write(json.dumps(new_entry))
     sys.stdout.flush()
-
     
