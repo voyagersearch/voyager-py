@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import sys
 import json
 import logging
@@ -30,13 +31,13 @@ def post_to_nlp_service(text):
     text = unicode(text).encode('utf-8')
     text = urllib.quote(text)
     try:
-        req = urllib2.Request("http://{0}:{1}/nlp".format(settings.SERVICE_ADDRESS, settings.SERVICE_PORT), text.encode('utf-8'))
+        req = urllib2.Request("http://{0}:{1}/nlp".format(settings.SERVICE_ADDRESS, settings.SERVICE_PORT), text)
         response = urllib2.urlopen(req)
         result = response.read()
         # logging.debug("\n\n--> sent to NLP %s \n\nGOT BACK: %s" % (text, result))
         return result
     except Exception as e:
-        logging.error("NLP error. Sent {0}, error: \n {1}".format(text, e))
+        logging.error("NLP error: \n {0}".format(e))
 
 
 def run(entry, *args):
@@ -44,6 +45,10 @@ def run(entry, *args):
         NLP_FIELDS = list(args)
 
     new_entry = json.load(open(entry, "rb"))
+
+    if 'path' not in new_entry['job'].keys():
+        logging.info('no job path in this entry, skipping...')
+        return
 
     text = ''
     for field in NLP_FIELDS:
@@ -55,27 +60,32 @@ def run(entry, *args):
                 else:
                     text = u'{0}, {1}'.format(text, v)
 
+    nlp_items = dict()
+
     if len(text) > 0:
-        nlp_items = json.loads(post_to_nlp_service(text))
+        try:
+            logging.info('sending {0} chars to nlp'.format(len(text)))
+            nlp_items = json.loads(post_to_nlp_service(text))
+            for nlp_item_key in nlp_items.keys():
+                nlp_text_field_name = "fss_NLP_{0}".format(nlp_item_key)
+                new_entry['entry']['fields'][nlp_text_field_name] = nlp_items[nlp_item_key]
+
+            geo_text = ""
+            for field in NLP_GEO_KEYS:
+                if field in nlp_items.keys():
+                    v = nlp_items[field]
+                    geo_text = "{0} {1}".format(geo_text, ' '.join(v))
+
+            new_entry['entry']['fields']['ft_NLP_Geo'] = geo_text
+
+        except Exception as e:
+            logging.error("could not get response from NLP parser. ")
+            logging.error(e)
+
     else:
-        nlp_items = dict()
+        logging.info('no text found to send to NLP in entry \n {0}'.format(json.dumps(new_entry,indent=4)))
 
-    try:
-        for nlp_item_key in nlp_items.keys():
-            nlp_text_field_name = "fss_NLP_{0}".format(nlp_item_key)
-            new_entry['entry']['fields'][nlp_text_field_name] = nlp_items[nlp_item_key]
-
-        geo_text = ""
-        for field in NLP_GEO_KEYS:
-            if field in nlp_items.keys():
-                v = nlp_items[field]
-                geo_text = "{0} {1}".format(geo_text, ' '.join(v))
-
-        new_entry['entry']['fields']['ft_NLP_Geo'] = geo_text
-
-    except Exception as e:
-        logging.error("could not get response from NLP parser. ")
-        logging.error(e)
-
+    
     sys.stdout.write(json.dumps(new_entry))
     sys.stdout.flush()
+    
