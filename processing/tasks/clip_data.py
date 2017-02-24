@@ -48,6 +48,8 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
 
     for ds, out_name in input_items.iteritems():
         try:
+            if not isinstance(out_name, list):
+                out_name = ''
             # -----------------------------------------------
             # If the item is a service layer, process and continue.
             # -----------------------------------------------
@@ -105,7 +107,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
                     processed_count += 1.
                     clipped += 1
                     status_writer.send_percent(processed_count / result_count, _('Clipped: {0}').format(ds), 'clip_data')
-                    continue
+                    # continue
                 except Exception as ex:
                     status_writer.send_state(status.STAT_WARNING, str(ex))
                     errors_reasons[ds] = ex.message
@@ -125,6 +127,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
             if isinstance(out_name, list):
                 for row in out_name:
                     try:
+                        arcpy.env.overwriteOutput = True
                         name = os.path.join(out_workspace, arcpy.ValidateTableName(ds, out_workspace))
                         if out_format == 'SHP':
                             name += '.shp'
