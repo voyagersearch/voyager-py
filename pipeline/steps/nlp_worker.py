@@ -24,7 +24,7 @@ from utils import settings
 NLP_FIELDS = ['description', 'text']
 NLP_GEO_KEYS = ['GPE', 'LOC', 'FAC']
 
-# logging.basicConfig(filename="{0}/nlp_worker.log".format(settings.LOG_FILE_PATH), level=logging.DEBUG)
+logging.basicConfig(filename="{0}/nlp_worker.log".format(settings.LOG_FILE_PATH), level=logging.DEBUG)
 
 
 def post_to_nlp_service(text):
@@ -34,10 +34,10 @@ def post_to_nlp_service(text):
         req = urllib2.Request("http://{0}:{1}/nlp".format(settings.SERVICE_ADDRESS, settings.SERVICE_PORT), text)
         response = urllib2.urlopen(req)
         result = response.read()
-        # logging.debug("\n\n--> sent to NLP %s \n\nGOT BACK: %s" % (text, result))
+        logging.info('\n\nsent {0} chars to nlp, got back {1} chars'.format(len(text), len(result)))
         return result
     except Exception as e:
-        logging.error("NLP error: \n {0}".format(e))
+        logging.error('\n\nsent {0} chars to nlp, got back error: {1}'.format(len(text), e))
 
 
 def run(entry, *args):
@@ -64,19 +64,18 @@ def run(entry, *args):
 
     if len(text) > 0:
         try:
-            logging.info('sending {0} chars to nlp'.format(len(text)))
             nlp_items = json.loads(post_to_nlp_service(text))
             for nlp_item_key in nlp_items.keys():
                 nlp_text_field_name = "fss_NLP_{0}".format(nlp_item_key)
                 new_entry['entry']['fields'][nlp_text_field_name] = nlp_items[nlp_item_key]
 
-            geo_text = ""
+            geo_text = " "
             for field in NLP_GEO_KEYS:
                 if field in nlp_items.keys():
-                    v = nlp_items[field]
-                    geo_text = "{0} {1}".format(geo_text, ' '.join(v))
-
-            new_entry['entry']['fields']['ft_NLP_Geo'] = geo_text
+                    if len(nlp_items[field]) > 0:
+                        geo_text = "{0} {1}".format(geo_text, ' '.join(nlp_items[field]))
+            if not geo_text.isspace():
+                new_entry['entry']['fields']['ft_NLP_Geo'] = geo_text
 
         except Exception as e:
             logging.error("could not get response from NLP parser. ")
