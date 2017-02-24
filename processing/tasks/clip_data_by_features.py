@@ -91,6 +91,8 @@ def clip_data(input_items, out_workspace, clip_polygon, out_format):
 
     for ds, out_name in input_items.iteritems():
         try:
+            if not isinstance(out_name, list):
+                out_name = ''
             # -----------------------------------------------
             # If the item is a service layer, process and continue.
             # -----------------------------------------------
@@ -120,6 +122,7 @@ def clip_data(input_items, out_workspace, clip_polygon, out_format):
             # Is the input is geometry features
             # ---------------------------------
             if isinstance(out_name, list):
+                arcpy.env.overwriteOutput = True
                 increment = task_utils.get_increment(result_count)
                 for row in out_name:
                     try:
