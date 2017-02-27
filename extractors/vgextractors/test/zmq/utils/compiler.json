@@ -1,0 +1,17 @@
+{
+  "extra_link_args": [], 
+  "define_macros": [], 
+  "runtime_library_dirs": [], 
+  "libraries": [
+    "libzmq"
+  ], 
+  "library_dirs": [
+    "C:\\jenkins\\workspace\\py-win32\\bin\\deps\\windows\\x86\\release/zeromq-3.2.5\\lib"
+  ], 
+  "include_dirs": [
+    "C:\\jenkins\\workspace\\py-win32\\bin\\deps\\windows\\x86\\release/zeromq-3.2.5\\include", 
+    "zmq\\utils", 
+    "zmq\\backend\\cython", 
+    "zmq\\devices"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "have_sys_un_h": false, 
+  "zmq_prefix": "C:\\jenkins\\workspace\\py-win32\\bin\\deps\\windows\\x86\\release/zeromq-3.2.5", 
+  "no_libzmq_extension": true, 
+  "libzmq_extension": false, 
+  "bdist_egg": {}, 
+  "skip_check_zmq": false, 
+  "build_ext": {}
+}
