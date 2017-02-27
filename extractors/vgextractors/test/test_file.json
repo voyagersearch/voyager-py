@@ -1,0 +1,46 @@
+{
+    "task": "clip_data",
+	
+    "params": [
+        {
+            "name": "clip_geometry",
+            "type": "Geometry",
+			"required": false
+        },
+        {
+            "name": "input_items",
+            "type": "VoyagerResults",
+            "required": true
+        },
+        {
+            "name": "output_projection",
+            "type": "Projection",
+            "code": "4326",
+			"required": false
+        },
+        {
+            "name": "output_format",
+            "type": "StringChoice",
+            "value": "FileGDB",
+			"required": false,
+            "choices": [
+                [
+                    "FileGDB",
+                    "File Geodatabase"
+                ],
+                [
+                    "SHP",
+                    "Shapefile"
+                ],
+                [
+                    "LPK",
+                    "Layer Package"
+                ],
+                [
+                    "MPK",
+                    "Map Package"
+                ]
+            ]
+        }
+    ]
+}
