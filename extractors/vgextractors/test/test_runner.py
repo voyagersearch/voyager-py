@@ -6,7 +6,7 @@ import xmlrunner
 
 
 if __name__ == '__main__':
-    report_location = os.path.join(os.getcwd(), 'test-reports')
+    report_location = os.path.abspath(os.path.join(os.getcwd(), "../../..", "processing/test/test-reports"))
     if not os.path.exists(report_location):
         os.mkdir(report_location)
     test_file_strings = glob.glob('test_*.py')
