@@ -6,6 +6,7 @@ import tempfile
 import unittest
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), "../..")))
 import vgextractors
+from vgextractors import zmq
 
 
 class TestExtractors(unittest.TestCase):
