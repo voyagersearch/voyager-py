@@ -24,8 +24,8 @@ try:
     from _vgdexfield import VgDexField
 except ImportError as ie:
     sys.stdout.write(str(ie))
-    # sys.exit(1)
-    pass
+    sys.exit(1)
+    # pass
 except OSError as ose:
     sys.stdout.write("{0}. {1}.".format(str(ose), "This version of pyzmq requires 32bit Python"))
     sys.exit(1)
