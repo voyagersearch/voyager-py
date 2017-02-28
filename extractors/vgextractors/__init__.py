@@ -35,8 +35,7 @@ if platform.system() == 'Darwin':
 elif platform.system() == 'Linux':
     arch_dir = 'linux_amd64'
 
-dll_path = r"C:\Voyager\server_1.9.9.502\app\arch\win32_x86"
-# dll_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'arch', arch_dir))
+dll_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'arch', arch_dir))
 append_or_set_path(dll_path)
 
 egg_path = os.path.join(dll_path, 'py')
