@@ -15,7 +15,7 @@ The primary dependency to perform NLP is the [spacy](https://spacy.io/) library.
 
 To install the Python dependencies required for NLP:
 
-1. Ensure Python 2.7.10, 2.7.11 or 2.7.12 is installed.
+1. For Python 2.7, ensure Python 2.7.10 or higher is installed. Or, install latest Python 3.x version.
 2. After confirming Python is installed, run the setup.bat file (on windows) or setup.sh (on osx/linux) located in the voyager-nlp folder. By running this file, the Python libraries within the requirements.txt will be installed as well as the English language model that spacy requires. Setup.bat may have to be run with Administrative privileges if errors occur. 
 3. Edit the settings.py script to specify the valid service address and port number, and modify the path to the folder you would like the logs to be written to. 
 4. Start the NLP service by running the nlp_service.py. (ie: python nlp_service.py)
