@@ -11,15 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
-import logging
-import urllib
+from __future__ import unicode_literals
 
-from spacy.en import English
-
-import linguistic_features as lf
-import settings
 from bottle import route, run, request
+from spacy.en import English
+import linguistic_features as lf
+import logging
+import json
+import urllib
+import settings
+import argparse
+
 
 logging.basicConfig(filename="{0}/nlp_service.log".format(settings.LOG_FILE_PATH), level=logging.DEBUG)
 
@@ -27,32 +29,38 @@ logging.basicConfig(filename="{0}/nlp_service.log".format(settings.LOG_FILE_PATH
 class NLPException(Exception):
     pass
 
-
 class NLPParser(object):
     def __init__(self):
         self.english = English()
 
     def parse(self, text):
-        text = urllib.unquote(text)
         result = {}
+        doc = None
         try:
+            text = urllib.unquote(text)
+            text = text.decode('utf-8')
             doc = lf.parseText(text, self.english)
-        except (UnicodeError, TypeError):
+
+        except Exception as ee:
+            logging.info('error in utf-8 decode - (will attempt latin-1 decode)')
+            logging.info(ee)
+            doc = lf.parseText(text.decode('latin-1'), self.english)
+
+        if doc is not None:
             try:
-                doc = lf.parseText(text.decode('utf-8'), self.english)
-            except UnicodeDecodeError:
-                doc = lf.parseText(text.decode('latin-1'), self.english)
+                functions = [lf.tagSentences, lf.tagPOSTags, lf.tagNamedEntities, lf.tagNounChunks]
+                lf.run_functions(doc, result, *functions)
 
-        try:
-            functions = [lf.tagSentences, lf.tagPOSTags, lf.tagNamedEntities, lf.tagNounChunks]
-            lf.run_functions(doc, result, *functions)
-
-            if 'named_entities' in result:
-                return json.dumps(result['named_entities'])
-            else:
-                raise NLPException('No named entities found.')
-        except Exception as e:
-            logging.error("Error in NLP: %s" % e)
+                if 'named_entities' in result:
+                    return json.dumps(result['named_entities'])
+                else:
+                    raise NLPException('No named entities found.')
+            except Exception as e:
+                logging.error("Error in NLP: %s" % e)
+                return json.dumps({})
+        else:
+            logging.info('nothing returned from linguistic features parseText.')
+            return json.dumps({})
 
 
 _nlp = NLPParser()
@@ -69,4 +77,9 @@ def nlpservice():
     return _nlp.parse(postdata)
 
 
-run(host=settings.SERVICE_ADDRESS, port=settings.SERVICE_PORT)
+argument_parser = argparse.ArgumentParser(description='NLP Service')
+argument_parser.add_argument('-p', '--port', help='port to run on', default=settings.SERVICE_PORT)
+argument_parser.add_argument('-a', '--address', help='service address', default=settings.SERVICE_ADDRESS)
+arrgs = argument_parser.parse_args()
+
+run(host=arrgs.address, port=arrgs.port)
