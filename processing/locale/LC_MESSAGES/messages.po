@@ -252,7 +252,7 @@ msgstr ""
 
 #: mosiac_to_workspace.py:83
 #, python-format
-msgid "Output dataset already exists"
+msgid "Output dataset already exists. New name is: {0}"
 msgstr ""
 
 #: mosaic_to_workspace.py:55

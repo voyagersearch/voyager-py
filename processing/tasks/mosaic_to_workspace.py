@@ -157,8 +157,8 @@ def execute(request):
         output_name = '{0}.{1}'.format(arcpy.ValidateTableName(output_name, target_workspace), output_raster_format.lower())
 
     if arcpy.Exists(os.path.join(target_workspace, output_name)):
-        status_writer.send_state(status.STAT_FAILED, _('Output dataset already exists.'))
-        return
+        output_name = arcpy.CreateUniqueName(output_name, target_workspace)
+        status_writer.send_status(_('Output dataset already exists. New name is: {0}').format(output_name))
 
     if output_raster_format == 'MosaicDataset':
         try:

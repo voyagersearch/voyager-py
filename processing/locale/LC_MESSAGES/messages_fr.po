@@ -249,8 +249,8 @@ msgstr "N'existe pas espace de travail cible"
 
 #: mosiac_to_workspace.py:83
 #, python-format
-msgid "Output dataset already exists"
-msgstr "ensemble de données de sortie existe déjà"
+msgid "Output dataset already exists. New name is: {0}"
+msgstr "Le jeu de données de sortie existe déjà. Nouveau nom: {0}"
 
 #: mosaic_to_workspace.py:55
 #, python-format
