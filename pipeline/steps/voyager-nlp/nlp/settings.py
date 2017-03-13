@@ -16,7 +16,7 @@ import os
 
 """Settings for the nlp service."""
 SERVICE_ADDRESS = 'localhost'
-SERVICE_PORT = 8081
+SERVICE_PORT = 9999
 
 base_path = os.path.dirname(__file__)
 """ Change this path to the location you would like the logs to be written to. """
