@@ -5,7 +5,7 @@ import logging
 import urllib2
 import urllib
 
-from utils import settings
+from steps.utils import settings, nlp_settings
 
 """
 * PERSON:  People, including fictional.
@@ -31,7 +31,7 @@ def post_to_nlp_service(text):
     text = unicode(text).encode('utf-8')
     text = urllib.quote(text)
     try:
-        req = urllib2.Request("http://{0}:{1}/nlp".format(settings.SERVICE_ADDRESS, settings.SERVICE_PORT), text)
+        req = urllib2.Request("http://{0}:{1}/nlp".format(nlp_settings.SERVICE_ADDRESS, nlp_settings.SERVICE_PORT), text)
         response = urllib2.urlopen(req)
         result = response.read()
         logging.info('\n\nsent {0} chars to nlp, got back {1} chars'.format(len(text), len(result)))
@@ -45,7 +45,7 @@ def run(entry, *args):
         NLP_FIELDS = list(args)
 
     new_entry = json.load(open(entry, "rb"))
-
+        
     if 'path' not in new_entry['job'].keys():
         logging.info('no job path in this entry, skipping...')
         return
@@ -82,7 +82,7 @@ def run(entry, *args):
             logging.error(e)
 
     else:
-        logging.info('no text found to send to NLP in entry \n {0}'.format(json.dumps(new_entry,indent=4)))
+        logging.info('no text found to send to NLP in entry \n {0}'.format(json.dumps(new_entry, indent=4)))
 
     
     sys.stdout.write(json.dumps(new_entry))
