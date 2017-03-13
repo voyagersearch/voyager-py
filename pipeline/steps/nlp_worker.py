@@ -45,7 +45,6 @@ def run(entry, *args):
         NLP_FIELDS = list(args)
 
     new_entry = json.load(open(entry, "rb"))
-    logging.info('running nlp... ')
         
     if 'path' not in new_entry['job'].keys():
         logging.info('no job path in this entry, skipping...')
