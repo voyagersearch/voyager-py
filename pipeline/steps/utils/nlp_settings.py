@@ -1,0 +1,2 @@
+SERVICE_ADDRESS = 'localhost'
+SERVICE_PORT = 9876
