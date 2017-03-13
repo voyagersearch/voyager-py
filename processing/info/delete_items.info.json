@@ -1,0 +1,53 @@
+{
+  "name": "delete_items",
+  "runner": "python",
+  "categories": ["Voyager Tools"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "CheckBox",
+      "name": "delete_thumbnails",
+      "required": false,
+      "value": false
+    },
+    {
+      "type": "CheckBox",
+      "name": "delete_metadata",
+      "required": false,
+      "value": false
+ 	},
+    {
+      "type": "CheckBox",
+      "name": "delete_layers",
+      "required": false,
+      "value": false
+ 	}
+  ],
+  "display":
+  {
+    "en":
+    {
+      "display": "Delete Items",
+      "description": "Deletes items from the index",
+      "params":
+  	  {
+  	    "delete_thumbnails": {
+  	      "display": "Delete Thumbnails",
+  	      "description": "Delete thumbnails"
+  	    },
+        "delete_metadata": {
+  	      "display": "Delete Metadata",
+  	      "description": "Delete metadata"
+  	    },
+        "delete_layers": {
+  	      "display": "Delete Layers",
+  	      "description": "Delete layers"
+  	    }
+   	  }
+    }
+  }
+}
