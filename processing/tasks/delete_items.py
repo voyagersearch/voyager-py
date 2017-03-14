@@ -61,9 +61,9 @@ def execute(request):
         os.makedirs(archive_location)
 
     # Parameter values
-    delete_thumbs = task_utils.get_parameter_value(parameters, 'delete_thumbnails', 'value')
-    delete_metadata = task_utils.get_parameter_value(parameters, 'delete_metadata', 'value')
-    delete_layers = task_utils.get_parameter_value(parameters, 'delete_layers', 'value')
+    delete_thumbs = task_utils.get_parameter_value(parameters, 'delete_thumbnails', 'value') or False
+    delete_metadata = task_utils.get_parameter_value(parameters, 'delete_metadata', 'value') or False
+    delete_layers = task_utils.get_parameter_value(parameters, 'delete_layers', 'value') or False
     request_owner = request['owner']
 
     result_count, response_index = task_utils.get_result_count(parameters)
