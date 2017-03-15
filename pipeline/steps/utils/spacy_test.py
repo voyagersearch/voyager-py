@@ -9,5 +9,4 @@ try:
     sys.stdout.write("%s" % True)
 except Exception as e:
     sys.stdout.write("%s" % False)
-    sys.stdout.write(e)
 
