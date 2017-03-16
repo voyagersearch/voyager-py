@@ -214,7 +214,21 @@ def clip_data(input_items, out_workspace, clip_polygon, out_format):
                 else:
                     name = arcpy.ValidateTableName(out_name, out_workspace)
                     name = task_utils.create_unique_name(name, out_workspace)
-                arcpy.Clip_analysis(ds, clip_polygon, name)
+                # Does the input exist in a feature dataset? If so, create the feature dataset if it doesn't exist.
+                ws = os.path.dirname(ds)
+                if [any(ext) for ext in ('.gdb', '.mdb', '.sde') if ext in ws]:
+                    if os.path.splitext(ws)[1] in ('.gdb', '.mdb', '.sde'):
+                        arcpy.Clip_analysis(ds, clip_polygon, name)
+                    else:
+                        fds_name = os.path.basename(ws)
+                        if not arcpy.Exists(os.path.join(out_workspace, fds_name)):
+                            arcpy.CreateFeatureDataset_management(out_workspace, fds_name, dsc.spatialReference)
+                        arcpy.Clip_analysis(ds, clip_polygon,
+                                            os.path.join(out_workspace, fds_name, os.path.basename(ds)))
+                else:
+                    arcpy.Clip_analysis(ds, clip_polygon, name)
+
+                # arcpy.Clip_analysis(ds, clip_polygon, name)
 
             # Feature dataset
             elif dsc.dataType == 'FeatureDataset':
