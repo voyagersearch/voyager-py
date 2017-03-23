@@ -25,21 +25,32 @@ status_writer = status.Writer()
 errors_reasons = {}
 
 
-def create_saved_search(search_name, groups, owner, query, query_type='fq'):
+def find_between( s, first, last ):
+    """Find a string between two characters."""
+    try:
+        start = s.index( first ) + len( first )
+        end = s.index( last, start )
+        return s[start:end]
+    except ValueError:
+        return ""
+
+
+def create_saved_search(search_name, groups, owner, query, has_q):
     """Create the saved search using Voyager API."""
     try:
         voyager_server = sys.argv[2].split('=')[1].split('solr')[0][:-1]
         url = "{0}/api/rest/display/ssearch".format(voyager_server)
         if query:
-            if query_type == 'fq':
-                path = "/f.format=" + urllib.urlencode({"path": query}).split('=')[1]
-            else:
+            if has_q:
                 path = "/q=" + query
+            else:
+                path ="/" + query
             query = {
-                "title": search_name,
-                "owner": owner['name'],
-                "path": path,
-                "share": groups
+                "title": str(search_name),
+                "owner": str(owner['name']),
+                "path": str(path),
+                "share": groups,
+                "overwrite": True
             }
         else:
             query = {
@@ -78,33 +89,75 @@ def execute(request):
     request_owner = request['owner']
 
     result_count, response_index = task_utils.get_result_count(parameters)
-    fq = ''
+    fq = '/'
     if 'fq' in parameters[response_index]['query']:
         if isinstance(parameters[response_index]['query']['fq'], list):
             for q in parameters[response_index]['query']['fq']:
                 if '{!tag=' in q:
                     q = q.split('}')[1]
-                fq += q + ' AND '
-            fq = fq.strip(' AND ')
+                if ':' in q:
+                    facet = q.split(':')[0]
+                    value = q.split(':')[1]
+                    if '(' in value:
+                        value = value.replace('(', '').replace(')', '')
+                    value = urllib.urlencode({'val': value.replace('"', '')})
+                    value = value.split('val=')[1]
+                    facet2 = 'f.{0}='.format(facet)
+                    q = '{0}{1}'.format(facet2, value) #q.replace(facet + ':', facet2)
+                fq += '{0}/'.format(q).replace('"', '')
         else:
             # Replace spaces with %20 & remove \\ to avoid HTTP Error 400.
             fq += '&fq={0}'.format(parameters[response_index]['query']['fq'].replace("\\", ""))
-            fq = fq.replace(' ', '%20')
+            if '{!tag=' in fq:
+                fq = fq.split('}')[1]
+            if ':' in fq:
+                if fq.startswith('/&fq='):
+                    fq = fq.replace('/&fq=', '')
+                facet = fq.split(':')[0]
+                value = fq.split(':')[1]
+                facet2 = 'f.{0}='.format(facet)
+                if '(' in value:
+                    fq = ''
+                    if value.split(' '):
+                        for v in  value.split(' '):
+                            fq += (facet2 + v.replace('(', '').replace(')', '') + '/').replace(':', '')
+                else:
+                    value = urllib.urlencode({'val': value}).split('val=')[1]
+                    fq = '{0}{1}'.format(facet2, value)
+            if '{! place.op=' in fq:
+                relop = find_between(fq, 'place.op=', '}')
+                fq = fq.replace('}', '').replace('{', '')
+                fq = fq.replace('! place.op={0}'.format(relop), '/place.op={0}/'.format(relop))
+                fq = fq.replace('place:', 'place=')
+                fq = fq.replace('&fq=', '')
 
-    if fq:
-        if 'format:' in fq:
-            fq = fq.replace('format:', '')
-        query = fq.replace('&fq=', '')
-        qtype = 'fq'
-
+    hasQ = False
     if 'q' in parameters[response_index]['query']:
         query = parameters[response_index]['query']['q']
-        qtype = 'q'
+        hasQ = True
+        if fq:
+            query += '/'
+
+    if fq:
+        if fq.startswith('/place'):
+            query += fq.replace('"', '')
+        else:
+            if fq.startswith('f.//'):
+                fq = fq.replace('f.//', '/').replace('"', '')
+            if ' place.id' in fq:
+                fq = fq.replace(' place.id', '/place.id').replace('"', '')
+            if '{! place.op=' in fq:
+                relop = find_between(fq, 'place.op=', '}')
+                fq = fq.replace('}', '').replace('{', '')
+                fq = fq.replace('! place.op={0}'.format(relop), '/place.op={0}/'.format(relop)).replace('"', '')
+            query += fq.rstrip('/')
+            query = query.replace('f./', '')
+        query = query.replace('&fq=', '')
 
     if query:
-        result = create_saved_search(search_name, groups, request_owner, query, qtype)
+        result = create_saved_search(search_name, groups, request_owner, query, hasQ)
     else:
-        result = create_saved_search(search_name, groups, request_owner, "")
+        result = create_saved_search(search_name, groups, request_owner, "", hasQ)
     if not result[0]:
         errors += 1
         errors_reasons[search_name] = result[1]
