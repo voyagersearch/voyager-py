@@ -485,6 +485,10 @@ def worker(data_path, esri_service=False):
                         mapped_fields = dict(zip(ordered_fields.keys(), row))
                         mapped_fields['_discoveryID'] = job.discovery_id
                         mapped_fields['meta_table_name'] = dsc.name
+                        if hasattr(dsc, 'aliasName') and dsc.aliasName:
+                            mapped_fields['meta_table_alias_name'] = dsc.aliasName
+                        else:
+                            mapped_fields['meta_table_alias_name'] = dsc.name
                         mapped_fields['format_category'] = 'GIS'
                         mapped_fields['format_type'] = "Record"
                         mapped_fields['format'] = "application/vnd.esri.{0}.record".format(dsc.dataType.lower())
@@ -560,6 +564,10 @@ def worker(data_path, esri_service=False):
                             mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                             mapped_fields['_discoveryID'] = job.discovery_id
                             mapped_fields['meta_table_name'] = dsc.name
+                            if hasattr(dsc, 'aliasName') and dsc.aliasName:
+                                mapped_fields['meta_table_alias_name'] = dsc.aliasName
+                            else:
+                                mapped_fields['meta_table_alias_name'] = dsc.name
                             mapped_fields['format_category'] = 'GIS'
                             mapped_fields['geometry_type'] = 'Point'
                             mapped_fields['format_type'] = 'Feature'
@@ -605,6 +613,10 @@ def worker(data_path, esri_service=False):
                             mapped_fields = dict(zip(ordered_fields.keys(), row[1:]))
                             mapped_fields['_discoveryID'] = job.discovery_id
                             mapped_fields['meta_table_name'] = dsc.name
+                            if hasattr(dsc, 'aliasName') and dsc.aliasName:
+                                mapped_fields['meta_table_alias_name'] = dsc.aliasName
+                            else:
+                                mapped_fields['meta_table_alias_name'] = dsc.name
                             for nf in new_fields:
                                 if nf['name'] == '*' or nf['name'] == dsc.name:
                                     for k, v in nf['new_fields'].iteritems():
