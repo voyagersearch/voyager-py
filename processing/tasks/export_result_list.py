@@ -285,6 +285,7 @@ def execute(request):
 
     headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     num_results, response_index = task_utils.get_result_count(request['params'])
+
     query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
     if 'query' in request['params'][response_index]:
         # Voyager Search Traditional UI
@@ -325,7 +326,10 @@ def execute(request):
         for i in xrange(0, num_results, chunk_size):
             req = urllib2.Request(query.replace('{0}', str(chunk_size)).replace('{1}', str(i)), headers=headers)
             for n in urllib2.urlopen(req):
-                jobs = eval(n.replace('null', '"null"').replace('true', 'True').replace('false', 'False'))['response']['docs']
+                try:
+                    jobs = eval(n.replace('null', '"null"').replace('true', 'True').replace('false', 'False'))['response']['docs']
+                except SyntaxError:
+                    jobs = eval(n.replace('true', 'True').replace('false', 'False'))['response']['docs']
                 if out_format == 'CSV':
                     export_to_csv(jobs, file_name, task_folder, fields)
                 elif out_format == 'XML':
