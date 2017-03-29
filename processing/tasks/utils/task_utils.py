@@ -534,7 +534,7 @@ def get_input_items(parameters, list_ids=False, list_components=False):
                 continue
             if list_components and 'component_files' in i:
                     for c in i['component_files']:
-                        if not i['path'].startswith('s3'):
+                        if not i['path'].startswith('s3') and '://s3' not in i['path']:
                             results[os.path.join(os.path.dirname(i['path']), c)] = ''
                         else:
                             results[os.path.join(os.path.dirname(data_path), c)] = ''
@@ -578,15 +578,6 @@ def get_data_path(item):
 
         if os.path.exists(item['path']):
             return item['path']
-        elif item['path'].startswith('http'):
-            return item['path']
-        elif item['format'] == 'format:application/vnd.esri.lyr':
-            return item['[absolute]']
-        elif item['format'] == 'application/vnd.esri.map.data.frame':
-            return item['path']
-        elif '[lyrFile]' in item and os.path.exists(item['[lyrFile]']):
-            return item['[lyrFile]']
-
         elif item['path'].startswith('s3:'):
             base_name = os.path.basename(item['path'])
             temp_folder = tempfile.mkdtemp()
@@ -598,6 +589,17 @@ def get_data_path(item):
                     return os.path.join(temp_folder, urllib.unquote(base_name))
                 else:
                     return download
+        elif '://s3' in item['path'] and '[downloadURL]' in item:
+            return item['[downloadURL]']
+
+        elif item['path'].startswith('http'):
+            return item['path']
+        elif item['format'] == 'format:application/vnd.esri.lyr':
+            return item['[absolute]']
+        elif item['format'] == 'application/vnd.esri.map.data.frame':
+            return item['path']
+        elif '[lyrFile]' in item and os.path.exists(item['[lyrFile]']):
+            return item['[lyrFile]']
         else:
             layer_file = urllib.urlretrieve(item['[lyrURL]'])[0]
             return layer_file
