@@ -45,7 +45,9 @@ def tagNamedEntities(doc, data):
             for word in e1:
                 if word.pos_ != "DET":
                     entity = entity + " " + word.text
-            data["named_entities"][e1.label_].append(entity.strip())
+            if not entity.strip() in data["named_entities"][e1.label_]: 
+                data["named_entities"][e1.label_].append(entity.strip())
+            
 
 
 def tagNounChunks(doc, data):
