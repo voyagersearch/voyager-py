@@ -46,8 +46,8 @@ class ZipFileManager(zipfile.ZipFile):
     """Context manager for zip files. Added to support using
     a with statement with Python 2.6 installed with ArcGIS 10.0.
     """
-    def __init__(self, zip_file, mode='r', compression=zipfile.ZIP_DEFLATED):
-        zipfile.ZipFile.__init__(self, zip_file, mode, compression)
+    def __init__(self, zip_file, mode='r', compression=zipfile.ZIP_DEFLATED, allowZip64=True):
+        zipfile.ZipFile.__init__(self, zip_file, mode, compression, allowZip64)
 
     def __enter__(self):
         """Return object created in __init__ part"""
@@ -636,6 +636,7 @@ def get_data_frame_name(path):
     else:
         return map_frame_name
 
+
 def from_wkt(wkt, sr):
     """Creates a polygon geometry from a list of well-known text coordinates.
 
@@ -833,7 +834,7 @@ def zip_data(data_location, name):
     :rtype : str
     """
     zfile = os.path.join(data_location, name)
-    with ZipFileManager(zfile, 'w', zipfile.ZIP_DEFLATED) as z:
+    with ZipFileManager(zfile, 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as z:
         for root, dirs, files in os.walk(data_location):
             for f in files:
                 if not f.endswith('zip'):
