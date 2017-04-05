@@ -35,10 +35,44 @@ def find_between( s, first, last ):
         return ""
 
 
+def delete_saved_search(search_name, owner):
+    """Deletes an existing saved search. This is used when overwriting a saved search."""
+    try:
+        voyager_server = sys.argv[2].split('=')[1].split('solr')[0][:-1]
+        get_url = "{0}/api/rest/display/ssearch/export".format(voyager_server)
+        get_response = requests.get(get_url, headers={'Content-type': 'application/json', 'x-access-token': task_utils.get_security_token(owner)})
+        if get_response.status_code == 200:
+            delete_url = ''
+            saved_searches = get_response.json()['searches']
+            for ss in saved_searches:
+                if ss['title'] == search_name:
+                    search_id = ss['id']
+                    delete_url = "{0}/api/rest/display/ssearch/{1}".format(voyager_server, search_id)
+                    break
+            if delete_url:
+                res = requests.delete(delete_url, headers={'Content-type': 'application/json', 'x-access-token': task_utils.get_security_token(owner)})
+                if not res.status_code == 200:
+                    if hasattr(res, 'content'):
+                        return False, eval(res.content)['error']
+                    else:
+                        return False, 'Error creating saved search: {0}: {1}'.format(search_name, res.reason)
+                else:
+                    return True, ''
+            else:
+                return True, ''
+        else:
+            return False, eval(get_response.content)['message']
+    except requests.HTTPError as http_error:
+        return False, http_error
+    except requests.exceptions.InvalidURL as url_error:
+        return False, url_error
+    except requests.RequestException as re:
+        return False, re
+
 def create_saved_search(search_name, groups, owner, query, has_q):
     """Create the saved search using Voyager API."""
     try:
-        voyager_server = sys.argv[2].split('=')[1].split('solr')[0][:-1]
+        voyager_server = "http://localhost:8888" #sys.argv[2].split('=')[1].split('solr')[0][:-1]
         url = "{0}/api/rest/display/ssearch".format(voyager_server)
         if query:
             if has_q:
@@ -63,7 +97,10 @@ def create_saved_search(search_name, groups, owner, query, has_q):
         if response.status_code == 200:
             return True, 'Created save search: {0}'.format(response.json()['title'])
         else:
-            return False, 'Error creating saved search: {0}: {1}'.format(search_name, response.reason)
+            if hasattr(response, 'content'):
+                return False, eval(response.content)['error']
+            else:
+                return False, 'Error creating saved search: {0}: {1}'.format(search_name, response.reason)
     except requests.HTTPError as http_error:
         return False, http_error
     except requests.exceptions.InvalidURL as url_error:
@@ -84,7 +121,9 @@ def execute(request):
         os.makedirs(archive_location)
 
     # Parameter values
+    search_action = task_utils.get_parameter_value(parameters, 'saved_search_action', 'value')
     search_name = task_utils.get_parameter_value(parameters, 'search_name', 'value')
+    saved_search = task_utils.get_parameter_value(parameters, 'saved_searches', 'value')
     groups = task_utils.get_parameter_value(parameters, 'groups', 'value')
     request_owner = request['owner']
 
@@ -154,6 +193,12 @@ def execute(request):
             query = query.replace('f./', '')
         query = query.replace('&fq=', '')
 
+    if search_action == 'Overwrite an existing saved search':
+        delete_result = delete_saved_search(saved_search, request_owner)
+        if not delete_result[0]:
+            status_writer.send_state(status.STAT_FAILED, delete_result[1])
+            return
+
     if query:
         result = create_saved_search(search_name, groups, request_owner, query, hasQ)
     else:
@@ -164,7 +209,7 @@ def execute(request):
 
     # Update state if necessary.
     if errors > 0:
-        status_writer.send_state(status.STAT_FAILED)
+        status_writer.send_state(status.STAT_FAILED, result[1])
     else:
         status_writer.send_status(result[1])
     task_utils.report(os.path.join(request['folder'], '__report.json'), 1, 0, errors, errors_details=errors_reasons)
