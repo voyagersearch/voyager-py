@@ -72,7 +72,7 @@ def delete_saved_search(search_name, owner):
 def create_saved_search(search_name, groups, owner, query, has_q):
     """Create the saved search using Voyager API."""
     try:
-        voyager_server = "http://localhost:8888" #sys.argv[2].split('=')[1].split('solr')[0][:-1]
+        voyager_server = sys.argv[2].split('=')[1].split('solr')[0][:-1]
         url = "{0}/api/rest/display/ssearch".format(voyager_server)
         if query:
             if has_q:
