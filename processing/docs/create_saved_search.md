@@ -6,7 +6,7 @@ Creates a saved search using items in the cart.
   - The default option is to create a new saved search. 
   - A search name is required whether it already exists or not. 
   - An existing saved search can be overwritten. To do this, enter a name and select and existing saved search.
-  - Only the saved searches that the user logged in to Voyager has permission to update will be listed.
+  - Only saved searches that the user logged in to Voyager has permission to update will be listed.
   - If the option to create a new saved search is selected and the name already exists, an error will occur and inform the user of this issue.
   - A saved search can be shared with other groups. The list of groups is populated based on the credentials of the user logged into Voyager.
   
