@@ -9,25 +9,9 @@
       "required": true
     },
     {
-      "type": "StringChoice",
-      "name": "saved_search_action",
-      "required": true,
-      "choices": [
-        "Create a new saved search",
-        "Overwrite an existing saved search"
-      ],
-      "value": "Create a new saved search"
-    },
-    {
       "type": "String",
       "name": "search_name",
       "required": true
-    },
-    {
-      "type": "StringChoice",
-      "name": "saved_searches",
-      "required": false,
-      "choices": []
     },
     {
       "type": "List",
@@ -44,15 +28,9 @@
       "description": "Creates a saved search of items",
       "params":
   	  {
-        "saved_search_action": {
-  	      "display": "Use cart items to:"
-  	    },
   	    "search_name": {
   	      "display": "Saved search name"
   	    },
-        "saved_searches": {
-          "display": "Existing saved searches"
-        },
         "groups": {
   	      "display": "Groups to share with"
   	    }
