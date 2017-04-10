@@ -13,7 +13,7 @@
 # limitations under the License.
 from __future__ import unicode_literals
 
-from bottle import route, run, request
+from bottle import route, run, request, response
 from spacy.en import English
 import linguistic_features as lf
 import logging
@@ -65,17 +65,22 @@ class NLPParser(object):
 
 _nlp = NLPParser()
 
+def jsonp(request, dictionary):
+    if (request.query.callback):
+        return "%s(%s)" % (request.query.callback, dictionary)
+    return dictionary
 
-@route('/nlptest/<text>', method='GET')
-def nlptest(text):
-    return _nlp.parse(text)
-
+@route('/nlptest', method='GET')
+def nlptest():
+    if request.query.callback:
+        response.content_type = "application/javascript"
+    result = _nlp.parse(request.query.text)
+    return jsonp(request, result)
 
 @route('/nlp', method='POST')
 def nlpservice():
     postdata = request.body.read()
     return _nlp.parse(postdata)
-
 
 argument_parser = argparse.ArgumentParser(description='NLP Service')
 argument_parser.add_argument('-p', '--port', help='port to run on', default=settings.SERVICE_PORT)
