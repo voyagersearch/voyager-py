@@ -35,41 +35,6 @@ def find_between( s, first, last ):
         return ""
 
 
-# def delete_saved_search(search_name, owner):
-#     """Deletes an existing saved search. This is used when overwriting a saved search."""
-#     try:
-#         voyager_server = sys.argv[2].split('=')[1].split('solr')[0][:-1]
-#         get_url = "{0}/api/rest/display/ssearch/export".format(voyager_server)
-#         get_response = requests.get(get_url, headers={'Content-type': 'application/json', 'x-access-token': task_utils.get_security_token(owner)})
-#         if get_response.status_code == 200:
-#             delete_url = ''
-#             saved_searches = get_response.json()['searches']
-#             for ss in saved_searches:
-#                 if ss['title'] == search_name:
-#                     search_id = ss['id']
-#                     delete_url = "{0}/api/rest/display/ssearch/{1}".format(voyager_server, search_id)
-#                     break
-#             if delete_url:
-#                 res = requests.delete(delete_url, headers={'Content-type': 'application/json', 'x-access-token': task_utils.get_security_token(owner)})
-#                 if not res.status_code == 200:
-#                     if hasattr(res, 'content'):
-#                         return False, eval(res.content)['error']
-#                     else:
-#                         return False, 'Error creating saved search: {0}: {1}'.format(search_name, res.reason)
-#                 else:
-#                     return True, ''
-#             else:
-#                 return True, ''
-#         else:
-#             return False, eval(get_response.content)['message']
-#     except requests.HTTPError as http_error:
-#         return False, http_error
-#     except requests.exceptions.InvalidURL as url_error:
-#         return False, url_error
-#     except requests.RequestException as re:
-#         return False, re
-
-
 def create_saved_search(search_name, groups, owner, query, has_q):
     """Create the saved search using Voyager API."""
     try:
@@ -152,7 +117,9 @@ def execute(request):
                 if fq.startswith('/&fq='):
                     fq = fq.replace('/&fq=', '')
                 facet = fq.split(':')[0]
-                value = fq.split(':')[1]
+                value = fq.split(':')[1].replace('(', '').replace(')', '').replace('"', '')
+                if 'place' not in facet:
+                    value = urllib.urlencode({'val': value}).split('val=')[1]
                 facet2 = 'f.{0}='.format(facet)
                 if '(' in value:
                     fq = ''
@@ -179,6 +146,11 @@ def execute(request):
     if fq:
         if fq.startswith('/place'):
             query += fq.replace('"', '')
+        elif '!tag' in query and 'OR' in query:
+            # e.g. "path": "/q=id:(92cdd06e01761c4c d9841b2f59b8a326) OR format:(application%2Fvnd.esri.shapefile)"
+            q = query.split('}')[1].replace('))/', '').replace('(', '').replace('(', '')
+            q = urllib.urlencode({'val': q.split(':')[1]}).split('val=')[1]
+            query = query.split(' OR ')[0] + ' OR ' + q
         else:
             if fq.startswith('f.//'):
                 fq = fq.replace('f.//', '/').replace('"', '')
