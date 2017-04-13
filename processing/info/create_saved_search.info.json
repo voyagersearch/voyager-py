@@ -25,7 +25,8 @@
     "en":
     {
       "display": "Create Saved Search",
-      "description": "Creates a saved search of items",
+      "description": "Creates a saved search of items in the cart",
+      "helpURL": "https://voyagersearch.zendesk.com/hc/en-us/articles/115005484308",
       "params":
   	  {
   	    "search_name": {
