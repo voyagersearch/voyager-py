@@ -338,7 +338,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
             else:
                 processed_count += 1.
                 status_writer.send_percent(processed_count / result_count, _('Invalid input type: {0}').format(ds), 'clip_data')
-                status_writer.send_state(_(status.STAT_WARNING, 'Invalid input type: {0}').format(ds))
+                status_writer.send_state(status.STAT_WARNING, _('Invalid input type: {0}').format(ds))
                 skipped += 1
                 skipped_reasons[ds] = _('Invalid input type: {0}').format(dsc.dataType)
                 continue
