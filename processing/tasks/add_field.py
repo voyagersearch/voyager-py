@@ -122,7 +122,7 @@ def add_field(input_items, field_name, field_type, field_value):
             dsc = arcpy.Describe(path)
             try:
                 if dsc.dataType in ('FeatureClass', 'Shapefile', 'ShapeFile', 'Table', 'RasterDataset'):
-                    if dsc.dataType == 'RasterDataset' and not dsc.isInteger:
+                    if dsc.dataType == 'RasterDataset' and hasattr(dsc, 'isInteger') and not dsc.isInteger:
                         raise arcpy.ExecuteError(_('Invalid input type. Pixel type must be Integer.'))
                     field_name = arcpy.ValidateFieldName(field_name, task_utils.get_geodatabase_path(path))
                     arcpy.AddField_management(path, field_name, field_type)
