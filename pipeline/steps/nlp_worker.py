@@ -21,37 +21,44 @@ from steps.utils import settings, nlp_settings
 * LANGUAGE:    Any named language
 """
 
-NLP_FIELDS = ['description', 'text']
+NLP_FIELDS = ['text', 'fulltext', 'description']
 NLP_GEO_KEYS = ['GPE', 'LOC', 'FAC']
 
-logging.basicConfig(filename="{0}/nlp_worker.log".format(settings.LOG_FILE_PATH), level=logging.DEBUG)
+logging.basicConfig(filename="{0}/nlp_worker.log".format(settings.LOG_FILE_PATH),
+                    level=logging.INFO,
+                    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
+                    datefmt="%Y-%m-%d %H:%M:%S")
 
 
 def post_to_nlp_service(text):
+    """ posts content to the nlp service """
     text = unicode(text).encode('utf-8')
     text = urllib.quote(text)
     try:
         req = urllib2.Request("http://{0}:{1}/nlp".format(nlp_settings.SERVICE_ADDRESS, nlp_settings.SERVICE_PORT), text)
         response = urllib2.urlopen(req)
         result = response.read()
-        logging.info('\n\nsent {0} chars to nlp, got back {1} chars'.format(len(text), len(result)))
+        logging.debug('sent %s chars to nlp, got back %s chars', len(text), len(result))
         return result
     except Exception as e:
-        logging.error('\n\nsent {0} chars to nlp, got back error: {1}'.format(len(text), e))
+        logging.error('sent %s chars to nlp, got back error: %s', len(text), e)
 
 
 def run(entry, *args):
-    if args is not None:
-        NLP_FIELDS = list(args)
+    """ run the worker """
+    _fields = NLP_FIELDS
+    if args is not None and len(args) > 0:
+        _fields = list(args)
 
+    logging.debug("combined nlp fields %s" % _fields)
     new_entry = json.load(open(entry, "rb"))
-        
+
     if 'path' not in new_entry['job'].keys():
-        logging.info('no job path in this entry, skipping...')
+        logging.debug('no job path in this entry, skipping...')
         return
 
     text = ''
-    for field in NLP_FIELDS:
+    for field in _fields:
         if field in new_entry['entry']['fields'].keys():
             v = new_entry['entry']['fields'][field]
             if v is not None:
@@ -82,9 +89,8 @@ def run(entry, *args):
             logging.error(e)
 
     else:
-        logging.info('no text found to send to NLP in entry \n {0}'.format(json.dumps(new_entry, indent=4)))
+        logging.info('no text found to send to NLP in entry id %s', new_entry['entry']['fields']['id'])
 
-    
     sys.stdout.write(json.dumps(new_entry))
     sys.stdout.flush()
     
