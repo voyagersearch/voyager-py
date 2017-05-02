@@ -36,9 +36,8 @@ def find_between( s, first, last ):
 
 
 def get_display_tempate_id(owner):
-    # http: // localhost:8888 / api / rest / display / config / default
     try:
-        voyager_server = "http://localhost:8888" #sys.argv[2].split('=')[1].split('solr')[0][:-1]
+        voyager_server = sys.argv[2].split('=')[1].split('solr')[0][:-1]
         get_url = "{0}/api/rest/display/config/default".format(voyager_server)
         get_response = requests.get(get_url, headers={'Content-type': 'application/json',
                                                           'x-access-token': task_utils.get_security_token(owner)})
@@ -56,7 +55,7 @@ def get_display_tempate_id(owner):
 def get_existing_saved_search_query(search_name, owner):
     """Retrieves the query from an existing saved search."""
     try:
-        voyager_server = "http://localhost:8888" #sys.argv[2].split('=')[1].split('solr')[0][:-1]
+        voyager_server = sys.argv[2].split('=')[1].split('solr')[0][:-1]
         get_url = "{0}/api/rest/display/ssearch/export".format(voyager_server)
         get_response = requests.get(get_url, headers={'Content-type': 'application/json',
                                                       'x-access-token': task_utils.get_security_token(owner)})
