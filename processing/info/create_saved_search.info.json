@@ -9,9 +9,20 @@
       "required": true
     },
     {
-      "type": "String",
-      "name": "search_name",
-      "required": true
+      "type": "StringChoice",
+      "name": "search_action",
+      "required": true,
+      "choices": [
+        "Create a new saved search",
+        "Overwrite an existing saved search"
+      ],
+      "value": "Create a new saved search"
+    },
+    {
+      "type": "List",
+      "name": "saved_searches",
+      "required": true,
+      "value": []
     },
     {
       "type": "List",
@@ -24,16 +35,19 @@
   {
     "en":
     {
-      "display": "Create Saved Search",
-      "description": "Creates a saved search of items in the cart",
+      "display": "Create a List - Saved Search",
+      "description": "Creates a list as a saved search of items in the cart",
       "helpURL": "https://voyagersearch.zendesk.com/hc/en-us/articles/115005484308",
       "params":
   	  {
-  	    "search_name": {
-  	      "display": "Saved search name"
+        "search_action": {
+  	      "display": "Use cart content to:"
+  	    },
+  	    "saved_searches": {
+  	      "display": "Name"
   	    },
         "groups": {
-  	      "display": "Groups to share with"
+  	      "display": "Permissions"
   	    }
    	  }
     }
