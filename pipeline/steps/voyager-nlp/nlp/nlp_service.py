@@ -13,14 +13,15 @@
 # limitations under the License.
 from __future__ import unicode_literals
 
-from bottle import route, run, request, response
-from spacy.en import English
-import linguistic_features as lf
 import logging
 import json
 import urllib
-import settings
 import argparse
+
+import settings
+from bottle import route, run, request, response
+from spacy.en import English
+import linguistic_features as lf
 
 
 logging.basicConfig(filename="{0}/nlp_service.log".format(settings.LOG_FILE_PATH), level=logging.DEBUG)

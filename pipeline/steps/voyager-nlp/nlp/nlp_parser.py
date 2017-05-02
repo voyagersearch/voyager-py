@@ -15,13 +15,13 @@ import codecs
 import logging
 import os
 import sys
-import ujson as json
-
 import argparse
-from spacy.en import English
 
-import linguistic_features as lf
 import settings
+import ujson as json
+from spacy.en import English
+import linguistic_features as lf
+
 
 sys.setrecursionlimit(10000)
 

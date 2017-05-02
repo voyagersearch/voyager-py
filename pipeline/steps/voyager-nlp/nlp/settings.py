@@ -12,6 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import sys
+import glob
+
+
+"""Import required Python libraries required for NLP."""
+path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'nlp-libs'))
+egg_files = glob.glob(os.path.join(path, '*.egg'))
+egg_files += glob.glob(os.path.join(path, '*', '*.egg'))
+for egg_file in egg_files:
+    sys.path.append(egg_file)
 
 
 """Settings for the nlp service."""
