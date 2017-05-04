@@ -168,7 +168,7 @@ def execute(request):
         os.makedirs(archive_location)
 
     # Parameter values
-    search_action = task_utils.get_parameter_value(parameters, 'saved_search_action', 'value')
+    search_action = task_utils.get_parameter_value(parameters, 'search_action', 'value')
     search_name = task_utils.get_parameter_value(parameters, 'saved_searches', 'value')
     search_name = eval(search_name[0])['text']
     groups = task_utils.get_parameter_value(parameters, 'groups', 'value')
