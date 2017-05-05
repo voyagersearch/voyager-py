@@ -50,7 +50,6 @@ def run(entry, *args):
     if args is not None and len(args) > 0:
         _fields = list(args)
 
-    logging.debug("combined nlp fields %s" % _fields)
     new_entry = json.load(open(entry, "rb"))
 
     if 'path' not in new_entry['job'].keys():
@@ -60,29 +59,29 @@ def run(entry, *args):
     text = ''
     for field in _fields:
         if field in new_entry['entry']['fields'].keys():
-            v = new_entry['entry']['fields'][field]
-            if v is not None:
-                if isinstance(v, list):
-                    text = u'{0}, {1}'.format(text, ', '.join(v))
+            _v = new_entry['entry']['fields'][field]
+            if _v is not None:
+                if isinstance(_v, list):
+                    text = u'{0}, {1}'.format(text, ', '.join(_v))
                 else:
-                    text = u'{0}, {1}'.format(text, v)
+                    text = u'{0}, {1}'.format(text, _v)
 
     nlp_items = dict()
 
-    if len(text) > 0:
+    if text:
         try:
             nlp_items = json.loads(post_to_nlp_service(text))
             for nlp_item_key in nlp_items.keys():
-                nlp_text_field_name = "fss_NLP_{0}".format(nlp_item_key)
+                nlp_text_field_name = "fss_nlp_{0}".format(nlp_item_key.lower())
                 new_entry['entry']['fields'][nlp_text_field_name] = nlp_items[nlp_item_key]
 
             geo_text = " "
             for field in NLP_GEO_KEYS:
                 if field in nlp_items.keys():
-                    if len(nlp_items[field]) > 0:
+                    if nlp_items[field]:
                         geo_text = "{0} {1}".format(geo_text, ' '.join(nlp_items[field]))
             if not geo_text.isspace():
-                new_entry['entry']['fields']['ft_NLP_Geo'] = geo_text
+                new_entry['entry']['fields']['ft_nlp_place'] = geo_text
 
         except Exception as e:
             logging.error("could not get response from NLP parser. ")
