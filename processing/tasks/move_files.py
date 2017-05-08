@@ -72,6 +72,7 @@ def execute(request):
 
     num_results, response_index = task_utils.get_result_count(parameters)
     if num_results > task_utils.CHUNK_SIZE:
+        task_utils.CHUNK_SIZE = num_results
         # Query the index for results in groups of 25.
         headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
         query_index = task_utils.QueryIndex(parameters[response_index])
