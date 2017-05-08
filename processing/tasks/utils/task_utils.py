@@ -373,6 +373,8 @@ def clip_mxd_layers(mxd_path, aoi, workspace, map_frame=None):
                 elif layer.isRasterLayer:
                     if isinstance(aoi, unicode):
                         clip_src = arcpy.Describe(aoi)
+                    else:
+                        clip_src = aoi
                     ext = '{0} {1} {2} {3}'.format(clip_src.extent.XMin, clip_src.extent.YMin, clip_src.extent.XMax, clip_src.extent.YMax)
                     if arcpy.env.workspace.endswith('.gdb'):
                         if out_name[-4:].startswith('.'):
