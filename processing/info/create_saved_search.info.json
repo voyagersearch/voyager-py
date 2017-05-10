@@ -37,7 +37,7 @@
     {
       "display": "Create a List - Saved Search",
       "description": "Creates a list as a saved search of items in the cart",
-      "helpURL": "https://voyagersearch.zendesk.com/hc/en-us/articles/115005484308",
+      "helpURL": "https://help.voyagersearch.com/doc-create-list-saved-search",
       "params":
   	  {
         "search_action": {
