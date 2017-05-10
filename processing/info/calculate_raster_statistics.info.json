@@ -38,7 +38,7 @@
     {
       "display": "Calculate Raster Statistics",
       "description": "Calculates statistics for raster datasets and mosaic datasets",
-      "helpURL": "https://voyagersearch.zendesk.com/hc/en-us/articles/203678027-Calculate-Raster-Statistics",
+      "helpURL": "https://help.voyagersearch.com/doc-203678027-calculate-raster-statistics",
       "params":
 	  {
 		"processing_extent":

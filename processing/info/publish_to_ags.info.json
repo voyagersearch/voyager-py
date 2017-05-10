@@ -30,7 +30,7 @@
     {
       "display": "Publish to ArcGIS Server",
       "description": "Publish results as a map service on ArcGIS for Server",
-      "helpURL": "https://voyagersearch.zendesk.com/hc/en-us/articles/203519576-Publish-to-an-ArcGIS-Server",
+      "helpURL": "https://help.voyagersearch.com/doc-203519576-publish-to-an-arcgis-server",
       "params":
       {
 		"server_connection_path":

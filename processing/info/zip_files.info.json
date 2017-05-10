@@ -27,7 +27,7 @@
     {
       "display": "Zip Files",
       "description": "Compress input files into a single zip file",
-      "helpURL": "https://voyagersearch.zendesk.com/entries/92846633-Zip-Files",
+      "helpURL": "https://help.voyagersearch.com/doc-203514783-zip-files",
       "params":
       {
         "flatten_results":

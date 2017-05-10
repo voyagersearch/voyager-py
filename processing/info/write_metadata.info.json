@@ -41,7 +41,7 @@
     {
       "display": "Write GIS Metadata",
       "description": "Create or update existing metadata for GIS datasets",
-      "helpURL": "https://voyagersearch.zendesk.com/hc/en-us/articles/204035673-Write-Metadata",
+      "helpURL": "https://help.voyagersearch.com/doc-204035673-write-gis-metadata",
       "params":
       {
       "overwrite": {

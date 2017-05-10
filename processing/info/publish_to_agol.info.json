@@ -41,7 +41,7 @@
     {
       "display": "Publish to Portal for ArcGIS",
       "description": "Publish results as a map service to a portal for ArcGIS",
-      "helpURL": "https://voyagersearch.zendesk.com/hc/en-us/articles/203950223-Publish-to-ArcGIS-for-Portal-",
+      "helpURL": "https://help.voyagersearch.com/doc-203950223-publish-to-arcgis-for-portal",
       "params":
       {
 		"url":

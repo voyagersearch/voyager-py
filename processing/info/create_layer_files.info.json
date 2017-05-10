@@ -22,7 +22,7 @@
     {
       "display": "Create Layer Files",
       "description": "Creates layers files in Voyager's meta folders.",
-      "helpURL": "https://voyagersearch.zendesk.com/entries/92842153-Create-Layer-Files",
+      "helpURL": "https://help.voyagersearch.com/doc-207723227-create-layer-files",
   	  "params":
   	  {
   	    "target_folder": {

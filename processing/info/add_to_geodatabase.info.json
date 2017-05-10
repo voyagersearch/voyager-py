@@ -26,7 +26,7 @@
 	{
       "display": "Add to Geodatabase",
       "description": "Add input data to an existing geodatabase",
-      "helpURL": "https://voyagersearch.zendesk.com/entries/93824306-Add-to-Geodatabase",
+      "helpURL": "https://help.voyagersearch.com/doc-203514793-add-to-geodatabase",
 	  "params":
 	  {
 		"target_workspace":

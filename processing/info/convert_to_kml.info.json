@@ -27,7 +27,7 @@
     {
       "display": "Convert to KML",
       "description": "Converts feature or raster data into Keyhole Markup Language",
-      "helpURL": "https://voyagersearch.zendesk.com/entries/92678063-Convert-to-KML",
+      "helpURL": "https://help.voyagersearch.com/doc-203514733-convert-to-kml",
       "params":
 	  {
 		"processing_extent":

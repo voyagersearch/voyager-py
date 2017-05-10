@@ -38,7 +38,7 @@
     {
       "display": "Add Field",
       "description": "Adds a new field and calculates it with the field value.",
-      "helpURL": "https://voyagersearch.zendesk.com/hc/en-us/articles/212011488-Add-Field",
+      "helpURL": "https://help.voyagersearch.com/doc-212011488-add-field",
   	  "params":
   	  {
   	    "field_name": {

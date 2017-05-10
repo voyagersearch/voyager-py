@@ -45,7 +45,7 @@
 	{
       "display": "Export Result List",
       "description": "Export search results to a CSV, shapefile or XML document",
-      "helpURL": "https://voyagersearch.zendesk.com/hc/en-us/articles/204436747-Export-Result-List",
+      "helpURL": "https://help.voyagersearch.com/doc-204436747-export-result-list",
 	  "params":
 	  {
         "file_name":

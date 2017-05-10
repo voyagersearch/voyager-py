@@ -44,7 +44,7 @@
     {
       "display": "Create an Esri Map or Layer Package",
       "description": "Package data into a single compressed file (.mpk or .lpk)",
-      "helpURL": "https://voyagersearch.zendesk.com/entries/93994146-Create-an-Esri-Map-or-Layer-Package",
+      "helpURL": "https://help.voyagersearch.com/doc-203514813-create-an-esri-map-or-layer-package",
       "params":
       {
         "processing_extent":

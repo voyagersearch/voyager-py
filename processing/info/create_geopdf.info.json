@@ -68,7 +68,7 @@
     "en": {
       "display": "Create GeoPDF",
       "description": "Add selected data to a GeoPDF document",
-      "helpURL": "https://voyagersearch.zendesk.com/entries/92843133-Create-GeoPDF",
+      "helpURL": "https://help.voyagersearch.com/doc-203514763-create-geopdf",
       "params": {
         "map_template": {
           "display": "Map Template",

@@ -80,7 +80,7 @@
     {
       "display": "Mosaic",
       "description": "Mosaic input rasters to a new raster dataset where the result is to be downloaded",
-      "helpURL": "https://voyagersearch.zendesk.com/entries/92843643-Mosaic",
+      "helpURL": "https://help.voyagersearch.com/doc-203514773-mosaic",
   	  "params":
   	  {
     		"processing_extent": {

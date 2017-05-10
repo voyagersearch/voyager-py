@@ -86,7 +86,7 @@
     {
       "display": "Mosaic to Workspace",
       "description": "Mosaic input rasters to a new dataset in an existing workspace",
-      "helpURL": "https://voyagersearch.zendesk.com/entries/93995726-Mosaic-to-Workspace",
+      "helpURL": "https://help.voyagersearch.com/doc-203514833-mosaic-to-workspace",
       "params": {
         "target_workspace": {
           "display": "Target Workspace",

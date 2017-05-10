@@ -31,7 +31,7 @@
     {
       "display": "Replace Data Source",
       "description": "Replaces a layer's data source",
-      "helpURL": "https://voyagersearch.zendesk.com/entries/92678893-Replace-Data-Source",
+      "helpURL": "https://help.voyagersearch.com/doc-203514743-replace-data-source",
       "params":
       {
 		"create_backup":

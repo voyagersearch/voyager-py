@@ -30,7 +30,7 @@
     {
       "display": "Move Files",
       "description": "Moves files to a target folder",
-      "helpURL": "https://voyagersearch.zendesk.com/entries/93995916-Move-Files",
+      "helpURL": "https://help.voyagersearch.com/doc-203514843-move-files",
   	  "params":
   	  {
   	    "archive_location": {
