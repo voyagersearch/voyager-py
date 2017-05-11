@@ -33,6 +33,7 @@
     {
       "display": "Delete Items",
       "description": "Deletes items from the index",
+      "helpURL": "https://help.voyagersearch.com/doc-delete-items",
       "params":
   	  {
   	    "delete_thumbnails": {
