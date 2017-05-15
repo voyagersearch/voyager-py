@@ -77,7 +77,7 @@ def get_existing_saved_search_query(search_name, owner):
 def delete_saved_search(search_name, owner):
     """Deletes an existing saved search. This is used when overwriting a saved search."""
     try:
-        voyager_server = "http://localhost:8888" #sys.argv[2].split('=')[1].split('solr')[0][:-1]
+        voyager_server = sys.argv[2].split('=')[1].split('solr')[0][:-1]
         get_url = "{0}/api/rest/display/ssearch/export".format(voyager_server)
         get_response = requests.get(get_url, headers={'Content-type': 'application/json', 'x-access-token': task_utils.get_security_token(owner)})
         if get_response.status_code == 200:
