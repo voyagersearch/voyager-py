@@ -22,7 +22,20 @@ from steps.utils import settings, nlp_settings
 """
 
 NLP_FIELDS = ['text', 'fulltext', 'description']
-NLP_GEO_KEYS = ['GPE', 'LOC', 'FAC']
+NLP_GEO_KEYS = ['GPE', 'LOC']
+NLP_SOLR_MAPPING = {
+    'PERSON':   'nlp_people',
+    'NORP':     'nlp_groups',
+    'FAC':      'nlp_facilities',
+    'ORG':      'nlp_orgs',
+    'GPE':      'nlp_admin_places',
+    'LOC':      'nlp_geo_places',
+    'PRODUCT':  'nlp_products',
+    'EVENT':    'nlp_events',
+    'WORK_OF_ART': 'nlp_art',
+    'LAW':      'nlp_legal',
+    'LANGUAGE': 'nlp_languages'
+}
 
 logging.basicConfig(filename="{0}/nlp_worker.log".format(settings.LOG_FILE_PATH),
                     level=logging.INFO,
@@ -72,16 +85,16 @@ def run(entry, *args):
         try:
             nlp_items = json.loads(post_to_nlp_service(text))
             for nlp_item_key in nlp_items.keys():
-                nlp_text_field_name = "fss_nlp_{0}".format(nlp_item_key.lower())
+                nlp_text_field_name = NLP_SOLR_MAPPING[nlp_item_key]
                 new_entry['entry']['fields'][nlp_text_field_name] = nlp_items[nlp_item_key]
 
             geo_text = " "
             for field in NLP_GEO_KEYS:
                 if field in nlp_items.keys():
                     if nlp_items[field]:
-                        geo_text = "{0} {1}".format(geo_text, ' '.join(nlp_items[field]))
+                        geo_text = "{0} {1}".format(geo_text, ', '.join(nlp_items[field]))
             if not geo_text.isspace():
-                new_entry['entry']['fields']['ft_nlp_place'] = geo_text
+                new_entry['entry']['fields']['nlp_place'] = geo_text
 
         except Exception as e:
             logging.error("could not get response from NLP parser. ")
