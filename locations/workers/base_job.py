@@ -381,7 +381,7 @@ class Job(object):
             srvr = self.sql_connection_info['connection']['server']
             db = self.sql_connection_info['connection']['database']
             un = self.sql_connection_info['connection']['uid']
-            pw = self.sql_connection_info['connection']['pwd']
+            pw = self.sql_connection_info['connection']['password']
 
             if self.drvr == 'Oracle':
                 import cx_Oracle
