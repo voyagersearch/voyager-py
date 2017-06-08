@@ -31,7 +31,7 @@ sys.path.append(egg_path)
 libs = glob.glob(join(egg_path, 'GDAL*.egg'))
 for lib in libs:
     sys.path.append(lib)
-import ogr
+from osgeo import ogr
 
 
 class InvalidToken(Exception):

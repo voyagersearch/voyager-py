@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import base_job
-import ogr
-import gdalconst
+from osgeo import ogr
+from osgeo import gdalconst
 
 
 def global_job(args):
