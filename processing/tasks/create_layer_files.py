@@ -57,11 +57,16 @@ def execute(request):
     errors = 0
     global result_count
     parameters = request['params']
+    headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
 
     if not os.path.exists(request['folder']):
         os.makedirs(request['folder'])
 
-    meta_folder = task_utils.get_parameter_value(parameters, 'meta_data_folder', 'value')
+    # meta_folder = task_utils.get_parameter_value(parameters, 'meta_data_folder', 'value')
+    voyager_server = sys.argv[2].split('=')[1].split('solr')[0][:-1]
+    url = "{0}/api/rest/system/settings".format(voyager_server)
+    response = requests.get(url, headers=headers)
+    meta_folder = response.json()['folders']['meta']
     result_count, response_index = task_utils.get_result_count(parameters)
     # Query the index for results in groups of 25.
     query_index = task_utils.QueryIndex(parameters[response_index])
@@ -78,7 +83,7 @@ def execute(request):
 
     status_writer.send_percent(0.0, _('Starting to process...'), 'create_layer_files')
     i = 0.
-    headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
+
     for group in groups:
         i += len(group) - group.count('')
         if fq:

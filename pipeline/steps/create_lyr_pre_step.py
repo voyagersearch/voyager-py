@@ -3,7 +3,7 @@ import sys
 import json
 
 
-def run(entry):
+def run(entry, *args):
     """
     Creates a layer file (.lyr) in the Voyager meta location for a GIS item that currently has no associated layer file.
     Currently has support for Shapefiles, raster datasets and geodatbase feature classes.
@@ -14,7 +14,10 @@ def run(entry):
     except ImportError as ie:
         sys.stdout.write(ie.message)
         sys.exit(1)
-    meta_folder = 'c:/voyager/data/meta'
+    if args is not None and len(args) > 0:
+        meta_folder = args[0]
+    else:
+        meta_folder = 'c:/voyager/data/meta'
     vmoptions = os.path.join(os.path.abspath(os.path.join(__file__, "../../../..")), 'Voyager.vmoptions')
     mxd_path = os.path.join(os.path.abspath(os.path.join(__file__, "../../..")), 'processing/supportfiles/GroupLayerTemplate.mxd') #os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'GroupLayerTemplate.mxd')
     with open(vmoptions, 'rb') as fp:

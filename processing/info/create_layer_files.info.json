@@ -9,11 +9,6 @@
       "type": "VoyagerResults",
       "name": "input_items",
       "required": true
-    },
-    {
-      "type": "FolderLocation",
-      "name": "meta_data_folder",
-      "required": true
     }
   ],
   "display":
@@ -22,14 +17,7 @@
     {
       "display": "Create Layer Files",
       "description": "Creates layers files in Voyager's meta folders.",
-      "helpURL": "https://help.voyagersearch.com/doc-207723227-create-layer-files",
-  	  "params":
-  	  {
-  	    "target_folder": {
-  	      "display": "Voyager Metadata Folder",
-  	      "description": "The Voyager metadata folder."
-  	    }
-   	  }
+      "helpURL": "https://help.voyagersearch.com/doc-207723227-create-layer-files"
     }
   }
 }
