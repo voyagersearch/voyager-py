@@ -41,7 +41,7 @@ def export_to_shp(jobs, file_name, output_folder):
     global exported_count
     global errors_count
     try:
-        import ogr
+        from osgeo import ogr
     except ImportError as ie:
         errors_count += 1
         exported_count = 0
