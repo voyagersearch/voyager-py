@@ -100,7 +100,7 @@ def delete_files(input_items, show_progress=False):
             if os.path.isfile(src_file) or src_file.endswith('.gdb'):
                 try:
                     os.remove(src_file)
-                except (OSError, WindowsError) as err:
+                except OSError as err:
                     status_writer.send_status(_(err))
                     skipped += 1
                     continue
