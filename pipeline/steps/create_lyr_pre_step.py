@@ -14,10 +14,16 @@ def run(entry, *args):
     except ImportError as ie:
         sys.stdout.write(ie.message)
         sys.exit(1)
-    if args is not None and len(args) > 0:
-        meta_folder = args[0]
+    if 'VOYAGER_META_DIR' in os.environ:
+        meta_folder = os.environ['VOYAGER_META_DIR']
     else:
-        meta_folder = 'c:/voyager/data/meta'
+        if args is not None and len(args) > 0:
+            meta_folder = args[0]
+        else:
+            if os.name == 'nt':
+	        meta_folder = 'c:/voyager/data/meta'
+            else:
+	        meta_folder = '/var/lib/voyager/data/meta'
     vmoptions = os.path.join(os.path.abspath(os.path.join(__file__, "../../../..")), 'Voyager.vmoptions')
     mxd_path = os.path.join(os.path.abspath(os.path.join(__file__, "../../..")), 'processing/supportfiles/GroupLayerTemplate.mxd') #os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'GroupLayerTemplate.mxd')
     with open(vmoptions, 'rb') as fp:
