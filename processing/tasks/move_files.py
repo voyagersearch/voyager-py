@@ -137,7 +137,7 @@ def move_files(input_items, target_folder, flatten_results, show_progress=False)
                     else:
                         dst = target_folder
                     shutil.move(src_file, dst)
-                except (OSError, WindowsError) as err:
+                except OSError as err:
                     status_writer.send_status(_(err))
                     skipped_reasons[src_file] = _(err)
                     skipped += 1
