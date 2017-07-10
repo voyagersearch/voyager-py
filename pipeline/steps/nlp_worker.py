@@ -21,7 +21,7 @@ from steps.utils import settings, nlp_settings
 * LANGUAGE:    Any named language
 """
 
-NLP_FIELDS = ['text', 'fulltext', 'description']
+NLP_FIELDS = ['text', 'fulltext', 'description', 'fs_story','meta_data_description','purpose','abstract']
 NLP_GEO_KEYS = ['GPE', 'LOC']
 NLP_SOLR_MAPPING = {
     'PERSON':   'nlp_people',
@@ -65,13 +65,13 @@ def run(entry, *args):
 
     new_entry = json.load(open(entry, "rb"))
 
-    if 'path' not in new_entry['job'].keys():
-        logging.debug('no job path in this entry, skipping...')
-        return
+    # if 'path' not in new_entry['job']:
+    #     logging.debug('no job path in this entry, skipping...')
+    #     return
 
     text = ''
     for field in _fields:
-        if field in new_entry['entry']['fields'].keys():
+        if field in new_entry['entry']['fields']:
             _v = new_entry['entry']['fields'][field]
             if _v is not None:
                 if isinstance(_v, list):
@@ -82,6 +82,7 @@ def run(entry, *args):
     nlp_items = dict()
 
     if text:
+        text = text.replace('\r', '').replace('\n', '').replace('\t', '').replace('\"', '').replace('-', '')
         try:
             nlp_items = json.loads(post_to_nlp_service(text))
             for nlp_item_key in nlp_items.keys():
@@ -96,9 +97,12 @@ def run(entry, *args):
             if not geo_text.isspace():
                 new_entry['entry']['fields']['nlp_place'] = geo_text
 
+            # logging.info('got back for item id %s', json.dumps(nlp_items, indent=4))
+
         except Exception as e:
             logging.error("could not get response from NLP parser. ")
             logging.error(e)
+
 
     else:
         logging.info('no text found to send to NLP in entry id %s', new_entry['entry']['fields']['id'])

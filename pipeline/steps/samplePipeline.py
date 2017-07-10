@@ -11,7 +11,7 @@ def run(entry):
     voyager_word_count = 0
     if 'fields' in new_entry['entry']:
         if 'text' in new_entry['entry']['fields']:
-            text_field = new_entry['entry']['fields']['text']
+            text_field = new_entry['entry']['fields']['fs_story']
             voyager_word_count += text_field.count('Voyager')
             voyager_word_count += text_field.count('voyager')
             new_entry['entry']['fields']['fi_voyager_word_count'] = voyager_word_count
