@@ -312,7 +312,7 @@ def index_service(connection_info):
             else:
                 # Faster to do one if check for geometry type then to condense code and check in every iteration.
                 if geometry_type == 'esriGeometryPoint':
-                    for x, feature in enumerate(features):
+                    for x, feature in enumerate(features, 1):
                         pt = feature['geometry']
                         geo['lon'] = pt['x']
                         geo['lat'] = pt['y']
@@ -332,11 +332,11 @@ def index_service(connection_info):
                         mapped_fields['format'] = 'application/vnd.esri.service.layer.record'
                         entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                         job.send_entry(entry)
-                        if (i % increment) == 0:
-                            status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer_name, int(i) / row_count), 'esri_worker')
+                        if (x % increment) == 0:
+                            status_writer.send_percent(x / row_count, "{0} {1:%}".format(layer_name, int(x) / row_count), 'esri_worker')
                 else:
                     generalize_value = job.generalize_value
-                    for x, feature in enumerate(features):
+                    for x, feature in enumerate(features, 1):
                         try:
                             geometry = make_feature(feature)  # Catch possible null geometries.
                         except RuntimeError:
@@ -365,17 +365,22 @@ def index_service(connection_info):
                             mapped_fields['title'] = layer_name
                             mapped_fields['geometry_type'] = geometry.type
                             mapped_fields['meta_table_name'] = layer_name
-                            mapped_fields['meta_table_path'] = layer['path']
+                            try:
+                                mapped_fields['meta_table_path'] = layer['path']
+                            except KeyError:
+                                layer['path'] = url + '/' + str(layer_id)
+                                mapped_fields['meta_table_path'] = layer['path']
                             mapped_fields['meta_table_location'] = os.path.dirname(layer['path'])
                             mapped_fields['format_category'] = 'GIS'
                             mapped_fields['format_type'] = 'Service Layer Feature'
                             mapped_fields['format'] = 'application/vnd.esri.service.layer.record'
                             mapped_fields['_discoveryID'] = job.discovery_id
                             entry['entry'] = {'geo': geo, 'fields': mapped_fields}
+                            job.send_entry(entry)
                         except KeyError:
                             job.send_entry(entry)
-                        if (i % increment) == 0:
-                            status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer_name, i / row_count), 'esri_worker')
+                        if (x % increment) == 0:
+                            status_writer.send_percent(x / row_count, "{0} {1:%}".format(layer_name, x / row_count), 'esri_worker')
 
 
 def worker(data_path, esri_service=False):
