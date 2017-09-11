@@ -412,6 +412,7 @@ def worker(data_path, esri_service=False):
 
         # Get the table schema.
         table_entry = {}
+        table_links = []
         schema['name'] = dsc.name
         try:
             alias = dsc.aliasName
@@ -449,6 +450,19 @@ def worker(data_path, esri_service=False):
             field['properties'] = props
             schema_fields.append(field)
         schema['fields'] = schema_fields
+
+        # Add and entry for the table and it's schema.
+        schema['rows'] = int(arcpy.GetCount_management(data_path).getOutput(0))
+        table_entry['id'] = '{0}_{1}'.format(job.location_id, dsc.name)
+        table_entry['location'] = job.location_id
+        table_entry['action'] = job.action_type
+        table_entry['format_type'] = 'Schema'
+        table_entry['entry'] = {'fields': {'_discoveryID': job.discovery_id, 'name': dsc.name, 'path': dsc.catalogPath, 'format': 'schema'}}
+        table_entry['entry']['fields']['schema'] = schema
+
+        if job.schema_only:
+            job.send_entry(table_entry)
+            return table_entry
 
         if dsc.dataType == 'Table':
             # Get join information.
@@ -511,8 +525,10 @@ def worker(data_path, esri_service=False):
                         entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), row[fld_index])
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
+                        entry['relation'] = 'contains'
                         entry['entry'] = {'fields': mapped_fields}
                         job.send_entry(entry)
+                        table_links.append({'relation': 'contains', 'id': entry['id']})
                         if (i % increment) == 0:
                             status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
                     except (AttributeError, RuntimeError):
@@ -586,8 +602,10 @@ def worker(data_path, esri_service=False):
                             entry['id'] = '{0}_{1}_{2}'.format(job.location_id, os.path.basename(data_path), i)
                             entry['location'] = job.location_id
                             entry['action'] = job.action_type
+                            entry['relation'] = 'contains'
                             entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                             job.send_entry(entry)
+                            table_links.append({'relation': 'contains', 'id': entry['id']})
                             if (i % increment) == 0:
                                 status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
                         except (AttributeError, RuntimeError):
@@ -637,20 +655,15 @@ def worker(data_path, esri_service=False):
                             entry['action'] = job.action_type
                             entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                             job.send_entry(entry)
+                            table_links.append({'relation': 'contains', 'id': entry['id']})
                             if (i % increment) == 0:
                                 status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
                         except (AttributeError, RuntimeError):
                             continue
 
-        # Add and entry for the table and it's schema.
-        schema['rows'] = row_count
-        table_entry['id'] = '{0}_{1}'.format(job.location_id, dsc.name)
-        table_entry['location'] = job.location_id
-        table_entry['action'] = job.action_type
-        table_entry['format_type'] = 'Schema'
-        table_entry['entry'] = {'fields': {'_discoveryID': job.discovery_id, 'name': dsc.name, 'path': dsc.catalogPath, 'format': 'schema'}}
-        table_entry['entry']['fields']['schema'] = schema
+        table_entry['entry']['links'] = table_links
         job.send_entry(table_entry)
+        return table_entry
 
 
 def run_job(esri_job):
@@ -690,6 +703,37 @@ def run_job(esri_job):
 
     # A geodatabase (.mdb, .gdb, or .sde).
     elif dsc.dataType == 'Workspace':
+        # Create a geodatabase entry with links to tables.
+        gdb_links = []
+        gdb_entry = {}
+        gdb_properties = {}
+        gdb_properties['id'] = job.location_id + os.path.splitext(dsc.name)[0]
+        gdb_properties['name'] = dsc.name
+        gdb_properties['path'] = dsc.catalogPath
+        gdb_properties['_discoveryID'] = job.discovery_id
+        gdb_properties['format'] = dsc.workspaceFactoryProgID
+        if hasattr(dsc, 'domains'):
+            if dsc.domains:
+                gdb_properties['meta_has_domains'] = True
+            else:
+                gdb_properties['meta_has_domains'] = 'false'
+        if dsc.release == '3,0,0':
+            gdb_properties['fs_arcgis_version'] = "10.0, 10.1, 10.2, 10.3, 10.4, 10.5 or ArcGIS Pro 1.0, 1.1, 1.2"
+        elif dsc.release == '2,3,0':
+            gdb_properties['fs_arcgis_version'] = "9.3, 9.3.1"
+        else:
+            gdb_properties['fs_arcgis_version'] = "9.2"
+        if hasattr(dsc.connectionProperties, 'version'):
+            cp = dsc.connectionProperties
+            gdb_properties['fs_server'] = cp.server
+            gdb_properties['fs_instance'] = cp.instance
+            gdb_properties['fs_database'] = cp.database
+            gdb_properties['fs_version'] = cp.version
+        gdb_entry['location'] = job.location_id
+        gdb_entry['action'] = job.action_type
+        gdb_entry['entry'] = {'fields': gdb_properties}
+
+
         arcpy.env.workspace = job.path
         feature_datasets = arcpy.ListDatasets('*', 'Feature')
         tables = []
@@ -749,8 +793,12 @@ def run_job(esri_job):
         for i, tbl in enumerate(tables, 1):
             try:
                 global_job(job)
-                worker(tbl)
+                te = worker(tbl)
+                if te:
+                    gdb_links.append({'relation': 'contains', 'id': te['id']})
                 status_writer.send_percent(i / len(tables), "{0} {1:%}".format(tbl, i / len(tables)), 'esri_worker')
             except Exception:
                 continue
+    gdb_entry['entry']['links'] = gdb_links
+    job.send_entry(gdb_entry)
     return

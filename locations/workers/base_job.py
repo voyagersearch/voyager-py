@@ -348,6 +348,17 @@ class Job(object):
             return None
 
     @property
+    def schema_only(self):
+        """Index the schema only."""
+        try:
+            if self.job['location']['config']['schema_only'] == 'true':
+                return True
+            else:
+                return False
+        except KeyError:
+            return False
+
+    @property
     def sql_schema(self):
         """Returns the database schema."""
         try:
