@@ -15,6 +15,7 @@
 import decimal
 from itertools import izip
 import json
+import random
 from utils import status
 from utils import worker_utils
 import cx_Oracle
@@ -184,6 +185,8 @@ def run_job(oracle_job):
     if not all_tables:
         status_writer.send_state(status.STAT_FAILED, "No tables, views or layers found. Check the configuration.")
         return
+
+    db_links = []
 
     # Begin indexing.
     for tbl in set(all_tables):
@@ -417,15 +420,20 @@ def run_job(oracle_job):
         entry = {}
 
         # First, add an entry for the table itself with schema.
-        table_schema['rows'] = row_count
         table_entry = {}
         table_entry['id'] = '{0}_{1}'.format(location_id, tbl)
         table_entry['location'] = location_id
         table_entry['action'] = action_type
-        table_entry['format_type'] = 'Schema'
-        table_entry['entry'] = {'fields': {'_discoveryID': discovery_id, 'name': tbl, 'path': rows.connection.dsn}}
+        table_entry['relation'] = 'contains'
+        table_entry['entry'] = {'fields': {'format': 'schema', 'format_type': 'Schema', 'fi_rows': int(row_count),
+                                           '_discoveryID': discovery_id, 'name': tbl, 'path': rows.connection.dsn}}
         table_entry['entry']['fields']['schema'] = table_schema
-        job.send_entry(table_entry)
+        db_links.append(table_entry)
+        if job.schema_only:
+            job.send_entry(table_entry)
+            continue
+        else:
+            job.send_entry(table_entry)
 
         if not has_shape:
             for i, row in enumerate(rows):
@@ -508,3 +516,15 @@ def run_job(oracle_job):
                 except Exception as ex:
                     status_writer.send_status(ex)
                     continue
+
+    oracle_entry = {}
+    oracle_properties = {}
+    oracle_entry['id'] = job.location_id + str(random.randint(0, 1000))
+    oracle_entry['location'] = job.location_id
+    oracle_entry['action'] = job.action_type
+    oracle_properties['_discoveryID'] = job.discovery_id
+    oracle_properties['name'] = job.sql_connection_info['connection']['database']
+    oracle_properties['format'] = 'Oracle Database'
+    oracle_entry['entry'] = {'fields': oracle_properties}
+    oracle_entry['entry']['links'] = db_links
+    job.send_entry(oracle_entry)
