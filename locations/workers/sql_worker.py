@@ -15,6 +15,7 @@ import random
 import re
 import decimal
 import json
+import random
 from utils import status
 from utils import worker_utils
 
@@ -57,6 +58,7 @@ def run_job(job):
     job.connect_to_zmq()
     job.connect_to_database()
     tables = get_tables(job)
+    sql_links = []
 
     for tbl in set(tables):
         geo = {}
@@ -68,7 +70,6 @@ def run_job(job):
         # Get the table schema.
         # --------------------------------------------------------------------------------------------------
         schema = {}
-        schema['name'] = tbl
 
         # Get the primary key.
         qry = "SELECT K.COLUMN_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS C JOIN " \
@@ -219,20 +220,25 @@ def run_job(job):
         geometry_ops = worker_utils.GeometryOps()
         generalize_value = job.generalize_value
 
-
         # -----------------------------------------------
         # Add an entry for the table itself with schema.
         # -----------------------------------------------
         mapped_cols = {}
-        schema['rows'] = row_count
         table_entry = {}
         table_entry['id'] = '{0}_{1}'.format(location_id, tbl)
         table_entry['location'] = location_id
         table_entry['action'] = action_type
-        table_entry['format_type'] = 'Schema'
-        table_entry['entry'] = {'fields': {'_discoveryID': discovery_id, 'name': tbl, 'path': job.sql_server_connection_str, 'format_type': 'Schema'}}
+        table_entry['relation'] = 'contains'
+        table_entry['entry'] = {'fields': {'format': 'schema', 'format_type': 'Schema',
+                                           '_discoveryID': discovery_id, 'name': tbl, 'fi_rows': int(row_count),
+                                           'path': job.sql_server_connection_str}}
         table_entry['entry']['fields']['schema'] = schema
-        job.send_entry(table_entry)
+        sql_links.append(table_entry)
+        if job.schema_only:
+            job.send_entry(table_entry)
+            continue
+        else:
+            job.send_entry(table_entry)
 
         for i, row in enumerate(rows):
             if not cur_id == row[0] or not job.related_tables:
@@ -355,3 +361,18 @@ def run_job(job):
         # Send final entry.
         job.send_entry(entry)
         status_writer.send_percent(1, '{0}: {1:%}'.format(tbl, 1), 'sql_server')
+
+    sql_entry = {}
+    sql_properties = {}
+    sql_entry['id'] = job.location_id + str(random.randint(0, 1000))
+    sql_entry['location'] = job.location_id
+    sql_entry['action'] = job.action_type
+    sql_properties['_discoveryID'] = job.discovery_id
+    sql_properties['name'] = job.sql_connection_info['connection']['database']
+    sql_properties['fs_driver'] = job.sql_connection_info['connection']['driver']
+    sql_properties['fs_server'] = job.sql_connection_info['connection']['server']
+    sql_properties['fs_database'] = job.sql_connection_info['connection']['database']
+    sql_properties['format'] = 'SQL Database'
+    sql_entry['entry'] = {'fields': sql_properties}
+    sql_entry['entry']['links'] = sql_links
+    job.send_entry(sql_entry)
