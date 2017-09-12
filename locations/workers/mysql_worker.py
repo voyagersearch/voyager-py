@@ -14,6 +14,7 @@
 import re
 import decimal
 import json
+import random
 from utils import status
 from utils import worker_utils
 
@@ -58,6 +59,9 @@ def run_job(mysql_job):
     job.connect_to_database()
     tables = get_tables(job)
     processed = 0
+    mysql_entry = {}
+    mysql_links = []
+
     for table in tables:
         geo = {}
         is_point = False
@@ -155,7 +159,6 @@ def run_job(mysql_job):
                 column_types.pop(col.column_name)
                 break
 
-
         # ------------------------------
         # Query the table for the rows.
         # ------------------------------
@@ -183,7 +186,6 @@ def run_job(mysql_job):
         mapped_fields = job.map_fields(table, columns, column_types)
         new_fields = job.new_fields
         row_count = float(rows.rowcount)
-        schema['rows'] = row_count
         increment = job.get_increment(row_count)
         geometry_ops = worker_utils.GeometryOps()
         generalize_value = job.generalize_value
@@ -193,62 +195,85 @@ def run_job(mysql_job):
         table_entry['id'] = '{0}_{1}'.format(location_id, table)
         table_entry['location'] = location_id
         table_entry['action'] = action_type
-        table_entry['format_type'] = 'Schema'
-        table_entry['entry'] = {'fields': {'_discoveryID': discovery_id, 'name': table, 'path': job.sql_server_connection_str}}
+        table_entry['relation'] = 'contains'
+        table_entry['entry'] = {'fields': {'format': 'schema', 'format_type': 'Schema',
+                                           '_discoveryID': discovery_id, 'name': table, 'fi_rows': int(row_count)}}
         table_entry['entry']['fields']['schema'] = schema
-        job.send_entry(table_entry)
+        mysql_links.append(table_entry)
+        if job.schema_only:
+            job.send_entry(table_entry)
+            continue
 
-        for i, row in enumerate(rows):
-            if has_shape:
-                if is_point:
-                    if job.include_wkt:
-                        geo['wkt'] = row[0]
-                    geo['lon'] = row[2]
-                    geo['lat'] = row[1]
-                    mapped_cols = dict(zip(mapped_fields[3:], row[3:]))
-                    mapped_cols['geometry_type'] = 'Point'
-                    for nf in new_fields:
-                        if nf['name'] == '*' or nf['name'] == table:
-                            for k, v in nf['new_fields'].iteritems():
-                                mapped_fields[k] = v
-                else:
-                    if job.include_wkt:
-                        if generalize_value == 0:
+        if not job.schema_only:
+            table_links = []
+            for i, row in enumerate(rows):
+                if has_shape:
+                    if is_point:
+                        if job.include_wkt:
                             geo['wkt'] = row[0]
-                        else:
-                            geo['wkt'] = geometry_ops.generalize_geometry(str(row[0]), generalize_value)
-                    nums = re.findall("-?(?:\.\d+|\d+(?:\.\d*)?)", row[0].rpartition(',')[0])
-                    geo['xmin'] = float(nums[0])
-                    geo['ymin'] = float(nums[1])
-                    geo['xmax'] = float(nums[4])
-                    geo['ymax'] = float(nums[5])
-                    mapped_cols = dict(zip(mapped_fields[1:], row[1:]))
-                    for nf in new_fields:
-                        if nf['name'] == '*' or nf['name'] == table:
-                            for k, v in nf['new_fields'].iteritems():
-                                mapped_fields[k] = v
-                    if 'POLYGON' in geom_type:
-                        mapped_cols['geometry_type'] = 'Polygon'
+                        geo['lon'] = row[2]
+                        geo['lat'] = row[1]
+                        mapped_cols = dict(zip(mapped_fields[0:], row[3:]))
+                        mapped_cols['geometry_type'] = 'Point'
+                        for nf in new_fields:
+                            if nf['name'] == '*' or nf['name'] == table:
+                                for k, v in nf['new_fields'].iteritems():
+                                    mapped_fields[k] = v
                     else:
-                        mapped_cols['geometry_type'] = 'Polyline'
-            else:
-                mapped_cols = dict(zip(mapped_fields, row))
-                for nf in new_fields:
-                        if nf['name'] == '*' or nf['name'] == table:
-                            for k, v in nf['new_fields'].iteritems():
-                                mapped_fields[k] = v
+                        if job.include_wkt:
+                            if generalize_value == 0:
+                                geo['wkt'] = row[0]
+                            else:
+                                geo['wkt'] = geometry_ops.generalize_geometry(str(row[0]), generalize_value)
+                        nums = re.findall("-?(?:\.\d+|\d+(?:\.\d*)?)", row[0].rpartition(',')[0])
+                        geo['xmin'] = float(nums[0])
+                        geo['ymin'] = float(nums[1])
+                        geo['xmax'] = float(nums[4])
+                        geo['ymax'] = float(nums[5])
+                        mapped_cols = dict(zip(mapped_fields[1:], row[1:]))
+                        for nf in new_fields:
+                            if nf['name'] == '*' or nf['name'] == table:
+                                for k, v in nf['new_fields'].iteritems():
+                                    mapped_fields[k] = v
+                        if 'POLYGON' in geom_type:
+                            mapped_cols['geometry_type'] = 'Polygon'
+                        else:
+                            mapped_cols['geometry_type'] = 'Polyline'
+                else:
+                    mapped_cols = dict(zip(mapped_fields, row))
+                    for nf in new_fields:
+                            if nf['name'] == '*' or nf['name'] == table:
+                                for k, v in nf['new_fields'].iteritems():
+                                    mapped_fields[k] = v
 
-            # Create an entry to send to ZMQ for indexing.
-            mapped_cols['title'] = table
-            mapped_cols['format_type'] = 'Record'
-            mapped_cols['format'] = 'application/vnd.mysql.record'
-            entry['id'] = '{0}_{1}_{2}'.format(location_id, table, i)
-            entry['location'] = location_id
-            entry['action'] = action_type
-            entry['entry'] = {'geo': geo, 'fields': mapped_cols}
-            entry['entry']['fields']['_discoveryID'] = discovery_id
-            job.send_entry(entry)
-            if (i % increment) == 0:
-                status_writer.send_percent(i / row_count, '{0}: {1:%}'.format(table, i / row_count), 'MySql')
-        processed += i
+                # Create an entry to send to ZMQ for indexing.
+                mapped_cols['format_type'] = 'Record'
+                mapped_cols['format'] = 'application/vnd.mysql.record'
+                entry['id'] = '{0}_{1}_{2}'.format(location_id, table, i)
+                entry['location'] = location_id
+                entry['action'] = action_type
+                entry['entry'] = {'geo': geo, 'fields': mapped_cols}
+                entry['entry']['fields']['_discoveryID'] = discovery_id
+                job.send_entry(entry)
+                table_links.append({'relation': 'contains', 'id': entry['id']})
+                if (i % increment) == 0:
+                    status_writer.send_percent(i / row_count, '{0}: {1:%}'.format(table, i / row_count), 'MySql')
+            processed += i
+            table_entry['entry']['links'] = table_links
+            job.send_entry(table_entry)
+
+    mysql_properties = {}
+    mysql_entry['id'] = job.location_id + str(random.randint(0, 1000))
+    mysql_entry['location'] = job.location_id
+    mysql_entry['action'] = job.action_type
+    mysql_properties['_discoveryID'] = job.discovery_id
+    mysql_properties['name'] = job.sql_connection_info['connection']['database']
+    mysql_properties['fs_driver'] = job.sql_connection_info['connection']['driver']
+    mysql_properties['fs_server'] = job.sql_connection_info['connection']['server']
+    mysql_properties['fs_database'] = job.sql_connection_info['connection']['database']
+    mysql_properties['format'] = 'MySQL Database'
+    mysql_entry['entry'] = {'fields': mysql_properties}
+    mysql_entry['entry']['links'] = mysql_links
+    job.send_entry(mysql_entry)
+
     status_writer.send_status("Processed: {0}".format(processed))
