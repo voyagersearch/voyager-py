@@ -46,7 +46,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
     global new_fields
     global field_values
 
-    for ds, out_name in input_items.iteritems():
+    for ds, out_name in input_items.items():
         try:
             if not isinstance(out_name, list):
                 out_name = ''
@@ -90,6 +90,8 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
                         where = '{0} IN {1}'.format(service_layer.oid_field_name, tuple(group))
                         url = ds + "/query?where={}&outFields={}&returnGeometry=true&f=json".format(where, '*', eval(clip_poly.JSON))
                         feature_set = arcpy.FeatureSet()
+                        if not out_name:
+                            out_name = service_layer.service_layer_name
                         try:
                             feature_set.load(url)
                         except Exception:
@@ -103,11 +105,11 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
                                 arcpy.Delete_management(clip_features)
                             except arcpy.ExecuteError:
                                 pass
-                        status_writer.send_percent(float(g) / group_cnt * 100, '', 'clip_data')
+                        status_writer.send_percent(float(g) / group_cnt, '', 'clip_data')
                     processed_count += 1.
                     clipped += 1
                     status_writer.send_percent(processed_count / result_count, _('Clipped: {0}').format(ds), 'clip_data')
-                    # continue
+                    continue
                 except Exception as ex:
                     status_writer.send_state(status.STAT_WARNING, str(ex))
                     errors_reasons[ds] = ex.message
@@ -168,7 +170,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
                                 existing_fields = [f.name for f in arcpy.ListFields(layer_name)]
                                 new_fields = []
                                 field_values = []
-                                for field, value in row.iteritems():
+                                for field, value in row.items():
                                     valid_field = arcpy.ValidateFieldName(field, out_workspace)
                                     new_fields.append(valid_field)
                                     field_values.append(value)

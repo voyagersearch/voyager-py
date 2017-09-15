@@ -15,9 +15,7 @@
 import os
 import sys
 import glob
-import json
 import shutil
-import urllib
 import requests
 from utils import status
 from utils import task_utils
@@ -41,9 +39,9 @@ class AGOLHandler(object):
         query_dict = {'username': self.username,
                       'password': self.password,
                       'referer': self.portal_url}
-        query_string = urllib.urlencode(query_dict)
         url = "{0}/sharing/rest/generateToken".format(self.portal_url)
-        token = json.loads(urllib.urlopen(url + "?f=json", query_string).read())
+        response = requests.post(url + "?f=json", data=query_dict)
+        token = response.json()
         if "token" not in token:
             raise task_utils.PublishException(token['error']['message'] + ', ' + token['error']['details'][0])
         else:
@@ -63,12 +61,12 @@ class AGOLHandler(object):
             "&tags="+tags + \
             "&description=" + description
         response = requests.post(url, files=sd_file)
-        items = json.loads(response.text)
+        items = response.json()
         if "success" in items:
             publish_url = '{0}/content/users/{1}/publish'.format(self.http, self.username)
             query_dict = {'itemID': items['id'], 'filetype': 'serviceDefinition', 'f': 'json', 'token': self.token}
-            json_response = urllib.urlopen(publish_url, urllib.urlencode(query_dict))
-            json_output = json.loads(json_response.read())
+            json_response = requests.post(publish_url, data=query_dict)
+            json_output = json_response.json()
             word_test = ["success", "results", "services", "notSharedWith"]
             if not any(word in json_output for word in word_test):
                 raise task_utils.PublishException('Failed to publish: {0}'.format(json_output))
@@ -116,7 +114,6 @@ def create_service(temp_folder, map_document, portal_url, username, password, se
         else:
             errors = analysis['errors']
         raise task_utils.AnalyzeServiceException(errors)
-
 
     # Upload/publish the service.
     status_writer.send_status(_('Publishing the map service to: {0}...').format(portal_url))

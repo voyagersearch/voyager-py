@@ -16,7 +16,6 @@ import os
 import re
 import sys
 import tempfile
-import urllib2
 import xml.etree.cElementTree as eTree
 import shutil
 import requests
@@ -40,8 +39,7 @@ def index_item(id, header):
     :param id: Item's index ID
     """
     solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
-    request = urllib2.Request(solr_url, headers=header)
-    urllib2.urlopen(request)
+    requests.post(solr_url, headers=header)
 
 
 def execute(request):
@@ -259,7 +257,7 @@ def write_metadata(input_items, template_xml, xslt_file, summary, description, t
 
                 try:
                     index_item(id, token_header)
-                except (IndexError, urllib2.HTTPError, urllib2.URLError) as e:
+                except (IndexError, requests.HTTPError, requests.ConnectionError) as e:
                     status_writer.send_status(e.message)
                     pass
                 updated += 1

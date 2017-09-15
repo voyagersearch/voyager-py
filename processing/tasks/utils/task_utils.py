@@ -20,11 +20,12 @@ import locale
 import shutil
 import datetime
 import itertools
-import urllib
 import time
 import tempfile
 import zipfile
+import requests
 import status
+
 
 # Constants
 CHUNK_SIZE = 25
@@ -33,6 +34,7 @@ CHUNK_SIZE = 25
 # Custom Exceptions
 class LicenseError(Exception):
     pass
+
 
 class AnalyzeServiceException(Exception):
     pass
@@ -116,10 +118,15 @@ class ServiceLayer(object):
         self._wkid = self.__get_wkid()
         self._oid_field_name = ''
         self._object_ids = self.__get_object_ids(geometry, geometry_type)
+        self._layer_name = self.__get_layer_name()
 
     @property
     def service_layer_url(self):
         return self._service_layer_url
+
+    @property
+    def service_layer_name(self):
+        return self._layer_name
 
     @property
     def oid_field_name(self):
@@ -137,14 +144,19 @@ class ServiceLayer(object):
     def wkid (self):
         return self._wkid
 
+    def __get_layer_name(self):
+        """Returns the service layer name."""
+        res = requests.get(self._service_layer_url + '?f=json')
+        return res.json()['name']
+
     def __get_wkid(self):
         """Returns the spatial reference wkid for the service layer."""
         if self._token:
-            query = {'where': '1=1', 'returnExtentOnly':True, 'token': self._token, 'f': 'json'}
+            query = {'where': '1=1', 'returnExtentOnly': True, 'token': self._token, 'f': 'json'}
         else:
-            query = {'where': '1=1', 'returnExtentOnly':True, 'f': 'json'}
-        response = urllib.urlopen('{0}/query?'.format(self._service_layer_url), urllib.urlencode(query))
-        data = json.loads(response.read())
+            query = {'where': '1=1', 'returnExtentOnly': True, 'f': 'json'}
+        response = requests.get('{0}/query?'.format(self._service_layer_url), params=query)
+        data = response.json()
         if 'extent' in data:
             return data['extent']['spatialReference']['wkid']
         else:
@@ -156,8 +168,8 @@ class ServiceLayer(object):
             query = {'where': '1=1', 'returnIdsOnly':True, 'geometry': geom, 'geometryType': geom_type, 'token': self._token, 'f': 'json'}
         else:
             query = {'where': '1=1', 'geometry': geom, 'geometryType': geom_type, 'returnIdsOnly':True, 'f': 'json'}
-        response = urllib.urlopen('{0}/query?'.format(self._service_layer_url), urllib.urlencode(query))
-        data = json.loads(response.read())
+        response = requests.get('{0}/query?'.format(self._service_layer_url), params=query)
+        data = response.json()
         if 'error' in data:
             if data['error']['code'] == 400:
                 raise Exception('Service Layer has no records')
@@ -554,15 +566,14 @@ def get_increment(count):
 
 
 def get_geodatabase_path(input_table):
-  """Return the Geodatabase path from the input table or feature class.
-
-  :param input_table: path to the input table or feature class
-  """
-  workspace = os.path.dirname(input_table)
-  if [any(ext) for ext in ('.gdb', '.mdb', '.sde') if ext in os.path.splitext(workspace)]:
-    return workspace
-  else:
-    return os.path.dirname(workspace)
+    """Return the Geodatabase path from the input table or feature class.
+    :param input_table: path to the input table or feature class
+    """
+    workspace = os.path.dirname(input_table)
+    if [any(ext) for ext in ('.gdb', '.mdb', '.sde') if ext in os.path.splitext(workspace)]:
+        return workspace
+    else:
+        return os.path.dirname(workspace)
 
 
 def get_data_path(item):
@@ -584,13 +595,17 @@ def get_data_path(item):
             base_name = os.path.basename(item['path'])
             temp_folder = tempfile.mkdtemp()
             if '[downloadURL]' in item:
-                download = urllib.urlretrieve(item['[downloadURL]'])[0]
-                if download.endswith('.zip'):
-                    zip = zipfile.ZipFile(download)
+                extension = os.path.splitext(item['[downloadURL]'])[1][1:]
+                download = requests.get(item['[downloadURL]'])
+                download_file = os.path.join(temp_folder, '{0}.{1}'.format(os.path.splitext(base_name)[0], extension))
+                with open(download_file, 'wb') as fp:
+                    fp.write(download.content)
+                if extension == 'zip':
+                    zip = zipfile.ZipFile(download_file)
                     zip.extractall(temp_folder)
-                    return os.path.join(temp_folder, urllib.unquote(base_name))
+                    return os.path.join(temp_folder, base_name)
                 else:
-                    return download
+                    return download_file
         elif '://s3' in item['path'] and '[downloadURL]' in item:
             return item['[downloadURL]']
 
@@ -603,7 +618,12 @@ def get_data_path(item):
         elif '[lyrFile]' in item and os.path.exists(item['[lyrFile]']):
             return item['[lyrFile]']
         else:
-            layer_file = urllib.urlretrieve(item['[lyrURL]'])[0]
+            response = requests.get(item['[lyrURL]'])
+            temp_folder = tempfile.mkdtemp()
+            file_name = '{0}.lyr'.format(os.path.basename(item['[lyrURL]'])[0])
+            layer_file = os.path.join(temp_folder, file_name)
+            with open(layer_file, 'wb') as fp:
+                fp.write(response.content)
             return layer_file
     except KeyError:
         try:

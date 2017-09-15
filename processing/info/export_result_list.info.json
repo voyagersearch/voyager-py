@@ -21,8 +21,7 @@
       "value": [
         "id",
         "name",
-        "path",
-        "[absolute]",
+        "path"
         "location:[localize]",
         "format",
         "[geo]"

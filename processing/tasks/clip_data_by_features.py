@@ -18,7 +18,6 @@ import collections
 import shutil
 import requests
 import tempfile
-import urllib
 import zipfile
 import arcpy
 from utils import status
@@ -388,11 +387,14 @@ def execute(request):
         base_name = os.path.basename(clipper['path'])
         temp_folder = tempfile.mkdtemp()
         if '[downloadURL]' in clipper:
-            download = urllib.urlretrieve(clipper['[downloadURL]'])[0]
+            download = os.path.join(temp_folder, os.path.basename(clipper['[downloadURL]']))
+            response = requests.get(clipper['[downloadURL]'])
+            with open(download, 'wb') as fp:
+                fp.write(response.content)
             if download.endswith('.zip'):
                 zip = zipfile.ZipFile(download)
                 zip.extractall(temp_folder)
-                clip_features = os.path.join(temp_folder, urllib.unquote(base_name))
+                clip_features = os.path.join(temp_folder, base_name)
             else:
                 clip_features = download
     else:
@@ -420,7 +422,6 @@ def execute(request):
         else:
             results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
 
-        # docs = eval(results.read().replace('false', 'False').replace('true', 'True').replace('null', 'None'))['response']['docs']
         docs = results.json()['response']['docs']
         input_items = task_utils.get_input_items(docs)
         if not input_items:

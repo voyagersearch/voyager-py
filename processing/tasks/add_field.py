@@ -15,7 +15,6 @@
 import os
 import sys
 import requests
-import urllib2
 import arcpy
 from utils import status
 from utils import task_utils
@@ -35,8 +34,7 @@ def index_item(id):
     :param id: Item's index ID
     """
     solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
-    request = urllib2.Request(solr_url)
-    urllib2.urlopen(request)
+    requests.post(solr_url)
 
 
 def execute(request):
@@ -154,7 +152,7 @@ def add_field(input_items, field_name, field_type, field_value):
             # Update the index.
             try:
                 index_item(id)
-            except (IndexError, urllib2.HTTPError, urllib2.URLError) as e:
+            except (IndexError, requests.HTTPError, requests.ConnectionError) as e:
                 status_writer.send_status(e.message)
                 pass
             processed_count += 1

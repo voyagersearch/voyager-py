@@ -11,14 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import math
-import json
 import sys
 import itertools
-import urllib
 import os
 from os.path import join, dirname, abspath
 import glob
+
 
 # Import ogr module.
 dll_path = abspath(join(dirname(dirname(dirname(dirname(__file__)))), '..', 'arch', 'win32_x86'))
@@ -32,6 +30,7 @@ libs = glob.glob(join(egg_path, 'GDAL*.egg'))
 for lib in libs:
     sys.path.append(lib)
 from osgeo import ogr
+import requests
 
 
 class InvalidToken(Exception):
@@ -66,9 +65,9 @@ class ArcGISServiceHelper(object):
                           'referer': self._referer,
                           'expiration': str(self._token_expiration)}
 
-            query_string = urllib.urlencode(query_dict)
             url = "{0}/{1}/tokens/generateToken".format(self._portal_url, self._instance)
-            token = json.loads(urllib.urlopen(url + "?f=json", query_string).read())
+            response = requests.post(url + "?f=json", query_dict)
+            token = response.json()
 
             if "token" not in token:
                return None
@@ -93,8 +92,9 @@ class ArcGISServiceHelper(object):
             query_dict = {'f': 'json',
                           'token': token,
                           'q': '''title:"{0}" AND owner:"{1}" AND type:"{2}"'''.format(service_name, self._username, service_type)}
-            response = urllib.urlopen(search_url, urllib.urlencode(query_dict))
-            data = json.loads(response.read())
+
+            response = requests.get(service_url, params=query_dict)
+            data = response.json()
             if 'error' in data:
                 if data['error']['message'] == "Invalid Token":
                     raise InvalidToken(data['error']['message'])
@@ -119,17 +119,16 @@ class ArcGISServiceHelper(object):
             else:
                 service_url = search_url
         if self.token:
-            r = urllib.urlopen(service_url, urllib.urlencode({'f': 'json', 'token': self.token, 'referer': self._referer}))
+            r = requests.get(service_url, params={'f': 'json', 'token': self.token, 'referer': self._referer})
         else:
-            r = urllib.urlopen(service_url, urllib.urlencode({'f': 'json'}))
-        items = json.loads(r.read())
+            r = requests.get(service_url, params={'f': 'json'})
+        items = r.json()
         if 'error' in items:
             if items['error']['message'] == "Invalid Token":
                 raise InvalidToken(items['error']['message'])
             else:
                 raise Exception(items['error']['message'])
         return service_url, items
-
 
     def get_item_row_count(self, url, layer_id, token):
         """Returns the row count of a service layer or table.
@@ -141,8 +140,9 @@ class ArcGISServiceHelper(object):
             query = {'where': '1=1', 'returnIdsOnly':True, 'token': token, 'f': 'json'}
         else:
             query = {'where': '1=1', 'returnIdsOnly':True, 'f': 'json'}
-        response = urllib.urlopen('{0}/{1}/query?'.format(url, layer_id), urllib.urlencode(query))
-        data = json.loads(response.read())
+
+        response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query)
+        data = response.json()
         objectids = data['objectIds']
         self.oid_field_name = data['objectIdFieldName']
         if not objectids:
@@ -158,11 +158,11 @@ class ArcGISServiceHelper(object):
         :param token: token value
         """
         if self.token:
-            query = {'where': '1=1', 'outFields': '*', 'returnGeometry':False, 'token': token, 'f': 'json'}
+            query = {'where': '1=1', 'outFields': '*', 'returnGeometry': False, 'token': token, 'f': 'json'}
         else:
-            query = {'where': '1=1', 'outFields': '*', 'returnGeometry':False, 'f': 'json'}
-        response = urllib.urlopen('{0}/{1}/query?'.format(url, layer_id), urllib.urlencode(query))
-        data = json.loads(response.read())
+            query = {'where': '1=1', 'outFields': '*', 'returnGeometry': False, 'f': 'json'}
+        response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query)
+        data = response.json()
         fields = data['fields']
         return fields
 
@@ -182,8 +182,8 @@ class ArcGISServiceHelper(object):
             query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr, 'token': token, 'f': 'json'}
         else:
             query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr, 'f': 'json'}
-        response = urllib.urlopen('{0}/{1}/query?'.format(url, layer_id), urllib.urlencode(query))
-        data = json.loads(response.read())
+        response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query)
+        data = response.json()
         return data
 
 

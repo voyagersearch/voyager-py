@@ -14,7 +14,6 @@
 # limitations under the License.
 import os
 import sys
-import urllib2
 import requests
 from utils import status
 from utils import task_utils
@@ -27,8 +26,7 @@ errors_reasons = {}
 def remove_from_index(id):
     """Remove the item from the index."""
     solr_url = "{0}/update?stream.body=<delete><id>{1}</id></delete>&commit=true".format(sys.argv[2].split('=')[1], id)
-    request = urllib2.Request(solr_url, headers={'Content-type': 'application/json'})
-    urllib2.urlopen(request)
+    requests.post(solr_url, headers={'Content-type': 'application/json'})
 
 
 def execute(request):
@@ -110,7 +108,7 @@ def delete_files(input_items, show_progress=False):
                 # Remove item from the index.
                 try:
                     remove_from_index(input_items[src_file][1])
-                except (IndexError, urllib2.HTTPError, urllib2.URLError):
+                except (IndexError, requests.HTTPError, requests.ConnectionError):
                     pass
                 deleted += 1
             else:

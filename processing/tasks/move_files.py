@@ -15,7 +15,6 @@
 import os
 import sys
 import shutil
-import urllib2
 import requests
 from utils import status
 from utils import task_utils
@@ -29,8 +28,7 @@ skipped_reasons = {}
 def remove_from_index(id):
     """Remove the item from the index."""
     solr_url = "{0}/update?stream.body=<delete><id>{1}</id></delete>&commit=true".format(sys.argv[2].split('=')[1], id)
-    request = urllib2.Request(solr_url, headers={'Content-type': 'application/json'})
-    urllib2.urlopen(request)
+    requests.post(solr_url, headers={'Content-type': 'application/json'})
 
 
 def create_dir(src_file, target_folder):

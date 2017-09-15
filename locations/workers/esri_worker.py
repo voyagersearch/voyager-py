@@ -299,7 +299,6 @@ def index_service(connection_info):
                     # Convert longs to datetime.
                     for df in date_fields:
                         mapped_fields[df] = get_date(mapped_fields[df])
-                    mapped_fields['title'] = layer_name
                     mapped_fields['meta_table_name'] = layer_name
                     mapped_fields['_discoveryID'] = job.discovery_id
                     mapped_fields['format_category'] = 'GIS'
@@ -324,7 +323,6 @@ def index_service(connection_info):
                         for df in date_fields:
                             mapped_fields[df] = get_date(mapped_fields[df])
                         mapped_fields['_discoveryID'] = job.discovery_id
-                        mapped_fields['title'] = layer_name
                         mapped_fields['geometry_type'] = 'Point'
                         mapped_fields['meta_table_name'] = layer_name
                         mapped_fields['format_category'] = 'GIS'
@@ -362,7 +360,6 @@ def index_service(connection_info):
                             # Convert longs to datetime.
                             for df in date_fields:
                                 mapped_fields[df] = get_date(mapped_fields[df])
-                            mapped_fields['title'] = layer_name
                             mapped_fields['geometry_type'] = geometry.type
                             mapped_fields['meta_table_name'] = layer_name
                             try:
@@ -380,7 +377,7 @@ def index_service(connection_info):
                         except KeyError:
                             job.send_entry(entry)
                         if (x % increment) == 0:
-                            status_writer.send_percent(x / row_count, "{0} {1:%}".format(layer_name, x / row_count), 'esri_worker')
+                            status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer_name, i / row_count), 'esri_worker')
 
 
 def worker(data_path, esri_service=False):

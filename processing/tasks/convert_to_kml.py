@@ -17,7 +17,6 @@ import sys
 import glob
 import collections
 import shutil
-import urllib2
 import requests
 from utils import status
 from utils import task_utils
