@@ -47,9 +47,9 @@ Each record in each table becomes an item indexed in Voyager Search. For more in
 
 ## Resources
 
-* [Processing Tasks](https://voyagersearch.zendesk.com/hc/en-us/sections/200577153-Processing)
-* [Create a new processing task](https://voyagersearch.zendesk.com/hc/en-us/articles/203569408-Creating-a-New-Processing-Task)
-* [Indexing Tables](https://voyagersearch.zendesk.com/hc/en-us/sections/200495997-Indexing-Tables)
+* [Processing Tasks](https://help.voyagersearch.com/doc-processing-tasks)
+* [Create a new processing task](https://help.voyagersearch.com/doc-203569408-creating-a-new-processing-task)
+* [Indexing Tables](https://help.voyagersearch.com/doc-indexing-database-tables)
 
 ## Issues
 
