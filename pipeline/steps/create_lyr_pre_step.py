@@ -21,9 +21,9 @@ def run(entry, *args):
             meta_folder = args[0]
         else:
             if os.name == 'nt':
-	        meta_folder = 'c:/voyager/data/meta'
+                meta_folder = 'c:/voyager/data/meta'
             else:
-	        meta_folder = '/var/lib/voyager/data/meta'
+                meta_folder = '/var/lib/voyager/data/meta'
     vmoptions = os.path.join(os.path.abspath(os.path.join(__file__, "../../../..")), 'Voyager.vmoptions')
     mxd_path = os.path.join(os.path.abspath(os.path.join(__file__, "../../..")), 'processing/supportfiles/GroupLayerTemplate.mxd') #os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'GroupLayerTemplate.mxd')
     with open(vmoptions, 'rb') as fp:
