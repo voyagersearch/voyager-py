@@ -1,3 +1,4 @@
+.vscode
 .project
 .classpath
 .settings/
@@ -19,3 +20,4 @@ target/
 .idea/workspace.xml
 .idea/voyager-py.iml
 processing/iir2.csv
+*.log
