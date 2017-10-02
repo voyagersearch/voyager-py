@@ -1,0 +1,35 @@
+{
+  "name": "create_group_layer",
+  "runner": "python",
+  "categories": ["Managing Data and Files"],
+  "constraints": [{"format_category": "(GIS CAD)"}],
+  "security": ["_ADMIN"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "String",
+      "name": "layer_name",
+      "required": true
+    }
+  ],
+  "display":
+  {
+    "en":
+    {
+      "display": "Create Group Layer",
+      "description": "Creates a layer file containing a group layer.",
+      "helpURL": "",
+  	  "params":
+  	  {
+  	    "group_layer_name": {
+  	      "display": "Layer Name",
+  	      "description": "The name of the group layer and layer file."
+  	    }
+   	  }
+    }
+  }
+}

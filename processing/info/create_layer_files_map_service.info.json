@@ -1,0 +1,36 @@
+{
+  "name": "create_layer_files_map_service",
+  "runner": "python",
+  "categories": ["Voyager Tools"],
+  "fields": "location id name rest_endpoint format geometry_type",
+  "constraints": [{"format": "(application/x-arcgis-map-server application/x-arcgis-map-server-layer application/x-arcgis-feature-server-layer)"}],
+  "security": ["_ADMIN"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "FolderLocation",
+      "name": "meta_data_folder",
+      "required": true
+    }
+  ],
+  "display":
+  {
+    "en":
+    {
+      "display": "Create Layer Files for Map and Feature Services",
+      "description": "Creates layers files in Voyager's meta folders for map and feature services.",
+      "helpURL": "",
+  	  "params":
+  	  {
+  	    "target_folder": {
+  	      "display": "Voyager Metadata Folder",
+  	      "description": "The Voyager metadata folder."
+  	    }
+   	  }
+    }
+  }
+}

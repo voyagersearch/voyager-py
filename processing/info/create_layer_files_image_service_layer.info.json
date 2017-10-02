@@ -1,0 +1,36 @@
+{
+  "name": "create_layer_files_image_service_layer",
+  "runner": "python",
+  "categories": ["Managing Data and Files"],
+  "fields": "location id name fl_objectid rest_endpoint format",
+  "constraints": [{"format": "(application/vnd.esri.service.layer.record application/x-arcgis-image-server)"}],
+  "security": ["_ADMIN"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "FolderLocation",
+      "name": "meta_data_folder",
+      "required": true
+    }
+  ],
+  "display":
+  {
+    "en":
+    {
+      "display": "Create Layer Files for Image Service Layers",
+      "description": "Creates layers files in Voyager's meta folders for image service layers.",
+      "helpURL": "",
+  	  "params":
+  	  {
+  	    "target_folder": {
+  	      "display": "Voyager Metadata Folder",
+  	      "description": "The Voyager metadata folder."
+  	    }
+   	  }
+    }
+  }
+}
