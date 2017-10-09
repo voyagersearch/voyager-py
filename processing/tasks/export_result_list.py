@@ -75,7 +75,7 @@ def export_to_shp(jobs, file_name, output_folder):
                 geometry_type = ogr.wkbMultiPoint
         except KeyError as ke:
             errors_count += 1
-            errors_reasons[job.values()[0]] = repr(ke)
+            errors_reasons[job.values()[0]] = 'No Geometry field for this item.'
             status_writer.send_state(status.STAT_WARNING)
             continue
         except TypeError as te:
@@ -362,8 +362,9 @@ def execute(request):
 
     # Zip up outputs.
     if exported_count == 0:
+        status_writer.send_state(status.STAT_FAILED)
         task_utils.report(os.path.join(request['folder'], '__report.json'), exported_count, 0, errors_count, errors_reasons)
     else:
         task_utils.report(os.path.join(request['folder'], '__report.json'), exported_count, 0, errors_count, errors_reasons)
-    zip_file = task_utils.zip_data(task_folder, 'output.zip')
-    shutil.move(zip_file, os.path.join(os.path.dirname(task_folder), os.path.basename(zip_file)))
+        zip_file = task_utils.zip_data(task_folder, 'output.zip')
+        shutil.move(zip_file, os.path.join(os.path.dirname(task_folder), os.path.basename(zip_file)))
