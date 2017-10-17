@@ -110,7 +110,7 @@ class Doc2VecService(object):
                 # is it enough?
                 if total_lines >= self.min_sentences_to_train_vocab:
                     logging.info("yep!")
-                    self.timer.stop()
+                    #self.timer.stop()
                     # combine all the files into one... 
                     combined_file = self.combine_files(files_to_parse, 'combined_sentences_%s.txt' % time.time())
                     logging.info("combined files... %s" % combined_file)
@@ -139,7 +139,7 @@ class Doc2VecService(object):
         logging.info("saving new model as %s " % new_model_file )
         self.training_model.save(new_model_file)
         logging.info("reloading training model ")
-        self.training_model_model = doc2vec.Doc2Vec.load(new_model_file)
+        self.training_model = doc2vec.Doc2Vec.load(new_model_file)
         logging.info("reloading trained model ")
         self.trained_model = doc2vec.Doc2Vec.load(new_model_file)
         self.path_to_trained_model = new_model_file
