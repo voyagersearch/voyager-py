@@ -227,6 +227,11 @@ class Job(object):
         return self.job['location']['id']
 
     @property
+    def location_name(self):
+        """The location name"""
+        return self.job['location']['name']
+
+    @property
     def generalize_value(self):
         """The value setting for generalizing the geometry.
         0   - do not generalize
@@ -348,17 +353,6 @@ class Job(object):
             return None
 
     @property
-    def schema_only(self):
-        """Index the schema only."""
-        try:
-            if self.job['location']['config']['schema_only'] == 'true':
-                return True
-            else:
-                return False
-        except KeyError:
-            return False
-
-    @property
     def sql_schema(self):
         """Returns the database schema."""
         try:
@@ -423,6 +417,55 @@ class Job(object):
                 self.db_connection = pyodbc.connect(self.__sql_server_connection_str)
                 self.db_cursor = self.db_connection.cursor()
                 self.__sql_server_connection_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4};OPTION=3".format(self.drvr, srvr, db, '', '')
+
+    def dict_generator(self, in_dict, pre=None):
+        """Recursive loop through nested dictionaries."""
+        if pre:
+            pre = pre[:]
+        else:
+            pre = []
+        if isinstance(in_dict, dict):
+            for key, value in in_dict.items():
+                if isinstance(value, dict):
+                    for d in self.dict_generator(value, [key] + pre):
+                        yield d
+                elif isinstance(value, list) or isinstance(value, tuple):
+                    for v in value:
+                        for d in self.dict_generator(v, [key] + pre):
+                            yield d
+                else:
+                    yield pre + [key, value]
+        else:
+            yield in_dict
+
+    def download_image(self, image_url, id, key):
+        """Download the thumbnail image to Voyager's meta folder."""
+        import requests
+        meta_folder = None
+        if 'VOYAGER_META_DIR' in os.environ:
+            meta_folder = os.environ['VOYAGER_META_DIR']
+        else:
+            if os.name == 'nt':
+                meta_folder = 'c:/voyager/data/meta'
+            else:
+                meta_folder = '/var/lib/voyager/data/meta'
+        image_folder = os.path.join(meta_folder, id[0], id[1:4])
+        try:
+            os.makedirs(image_folder)
+        except OSError:
+            pass
+
+        try:
+            if 'https' in image_url:
+                image = requests.get(image_url, auth=(key, ''))
+            else:
+                image_url = image_url.replace('http', 'https')
+                image = requests.get(image_url, auth=(key, ''))
+            with open(os.path.join(image_folder, '{0}.thumb.jpg'.format(id)), 'wb') as fp:
+                fp.write(image.content)
+            return os.path.join(image_folder, '{0}.thumb.jpg'.format(id))
+        except Exception as ex:
+            return ''
 
     def layers_to_keep(self):
         """List of layers to keep."""
