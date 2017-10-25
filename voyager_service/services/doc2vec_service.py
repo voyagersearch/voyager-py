@@ -1,8 +1,20 @@
+"""
+service which handles adding documents to the doc2vec index and keeping the model up to date with new documents.
+
+"""
 import json
 import gensim
 import datetime
-import time, os, stat
+import time
+import os
+import stat
 import sys
+import urllib2
+import urllib
+import uuid
+import logging
+import base64
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from shutil import copyfile
@@ -16,10 +28,9 @@ from gensim.models.doc2vec import LabeledSentence
 # import doc2vec_online as doc2vec
 # from doc2vec_online import LabeledSentence
 
-import logging
 
 logging.basicConfig(filename="{0}/doc2vec_service.log".format(r'D:'),
-                    level=logging.DEBUG,
+                    level=logging.INFO,
                     format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
                     datefmt="%Y-%m-%d %H:%M:%S")
 
@@ -48,92 +59,181 @@ class RepeatedTimer(object):
         self._timer.cancel()
         self.is_running = False
 
-class LabeledLineSentence(object):
-    def __init__(self, filename):
-        self.filename = filename
-    def __iter__(self):
-        for uid, line in enumerate(open(self.filename)):
-            l = json.loads(line)
-            yield doc2vec.TaggedDocument(words=l['words'], tags=l['tags'])
 
 class Doc2VecService(object):
     def __init__(self):
+        # TODO: change this to use the envvars passed in from voyager
+        os.environ["VOYAGER_BASE_URL"] = 'http://vector:8888'
+        os.environ["VOYAGER_DATA_DIR"] = r'D:\voyager_data'
         
-        self.max_lines = 500
-        self.max_age_seconds = 60
-        self.min_sentences_to_train_vocab =  5000
+        self.solr_url = '%s/solr/doc2vec' % os.environ["VOYAGER_BASE_URL"]
+        self.data_dir = os.path.join(os.path.sep, os.environ["VOYAGER_DATA_DIR"], 'doc2vec_training') 
+        
+        self.trained_model          = None
+        self.path_to_trained_model  = None
 
-        self.data_dir = r'D:\voyager_data\doc2vec_training'
-        self.timer = RepeatedTimer(20, self.train_model)
-        self.trained_model = None
-        self.path_to_trained_model = None
+        self.min_sentences_to_train_vocab = 20000
+        self.run_new_docs_check_seconds = 30
+
+        self.timer = RepeatedTimer(self.run_new_docs_check_seconds, self.train_model_from_solr)
+
+        # load the model - there should be only one or zero. safe to load the first one encountered. 
         for _f in os.listdir(self.data_dir):
             if _f.endswith(".doc2vec"):
                 self.path_to_trained_model = os.path.join(os.sep, self.data_dir, _f)
                 break
         if not self.path_to_trained_model:
-            self.training_model = doc2vec.Doc2Vec(size=50, min_count=2, iter=55, workers=1, hs=0)
-            # self.training_model = doc2vec.Doc2Vec(min_count=1, workers=1, hs=0)
+            # no model available, have to create one for training. 
+            self.training_model = doc2vec.Doc2Vec(size=200, min_count=2, iter=55, workers=1, hs=0)
         else:
+            # model exists - load one instance for querying, one for training. 
             self.trained_model = doc2vec.Doc2Vec.load(self.path_to_trained_model)
             self.training_model = doc2vec.Doc2Vec.load(self.path_to_trained_model)
-        
-        # print self.trained_model
 
-    def train_model(self):
-        logging.info('train model called')
-        # if the trained model doesn't exist, we need to create it. 
-        files_to_parse = []
-        for subdir, dirs, files in os.walk(self.data_dir):
-            for _f in files:
-                print _f
-                if 'tagged_sentences.txt' in _f:
-                    self.check_and_create_file(os.path.join(os.sep, subdir, _f))
-                elif _f.startswith('tagged_sentences_'):
-                    files_to_parse.append(os.path.join(os.sep, subdir, _f))
-        
-        logging.info('files to parse: %s', files_to_parse)
-        if files_to_parse:
-            self.timer.stop()
-            # if the model DOES NOT exist, we want to wait until theres a HUGE amount of data to train the vocab with. 
-            # we can train the model with more sentences, but we CANNOT update the vocab later. 
-            # need to ensure there's a large enough vocab before creating the initial model.
-            if not self.trained_model:
-                logging.info('model does not exist.  should i create it? ')
-                # get the line count of all the parsed files
-                total_lines = 0
-                for _file in files_to_parse:
-                    total_lines += self.file_len(_file)
 
-                logging.info('total lines: %s '  % total_lines)
-                
-                # is it enough?
-                if total_lines >= self.min_sentences_to_train_vocab:
-                    logging.info("yep!")
-                    self.timer.stop()
-                    # combine all the files into one... 
-                    combined_file = self.combine_files(files_to_parse, 'combined_sentences_%s.txt' % time.time())
-                    logging.info("combined files... %s" % combined_file)
-                    # pass it to the model to build the vocab
-                    logging.info("building vocab...")
-                    self.training_model.build_vocab(LabeledLineSentence(combined_file))
-                    # train the model 
-                    logging.info("training model...")
-                    self.training_model.train(LabeledLineSentence(combined_file), total_examples=self.file_len(combined_file), epochs=self.training_model.iter)
+    def get_docs_to_train(self, _fq, _q='*:*'):
+        rows            = 100
+        start           = 0
+        returned_ids    = []
+        total_ids       = 1
+        tagged_docs     = []
+
+        while len(returned_ids) < total_ids:
+            logging.info('total ids: %s collected ids: %s', total_ids, len(returned_ids))
+            query = 'q=%s&fq=%s&wt=json&rows=%s&start=%s' % (_q, _fq, rows, start)
+            url = '%s/select?%s' % (self.solr_url, query)
+            logging.info(url)
+            result = self.send_request(url)
+            docs = json.loads(result)
+            total_ids = docs['response']['numFound']
+            for item in docs['response']['docs']:
+                if 'fss_words' in item:
+                    tagged_docs.append(doc2vec.TaggedDocument(words=item['fss_words'], tags=[item['id']]))
+                    returned_ids.append(item['id'])
+            start = start + rows
+        return tagged_docs, returned_ids
+
+
+    def send_request(self, url, data=None):
+        logging.debug('sending to %s', url)
+        req = urllib2.Request(url, data=json.dumps(data))
+        base64string = base64.encodestring('%s:%s' % ('admin', 'admin')).replace('\n', '')
+        req.add_header("Authorization", "Basic %s" % base64string)
+        req.add_header('Content-type', 'application/json')
+        rsp = urllib2.urlopen(req)
+        result = rsp.read()
+        return result
+
+    def check_index(self):
+        query = 'q=*:*&rows=0&wt=json&json.facet={added_to_model:{type:query,query:"fb_added_to_model:true"},not_added_to_model:{type:query,query:"fb_added_to_model:false"}}'
+        url = '%s/select?%s' % (self.solr_url, query)
+        result = self.send_request(url)
+        return result
+
+    def clear_index(self, query):
+        query = 'commit=true&stream.body=<delete><query>%s</query></delete>&wt=json' % query
+        url = '%s/update?%s' % (self.solr_url, query)
+        result = self.send_request(url)
+        return result
+
+    def check_id_exists(self, doc_id):
+        query = 'q=id:%s&rows=0&wt=json&_=%s"}}' % (doc_id, time.time())
+        url = '%s/select?%s' % (self.solr_url, query)
+        result = json.loads(self.send_request(url))
+        return result['response']['numFound'] is not 0
+
+    def update_trained_docs(self, doc_ids):
+        chunks = [doc_ids[x: x+25] for x in xrange(0, len(doc_ids), 25)]
+        for chunk in chunks: 
+            logging.info('updating %s ids', len(chunk))
+            docs = []
+            for _id in chunk:
+                docs.append({
+                    'id': _id,
+                    'fb_added_to_model': { 'set': True }
+                })
+            url = "{0}/update?_={1}&commitWithin=1000&wt=json".format(self.solr_url, time.time())
+            result = self.send_request(url, data=docs)
+            logging.debug(json.dumps(result))
+
+    def reset_trained_docs(self, query):
+
+        self.timer.stop()
+        already_added, returned_ids = self.get_docs_to_train('fb_added_to_model:true', query)
+
+        try:
+            chunks = [returned_ids[x:x+25] for x in xrange(0, len(returned_ids), 25)]
+            for chunk in chunks: 
+                logging.info('updating %s ids', len(chunk))
+                docs = []
+                for _id in chunk:
+                    docs.append({
+                        'id': _id,
+                        'fb_added_to_model': { 'set': False }
+                    })
+                url = "{0}/update?_={1}&commitWithin=1000&wt=json".format(self.solr_url, time.time())
+                result = self.send_request(url, data=docs)
+                logging.debug(json.dumps(result))
+        except Exception as e:
+            logging.exception(e)
+
+        self.timer.start()
+        return {'message': 'reset %s ids' % len(already_added)}
+
+    def post_to_solr(self, words, doc_id, location_id, title=None):
+        try:
+            doc = {
+                'id': doc_id,
+                'name': title,
+                'fs_location_id': location_id,
+                'fss_words': words,
+                'fb_added_to_model': False
+            }
+            url = "{0}/update/json/docs?_={1}&commitWithin=1000&overwrite=true&wt=json".format(self.solr_url, time.time())
+            result = self.send_request(url, data=doc)
+            logging.info(json.dumps(result))
+        except Exception as e:
+            logging.exception(e)
+
+    def train_model_from_solr(self):
+        self.timer.stop()
+        try:
+            response = json.loads(self.check_index())
+            
+            not_added_to_model = int(response['facets']['not_added_to_model']['count'])
+            added_to_model = int(response['facets']['added_to_model']['count'])
+
+            logging.info('added: %s not added: %s', added_to_model, not_added_to_model)
+            
+            if not_added_to_model > 0:
+                if not self.trained_model:
+                    if not_added_to_model >= self.min_sentences_to_train_vocab:
+                        model_name = "model_%s.doc2vec" % time.time()
+                        vocab_items, returned_ids = self.get_docs_to_train('fb_added_to_model:false')
+                        self.training_model.build_vocab(vocab_items)
+                        logging.info('trained vocab on %s items', len(vocab_items))
+                        self.training_model.train(vocab_items, total_examples=len(vocab_items), epochs=self.training_model.iter)
+                        self.save_and_reload_model(model_name)
+                        self.update_trained_docs(returned_ids)
+                        self.save_and_reload_model(model_name)
+                        self.cleanup_after_training(model_name)
+                    else:
+                        logging.info('not enough data to train vocab, waiting... ')
+                else:
+                    logging.info("model exists, just updating with some new training material...")
                     model_name = "model_%s.doc2vec" % time.time()
+                    vocab_items, returned_ids = self.get_docs_to_train('fb_added_to_model:false')
+                    self.training_model.train(vocab_items, total_examples=len(vocab_items), epochs=self.training_model.iter)
+                    self.update_trained_docs(returned_ids)
                     self.save_and_reload_model(model_name)
-                    self.cleanup_after_training(files_to_parse, model_name)
+                    self.cleanup_after_training(model_name)
+            else:
+                logging.info('index up to date, nothing to process. ')
+        except Exception as e:
+            logging.exception(e)
 
-            else: # the model exists, just train it some more.
-                logging.info("model exists, just updating with some new training material...")
-                combined_file = self.combine_files(files_to_parse, 'combined_sentences_%s.txt' % time.time())
-                self.training_model.train(LabeledLineSentence(combined_file), total_examples=self.file_len(combined_file), epochs=self.training_model.iter)
-                model_name = "model_%s.doc2vec" % time.time()
-                self.save_and_reload_model(model_name)
-                self.cleanup_after_training(files_to_parse, model_name)
-            self.timer.start()
+        self.timer.start()
 
-                
     def save_and_reload_model(self, model_name):
         new_model_file = os.path.join(os.sep, self.data_dir, model_name)
         logging.info("saving new model as %s " % new_model_file )
@@ -144,100 +244,37 @@ class Doc2VecService(object):
         self.trained_model = doc2vec.Doc2Vec.load(new_model_file)
         self.path_to_trained_model = new_model_file
 
-    def cleanup_after_training(self, files_to_parse, model_name):
-        # clean up the combined sentences file
-        old_combined_files = [ f for f in os.listdir(self.data_dir) if "combined_sentences" in f]
-        logging.info("removing old combined files %s " % old_combined_files)
-        for _f in old_combined_files:
-            os.remove(os.path.join(os.sep, self.data_dir, _f))
-
+    def cleanup_after_training(self, model_name):
         # clean up all the old models
         old_models = [ f for f in os.listdir(self.data_dir) if f.endswith(".doc2vec") and model_name not in f ]
         logging.info("removing old models %s " % old_models)
         for _f in old_models:
             os.remove(os.path.join(os.sep, self.data_dir, _f))
 
-        # clean up the sentences files 
-        logging.info("removed tagged sentence files %s " % files_to_parse)
-        for _f in files_to_parse:
-            os.remove(_f)
-
-
-    def combine_files(self, files, filename):
-        combined_file = os.path.join(os.sep, self.data_dir, filename)
-        with open(combined_file, 'w+') as outfile:
-            for _file in files:
-                with open(_file) as infile:
-                    outfile.write(infile.read())
-        return combined_file
-
-    def file_len(self, _file):
-        if not os.path.isfile(_file):
-            return 0 
-        with open(_file) as f:
-            for i, l in enumerate(f):
-                pass
-            return i + 1
-
-    def file_age_in_seconds(self, _file):
-        if not os.path.isfile(_file):
-            return 0 
-        return time.time() - os.stat(_file)[stat.ST_MTIME]
-
-    def check_and_create_file(self, _file):
-
-        current_lines = self.file_len(_file)
-        file_age = self.file_age_in_seconds(_file)
-        
-        if current_lines > self.max_lines or file_age > self.max_age_seconds:
-            print "moving file"
-            final_files_path = os.path.join(os.sep, os.path.dirname(os.path.abspath(_file)), 'finalised')
-            print "target directory: %s" % final_files_path
-
-            try:
-                os.makedirs(final_files_path)
-            except OSError:
-                if not os.path.isdir(final_files_path):
-                    raise
-
-            target_path = os.path.join(os.sep, final_files_path, 'tagged_sentences_%s.txt' % time.time())
-            print "target path: %s" % target_path
-            copyfile(_file, target_path)
-            print "copied new file."
-            os.remove(_file)
-            print "removed old file."
-
-    def add_document(self, doc_id, text, location_id):
-        location_data_dir = os.path.join(os.sep, self.data_dir, location_id)
-        try:
-            os.makedirs(location_data_dir)
-        except OSError:
-            if not os.path.isdir(location_data_dir):
-                raise
-
-        _file  = os.path.join(os.sep, location_data_dir, 'tagged_sentences.txt')
-
-        self.check_and_create_file(_file)
-
-        test_corpus = doc2vec.TaggedDocument(gensim.utils.simple_preprocess(text), [doc_id])
-        with open(_file, 'a+') as corpus_docs:
-            line = '{"words": ["' + '","'.join(test_corpus.words).encode('utf-8') + '"], "tags": ["' + '","'.join(test_corpus.tags).encode('utf-8') + '"]}\n'
-            corpus_docs.write(line)
+    def add_document(self, doc_id, text, location_id, name):
+        if not self.check_id_exists(doc_id):
+            test_corpus = doc2vec.TaggedDocument(gensim.utils.simple_preprocess(text), [doc_id])
+            self.post_to_solr(test_corpus.words, doc_id, location_id, name)
+        else:
+            logging.info('id exists, skipping. ')
 
     def get_similar_docs(self, doc_id=None, positive=None, negative=None):
         result = {}
         if self.trained_model is None:
             result['error'] = "no trained model has been loaded. "
         elif doc_id:
-            print 'parsing - %s' % doc_id
-            result['similar'] = self.trained_model.docvecs.most_similar(doc_id)
-            ids = []
-            for d in result['similar']:
-                ids.append(d[0])
-            result['ids'] = ids
-            result['solr'] = "http://localhost:9000/search?disp=default&q=id:(%s)" % " ".join(ids)
+            logging.info('parsing - %s', doc_id)
+            try:
+                result['similar'] = self.trained_model.docvecs.most_similar(doc_id)
+                ids = []
+                for d in result['similar']:
+                    ids.append(d[0])
+                result['ids'] = ids
+                result['solr'] = "http://localhost:9000/search?disp=default&q=id:(%s)" % " ".join(ids)
+            except Exception as e:
+                logging.exception(e)
         elif positive:
-            print 'parsing - %s' % positive
+            logging.info('parsing - %s', positive)
             result['similar'] = self.trained_model.most_similar(positive=positive, negative=negative)
         return json.dumps(result)
 
@@ -254,6 +291,35 @@ def jsonp(request, dictionary):
         return "%s(%s)" % (request.query.callback, dictionary)
     return dictionary
 
+@service.route('/' + route_prefix + '/check_index', method='GET')
+def check_index():
+    response.content_type = 'application/json'
+    return jsonp(request, _d2v.check_index())
+
+@service.route('/' + route_prefix + '/check_id_exists', method='GET')
+def check_id_exists():
+    response.content_type = 'application/json'
+    if request.query.id:
+        return jsonp(request, {'exists': _d2v.check_id_exists(request.query.id)})
+    else:
+        return jsonp(request, {'error': 'you must supply an id parameter'})
+
+@service.route('/' + route_prefix + '/reset_trained_docs', method='GET')
+def reset_trained_docs():
+    response.content_type = 'application/json'
+    if request.query.query:
+        return jsonp(request, _d2v.reset_trained_docs(request.query.query))
+    else:
+        return jsonp(request, {'error': 'you must supply a query - *:* resets everything. '})
+
+@service.route('/' + route_prefix + '/clear_index', method='GET')
+def clear_index():
+    response.content_type = 'application/json'
+    if request.query.query:
+        return jsonp(request, _d2v.clear_index(request.query.query))
+    else:
+        return jsonp(request, {'error': 'you must supply a query - *:* clears everything. '})
+
 @service.route('/' + route_prefix + '/add', method='POST')
 def create():
     response.content_type = 'application/json'
@@ -261,7 +327,8 @@ def create():
     _id = postdata['id']
     _text = postdata['text']
     _location_id = postdata['location']
-    _d2v.add_document(_id, _text, _location_id)
+    _name = postdata['name']
+    _d2v.add_document(_id, _text, _location_id, _name)
 
 @service.route('/'+ route_prefix +'/similar', method='GET')
 def doc2vec_similar():

@@ -13,8 +13,8 @@ logging.basicConfig(filename="{0}/train_doc2vec.log".format(settings.LOG_FILE_PA
                     datefmt="%Y-%m-%d %H:%M:%S")
 
 
-def post_to_gensim_service(_id, location, text):
-    data = json.dumps({'id': _id, 'text': text, 'location': location})
+def post_to_gensim_service(_id, location, text, name):
+    data = json.dumps({'id': _id, 'text': text, 'location': location, 'name': name})
     try:
         req = urllib2.Request("http://localhost:9998/doc2vec/add", data)
         response = urllib2.urlopen(req)
@@ -45,7 +45,7 @@ def run(entry, *args):
 
 
         text = text.replace('<p>', '').replace('</p>', '')
-        response = post_to_gensim_service(fields['id'], fields['location'], text)
+        response = post_to_gensim_service(fields['id'], fields['location'], text, fields['name'])
 
         logging.info(response)
         sys.stdout.write(json.dumps(entry_json))
