@@ -14,6 +14,7 @@ import urllib
 import uuid
 import logging
 import base64
+import multiprocessing
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -42,6 +43,7 @@ class RepeatedTimer(object):
         self.args       = args
         self.kwargs     = kwargs
         self.is_running = False
+        self.status     = None
         self.start()
 
     def _run(self):
@@ -53,9 +55,11 @@ class RepeatedTimer(object):
         if not self.is_running:
             self._timer = Timer(self.interval, self._run)
             self._timer.start()
+            self.status = 'running'
             self.is_running = True
 
-    def stop(self):
+    def stop(self, current_status):
+        self.status = current_status
         self._timer.cancel()
         self.is_running = False
 
@@ -63,66 +67,99 @@ class RepeatedTimer(object):
 class Doc2VecService(object):
     def __init__(self):
         # TODO: change this to use the envvars passed in from voyager
+
+        # os.environ["VOYAGER_BASE_URL"] = 'http://34.214.30.162:8888'
+        # os.environ["VOYAGER_DATA_DIR"] = r'C:\voyager\server_1.9.12\data'
+
         os.environ["VOYAGER_BASE_URL"] = 'http://vector:8888'
         os.environ["VOYAGER_DATA_DIR"] = r'D:\voyager_data'
-        
-        self.solr_url = '%s/solr/doc2vec' % os.environ["VOYAGER_BASE_URL"]
-        self.data_dir = os.path.join(os.path.sep, os.environ["VOYAGER_DATA_DIR"], 'doc2vec_training') 
-        
-        self.trained_model          = None
+
+        # minimum items to train the vocab
+        # vocab training happens only once when the model is initially created,
+        # then the tagged documents are iteratively added to the model
+        self.min_sentences_to_train_vocab = 25000
+        self.max_ids_to_train_in_one_shot = 100
+        self.run_new_docs_check_seconds = 10
         self.path_to_trained_model  = None
 
-        self.min_sentences_to_train_vocab = 20000
-        self.run_new_docs_check_seconds = 30
+        self.solr_url = '%s/solr/doc2vec' % os.environ["VOYAGER_BASE_URL"]
+        self.data_dir = os.path.join(os.path.sep, os.environ["VOYAGER_DATA_DIR"], 'doc2vec_training')
+        if not os.path.exists(self.data_dir):
+            os.makedirs(self.data_dir)
 
         self.timer = RepeatedTimer(self.run_new_docs_check_seconds, self.train_model_from_solr)
 
-        # load the model - there should be only one or zero. safe to load the first one encountered. 
+        # load the model - there should be only one or zero. safe to load the first one encountered.
         for _f in os.listdir(self.data_dir):
             if _f.endswith(".doc2vec"):
                 self.path_to_trained_model = os.path.join(os.sep, self.data_dir, _f)
                 break
         if not self.path_to_trained_model:
             # no model available, have to create one for training. 
-            self.training_model = doc2vec.Doc2Vec(size=200, min_count=2, iter=55, workers=1, hs=0)
+            self.training_model = doc2vec.Doc2Vec(
+                size=300,
+                min_count=2,
+                iter=55,
+                workers=multiprocessing.cpu_count())
         else:
             # model exists - load one instance for querying, one for training. 
-            self.trained_model = doc2vec.Doc2Vec.load(self.path_to_trained_model)
+            # self.trained_model = doc2vec.Doc2Vec.load(self.path_to_trained_model)
             self.training_model = doc2vec.Doc2Vec.load(self.path_to_trained_model)
 
+    def get_docs_to_train(self, _fq, _q='*:*', return_tagged_docs=False):
+        rows = 10000 # rows per page
+        start = 0
+        ids = []
+        total_ids = 1
+        tagged_docs = []
 
-    def get_docs_to_train(self, _fq, _q='*:*'):
-        rows            = 100
-        start           = 0
-        returned_ids    = []
-        total_ids       = 1
-        tagged_docs     = []
-
-        while len(returned_ids) < total_ids:
-            logging.info('total ids: %s collected ids: %s', total_ids, len(returned_ids))
+        while len(ids) < total_ids and len(ids) < self.max_ids_to_train_in_one_shot:
+            logging.info('total ids: %s collected ids: %s', total_ids, len(ids))
             query = 'q=%s&fq=%s&wt=json&rows=%s&start=%s' % (_q, _fq, rows, start)
             url = '%s/select?%s' % (self.solr_url, query)
-            logging.info(url)
+            logging.debug(url)
             result = self.send_request(url)
             docs = json.loads(result)
             total_ids = docs['response']['numFound']
             for item in docs['response']['docs']:
                 if 'fss_words' in item:
-                    tagged_docs.append(doc2vec.TaggedDocument(words=item['fss_words'], tags=[item['id']]))
-                    returned_ids.append(item['id'])
+                    if return_tagged_docs:
+                        tagged_docs.append(doc2vec.TaggedDocument(words=item['fss_words'], tags=[item['id']]))
+                    ids.append(item['id'])
             start = start + rows
-        return tagged_docs, returned_ids
-
+        if return_tagged_docs:
+            return tagged_docs, ids
+        else:
+            return ids
 
     def send_request(self, url, data=None):
         logging.debug('sending to %s', url)
-        req = urllib2.Request(url, data=json.dumps(data))
+        if data:
+            req = urllib2.Request(url, data=json.dumps(data))
+        else:
+            req = urllib2.Request(url)
+
         base64string = base64.encodestring('%s:%s' % ('admin', 'admin')).replace('\n', '')
         req.add_header("Authorization", "Basic %s" % base64string)
         req.add_header('Content-type', 'application/json')
         rsp = urllib2.urlopen(req)
         result = rsp.read()
         return result
+
+    def get_status(self):
+        return {
+            'training_timer_running': self.timer.is_running,
+            'training_timer_status': self.timer.status,
+            'check_index_seconds': self.run_new_docs_check_seconds
+        }
+
+    def stop_timer(self):
+        self.timer.stop('stopped by user')
+        return self.get_status()
+
+    def start_timer(self):
+        self.timer.start()
+        return self.get_status()
 
     def check_index(self):
         query = 'q=*:*&rows=0&wt=json&json.facet={added_to_model:{type:query,query:"fb_added_to_model:true"},not_added_to_model:{type:query,query:"fb_added_to_model:false"}}'
@@ -142,15 +179,16 @@ class Doc2VecService(object):
         result = json.loads(self.send_request(url))
         return result['response']['numFound'] is not 0
 
-    def update_trained_docs(self, doc_ids):
-        chunks = [doc_ids[x: x+25] for x in xrange(0, len(doc_ids), 25)]
+    def update_trained_docs(self, doc_ids, added_to_model=True):
+        # update the documents as 'trained' in batches of 100
+        chunks = [doc_ids[x: x + 100] for x in xrange(0, len(doc_ids), 100)]
         for chunk in chunks: 
             logging.info('updating %s ids', len(chunk))
             docs = []
             for _id in chunk:
                 docs.append({
                     'id': _id,
-                    'fb_added_to_model': { 'set': True }
+                    'fb_added_to_model': { 'set': added_to_model }
                 })
             url = "{0}/update?_={1}&commitWithin=1000&wt=json".format(self.solr_url, time.time())
             result = self.send_request(url, data=docs)
@@ -158,27 +196,30 @@ class Doc2VecService(object):
 
     def reset_trained_docs(self, query):
 
-        self.timer.stop()
-        already_added, returned_ids = self.get_docs_to_train('fb_added_to_model:true', query)
+        self.timer.stop('resetting trained ids - %s' % query)
+        returned_ids = ['foo']
+        while returned_ids:
+            returned_ids = self.get_docs_to_train('fb_added_to_model:true', query, return_tagged_docs=False)
+            self.update_trained_docs(returned_ids, added_to_model=False)
 
-        try:
-            chunks = [returned_ids[x:x+25] for x in xrange(0, len(returned_ids), 25)]
-            for chunk in chunks: 
-                logging.info('updating %s ids', len(chunk))
-                docs = []
-                for _id in chunk:
-                    docs.append({
-                        'id': _id,
-                        'fb_added_to_model': { 'set': False }
-                    })
-                url = "{0}/update?_={1}&commitWithin=1000&wt=json".format(self.solr_url, time.time())
-                result = self.send_request(url, data=docs)
-                logging.debug(json.dumps(result))
-        except Exception as e:
-            logging.exception(e)
+        # try:
+        #     chunks = [returned_ids[x: x + 1000] for x in xrange(0, len(returned_ids), 1000)]
+        #     for chunk in chunks: 
+        #         logging.info('updating %s ids', len(chunk))
+        #         docs = []
+        #         for _id in chunk:
+        #             docs.append({
+        #                 'id': _id,
+        #                 'fb_added_to_model': { 'set': False }
+        #             })
+        #         url = "{0}/update?_={1}&commitWithin=1000&wt=json".format(self.solr_url, time.time())
+        #         result = self.send_request(url, data=docs)
+        #         logging.debug(json.dumps(result))
+        # except Exception as e:
+        #     logging.exception(e)
 
         self.timer.start()
-        return {'message': 'reset %s ids' % len(already_added)}
+        # return {'message': 'reset %s ids' % len(returned_ids)}
 
     def post_to_solr(self, words, doc_id, location_id, title=None):
         try:
@@ -196,25 +237,29 @@ class Doc2VecService(object):
             logging.exception(e)
 
     def train_model_from_solr(self):
-        self.timer.stop()
+        self.timer.stop('training model')
         try:
-            response = json.loads(self.check_index())
+            _resp = json.loads(self.check_index())
             
-            not_added_to_model = int(response['facets']['not_added_to_model']['count'])
-            added_to_model = int(response['facets']['added_to_model']['count'])
+            if 'not_added_to_model' in _resp['facets']:
+                not_added_to_model = int(_resp['facets']['not_added_to_model']['count'])
+            else:
+                not_added_to_model = 0
+
+            if 'added_to_model' in _resp['facets']:
+                added_to_model = int(_resp['facets']['added_to_model']['count'])
+            else:
+                added_to_model = 0
 
             logging.info('added: %s not added: %s', added_to_model, not_added_to_model)
-            
+
             if not_added_to_model > 0:
-                if not self.trained_model:
+                if not self.path_to_trained_model:
                     if not_added_to_model >= self.min_sentences_to_train_vocab:
                         model_name = "model_%s.doc2vec" % time.time()
-                        vocab_items, returned_ids = self.get_docs_to_train('fb_added_to_model:false')
+                        vocab_items, returned_ids = self.get_docs_to_train('fb_added_to_model:false', return_tagged_docs=True)
                         self.training_model.build_vocab(vocab_items)
                         logging.info('trained vocab on %s items', len(vocab_items))
-                        self.training_model.train(vocab_items, total_examples=len(vocab_items), epochs=self.training_model.iter)
-                        self.save_and_reload_model(model_name)
-                        self.update_trained_docs(returned_ids)
                         self.save_and_reload_model(model_name)
                         self.cleanup_after_training(model_name)
                     else:
@@ -222,7 +267,7 @@ class Doc2VecService(object):
                 else:
                     logging.info("model exists, just updating with some new training material...")
                     model_name = "model_%s.doc2vec" % time.time()
-                    vocab_items, returned_ids = self.get_docs_to_train('fb_added_to_model:false')
+                    vocab_items, returned_ids = self.get_docs_to_train('fb_added_to_model:false', return_tagged_docs=True)
                     self.training_model.train(vocab_items, total_examples=len(vocab_items), epochs=self.training_model.iter)
                     self.update_trained_docs(returned_ids)
                     self.save_and_reload_model(model_name)
@@ -240,13 +285,11 @@ class Doc2VecService(object):
         self.training_model.save(new_model_file)
         logging.info("reloading training model ")
         self.training_model = doc2vec.Doc2Vec.load(new_model_file)
-        logging.info("reloading trained model ")
-        self.trained_model = doc2vec.Doc2Vec.load(new_model_file)
         self.path_to_trained_model = new_model_file
 
     def cleanup_after_training(self, model_name):
         # clean up all the old models
-        old_models = [ f for f in os.listdir(self.data_dir) if f.endswith(".doc2vec") and model_name not in f ]
+        old_models = [ f for f in os.listdir(self.data_dir) if '.doc2vec' in f and model_name not in f ]
         logging.info("removing old models %s " % old_models)
         for _f in old_models:
             os.remove(os.path.join(os.sep, self.data_dir, _f))
@@ -260,22 +303,22 @@ class Doc2VecService(object):
 
     def get_similar_docs(self, doc_id=None, positive=None, negative=None):
         result = {}
-        if self.trained_model is None:
+        if self.training_model is None:
             result['error'] = "no trained model has been loaded. "
         elif doc_id:
             logging.info('parsing - %s', doc_id)
             try:
-                result['similar'] = self.trained_model.docvecs.most_similar(doc_id)
+                result['similar'] = self.training_model.docvecs.most_similar(doc_id)
                 ids = []
                 for d in result['similar']:
                     ids.append(d[0])
                 result['ids'] = ids
-                result['solr'] = "http://localhost:9000/search?disp=default&q=id:(%s)" % " ".join(ids)
+                result['solr'] = "%s/navigo/search?disp=default&q=id:(%s)" % (os.environ["VOYAGER_BASE_URL"], " ".join(ids))
             except Exception as e:
                 logging.exception(e)
         elif positive:
             logging.info('parsing - %s', positive)
-            result['similar'] = self.trained_model.most_similar(positive=positive, negative=negative)
+            result['similar'] = self.training_model.most_similar(positive=positive, negative=negative)
         return json.dumps(result)
 
 
@@ -290,6 +333,21 @@ def jsonp(request, dictionary):
     if (request.query.callback):
         return "%s(%s)" % (request.query.callback, dictionary)
     return dictionary
+
+@service.route('/' + route_prefix + '/status', method='GET')
+def check_status():
+    response.content_type = 'application/json'
+    return jsonp(request, _d2v.get_status())
+
+@service.route('/' + route_prefix + '/stop_timer', method='GET')
+def stop_timer():
+    response.content_type = 'application/json'
+    return jsonp(request, _d2v.stop_timer())
+
+@service.route('/' + route_prefix + '/start_timer', method='GET')
+def start_timer():
+    response.content_type = 'application/json'
+    return jsonp(request, _d2v.stop_timer())
 
 @service.route('/' + route_prefix + '/check_index', method='GET')
 def check_index():
@@ -312,7 +370,7 @@ def reset_trained_docs():
     else:
         return jsonp(request, {'error': 'you must supply a query - *:* resets everything. '})
 
-@service.route('/' + route_prefix + '/clear_index', method='GET')
+@service.route('/' + route_prefix + '/clear_index', method='POST')
 def clear_index():
     response.content_type = 'application/json'
     if request.query.query:
