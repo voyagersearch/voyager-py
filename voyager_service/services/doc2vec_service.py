@@ -11,6 +11,7 @@ import stat
 import sys
 import urllib2
 import urllib
+import urlparse
 import uuid
 import logging
 import base64
@@ -26,14 +27,17 @@ from threading import Timer
 import gensim.models.doc2vec as doc2vec
 from gensim.models.doc2vec import LabeledSentence
 
-# import doc2vec_online as doc2vec
-# from doc2vec_online import LabeledSentence
+if 'VOYAGER_LOGS_DIR' in os.environ:
+    logging_path = os.path.normpath(os.environ['VOYAGER_LOGS_DIR'])
+else:
+    logging_path = r'D:'
 
 
-logging.basicConfig(filename="{0}/doc2vec_service.log".format(r'D:'),
+logging.basicConfig(filename=os.path.join(os.sep, logging_path, 'doc2vec-service.log'),
                     level=logging.INFO,
                     format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
                     datefmt="%Y-%m-%d %H:%M:%S")
+
 
 class RepeatedTimer(object):
     def __init__(self, interval, function, *args, **kwargs):
@@ -66,24 +70,27 @@ class RepeatedTimer(object):
 
 class Doc2VecService(object):
     def __init__(self):
-        # TODO: change this to use the envvars passed in from voyager
-
-        # os.environ["VOYAGER_BASE_URL"] = 'http://34.214.30.162:8888'
-        # os.environ["VOYAGER_DATA_DIR"] = r'C:\voyager\server_1.9.12\data'
-
-        os.environ["VOYAGER_BASE_URL"] = 'http://vector:8888'
-        os.environ["VOYAGER_DATA_DIR"] = r'D:\voyager_data'
-
+        logging.info(json.dumps(["%s=%s" % (k, v) for k, v in os.environ.items()], indent=4))
         # minimum items to train the vocab
         # vocab training happens only once when the model is initially created,
         # then the tagged documents are iteratively added to the model
         self.min_sentences_to_train_vocab = 25000
         self.max_ids_to_train_in_one_shot = 100
-        self.run_new_docs_check_seconds = 10
+        self.run_new_docs_check_seconds = 90
         self.path_to_trained_model  = None
 
-        self.solr_url = '%s/solr/doc2vec' % os.environ["VOYAGER_BASE_URL"]
-        self.data_dir = os.path.join(os.path.sep, os.environ["VOYAGER_DATA_DIR"], 'doc2vec_training')
+        if 'VOYAGER_BASE_URL' in os.environ:
+            self.solr_url = urlparse.urljoin(os.environ['VOYAGER_BASE_URL'], 'solr/doc2vec')
+        else:
+            logging.warn('VOYAGER_BASE_URL not in os.environ, defaulting to localhost')
+            self.solr_url = 'http://localhost:8888/solr/doc2vec'
+
+        if 'VOYAGER_DATA_DIR' in os.environ:
+            self.data_dir = os.path.join(os.path.sep, os.environ["VOYAGER_DATA_DIR"], 'doc2vec_training')
+        else:
+            logging.warn('VOYAGER_DATA_DIR not in os.environ, defaulting to current directory')
+            self.data_dir = 'doc2vec_training'
+
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir)
 
@@ -102,8 +109,6 @@ class Doc2VecService(object):
                 iter=55,
                 workers=multiprocessing.cpu_count())
         else:
-            # model exists - load one instance for querying, one for training. 
-            # self.trained_model = doc2vec.Doc2Vec.load(self.path_to_trained_model)
             self.training_model = doc2vec.Doc2Vec.load(self.path_to_trained_model)
 
     def get_docs_to_train(self, _fq, _q='*:*', return_tagged_docs=False):
@@ -170,6 +175,7 @@ class Doc2VecService(object):
     def clear_index(self, query):
         query = 'commit=true&stream.body=<delete><query>%s</query></delete>&wt=json' % query
         url = '%s/update?%s' % (self.solr_url, query)
+        logging.info(url)
         result = self.send_request(url)
         return result
 
@@ -201,25 +207,7 @@ class Doc2VecService(object):
         while returned_ids:
             returned_ids = self.get_docs_to_train('fb_added_to_model:true', query, return_tagged_docs=False)
             self.update_trained_docs(returned_ids, added_to_model=False)
-
-        # try:
-        #     chunks = [returned_ids[x: x + 1000] for x in xrange(0, len(returned_ids), 1000)]
-        #     for chunk in chunks: 
-        #         logging.info('updating %s ids', len(chunk))
-        #         docs = []
-        #         for _id in chunk:
-        #             docs.append({
-        #                 'id': _id,
-        #                 'fb_added_to_model': { 'set': False }
-        #             })
-        #         url = "{0}/update?_={1}&commitWithin=1000&wt=json".format(self.solr_url, time.time())
-        #         result = self.send_request(url, data=docs)
-        #         logging.debug(json.dumps(result))
-        # except Exception as e:
-        #     logging.exception(e)
-
         self.timer.start()
-        # return {'message': 'reset %s ids' % len(returned_ids)}
 
     def post_to_solr(self, words, doc_id, location_id, title=None):
         try:
@@ -330,7 +318,7 @@ route_prefix = 'doc2vec'
 service = Bottle()
 
 def jsonp(request, dictionary):
-    if (request.query.callback):
+    if request.query.callback:
         return "%s(%s)" % (request.query.callback, dictionary)
     return dictionary
 
