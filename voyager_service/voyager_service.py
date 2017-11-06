@@ -68,7 +68,7 @@ def check_env():
 
     if 'VOYAGER_DATA_DIR' not in os.environ:
         # default to <working dir>/data
-        os.environ['VOYAGER_LOGS_DIR'] =  os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+        os.environ['VOYAGER_DATA_DIR'] =  os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
 
 def create_and_start_service():
