@@ -144,8 +144,6 @@ class Doc2VecService(object):
         else:
             req = urllib2.Request(url)
 
-        base64string = base64.encodestring('%s:%s' % ('admin', 'admin')).replace('\n', '')
-        req.add_header("Authorization", "Basic %s" % base64string)
         req.add_header('Content-type', 'application/json')
         rsp = urllib2.urlopen(req)
         result = rsp.read()
