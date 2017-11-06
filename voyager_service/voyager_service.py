@@ -100,7 +100,7 @@ def create_and_start_service():
     except Exception as e:
         logging.exception(e)
 
-    arg_parser = argparse.ArgumentParser(description='NLP Service')
+    arg_parser = argparse.ArgumentParser(description='Voyager Services')
     arg_parser.add_argument('-p', '--port', help='port to run on', default=9999)
     arg_parser.add_argument('-a', '--address', help='service address', default='localhost')
     arrgs = arg_parser.parse_args()
@@ -113,7 +113,7 @@ def create_and_start_service():
     if 'VOYAGER_SERVICE_ADDRESS' in os.environ:
         address = os.environ['VOYAGER_SERVICE_ADDRESS']
 
-    ROOT_APP.run(debug=True, host=address, port=port)
+    ROOT_APP.run(host=address, port=port)
 
 
 if __name__ == '__main__':
