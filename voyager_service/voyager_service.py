@@ -94,7 +94,7 @@ def create_and_start_service():
 
     try:
         folders = json.loads(os.environ['VOYAGER_SERVICE_FOLDERS'])
-        logging.info(folders)
+        logging.debug(folders)
         for folder in folders:
             merge_routes(folder)
     except Exception as e:
