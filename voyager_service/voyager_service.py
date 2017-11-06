@@ -1,5 +1,15 @@
-import os, imp, argparse, logging, json
-from bottle import Bottle, route, response, request
+"""
+Voyager Python Service 
+"""
+import os
+import imp
+import argparse
+import logging
+import json
+import requests
+from requests import ConnectionError
+
+from bottle import Bottle, response, request
 
 ROOT_APP = Bottle()
 
@@ -55,20 +65,37 @@ def check_env():
     Voyager 1.9.10 - added specific env vars for pipeline steps and workers,
     Voyager 1.9.13 - added specific env vars for this service.
     """
+    # TODO: is there a better way of defaulting the baseurl if it's not in the os.environ? 
+    # especially since we want to use this to try to access the other values the os.environ 
+    # hasn't been set.
+    settings = None
+    if 'VOYAGER_BASE_URL' not in os.environ:
+        # NOTE: change this if running manually and the base url is not localhost:8888
+        os.environ['VOYAGER_BASE_URL'] = 'http://localhost:8888'
+        # if the VOYAGER_BASE_URL isn't in the environ, can safely assume the other 
+        # environ vars won't be either, so go get them from the service. 
+        try:
+            resp = requests.get('%s/api/rest/system/settings' % os.environ['VOYAGER_BASE_URL'])
+            settings = resp.json()
+        except ConnectionError as e:
+            logging.exception("error trying to get the system settings from %s", ('%s/api/rest/system/settings' % os.environ['VOYAGER_BASE_URL']))
 
     if 'VOYAGER_LOGS_DIR' not in os.environ:
-        # default to <working dir>/logs
-        os.environ['VOYAGER_LOGS_DIR'] =  os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+        if settings and settings['folders'] and settings['folders']['logs']:
+            os.environ['VOYAGER_LOGS_DIR'] = settings['folders']['logs']
+        else:
+            # default to <working dir>/logs
+            os.environ['VOYAGER_LOGS_DIR'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+
+    if 'VOYAGER_DATA_DIR' not in os.environ:
+        if settings and settings['folders'] and settings['folders']['data']:
+            os.environ['VOYAGER_DATA_DIR'] = settings['folders']['data']
+        else:
+            # default to <working dir>/data
+            os.environ['VOYAGER_DATA_DIR'] =  os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
     if 'VOYAGER_SERVICE_FOLDERS' not in os.environ:
         os.environ['VOYAGER_SERVICE_FOLDERS'] = json.dumps([])
-
-    if 'VOYAGER_BASE_URL' not in os.environ:
-        os.environ['VOYAGER_BASE_URL'] = 'http://localhost:8888'
-
-    if 'VOYAGER_DATA_DIR' not in os.environ:
-        # default to <working dir>/data
-        os.environ['VOYAGER_DATA_DIR'] =  os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
 
 def create_and_start_service():
@@ -91,11 +118,12 @@ def create_and_start_service():
                         format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
                         datefmt="%Y-%m-%d %H:%M:%S")
 
-
+    # load the default services dir 
     services_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'services')
     merge_routes(services_dir)
 
     try:
+        # load any additional services dirs
         folders = json.loads(os.environ['VOYAGER_SERVICE_FOLDERS'])
         logging.debug(folders)
         for folder in folders:
