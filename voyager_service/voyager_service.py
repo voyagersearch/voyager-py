@@ -118,34 +118,3 @@ def create_and_start_service():
 
 if __name__ == '__main__':
     create_and_start_service()
-
-'''
-    todo: 
-            reload dynamically, maybe when new file is added
-            use filename for prefix
-            pass address / port into pipeline steps 
-            ability to have multiple directories of services - CHECK
-
-            generify nlp interface to use services in here 
-            can we stop single services? 
-            run from voyager process - CHECK
-            add flag to "not start" service 
-            async loading? 
-            licensing? maybe have them be inactive until needed
-            ability to specify / switch out engine - cherrypy, bjoern 
-
-            add config to use bottle, cherrypy, bjoern 
-            turn off service, specify url, voyager passes that to pipeline steps 
-            whitelist / blacklist to exclude scripts 
-
-            same format as NLP plugin 
-            put in voyager-py 
-            add code to run service, sample services, new root 
-            pass config through pipeline steps 
-
-            changes for NLP plugin to use this service 
-
-            how to expose in manage ui?
-
-
-'''
