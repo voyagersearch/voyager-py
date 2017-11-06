@@ -78,10 +78,9 @@ def create_and_start_service():
 
     check_env()
 
-    services_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'services')
-    merge_routes(services_dir)
-
     logging_path = os.path.normpath(os.environ['VOYAGER_LOGS_DIR'])
+    if not os.path.exists(logging_path):
+        os.makedirs(logging_path)
 
     # remove any previous handlers and set the logging to the voyager logs dir
     for handler in logging.root.handlers[:]:
@@ -92,6 +91,10 @@ def create_and_start_service():
                         format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
                         datefmt="%Y-%m-%d %H:%M:%S")
 
+
+    services_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'services')
+    merge_routes(services_dir)
+
     try:
         folders = json.loads(os.environ['VOYAGER_SERVICE_FOLDERS'])
         logging.debug(folders)
@@ -100,7 +103,7 @@ def create_and_start_service():
     except Exception as e:
         logging.exception(e)
 
-    arg_parser = argparse.ArgumentParser(description='Voyager Services')
+    arg_parser = argparse.ArgumentParser(description='Voyager Service')
     arg_parser.add_argument('-p', '--port', help='port to run on', default=9999)
     arg_parser.add_argument('-a', '--address', help='service address', default='localhost')
     arrgs = arg_parser.parse_args()
@@ -113,7 +116,7 @@ def create_and_start_service():
     if 'VOYAGER_SERVICE_ADDRESS' in os.environ:
         address = os.environ['VOYAGER_SERVICE_ADDRESS']
 
-    ROOT_APP.run(host=address, port=port)
+    ROOT_APP.run(debug=True, host=address, port=port)
 
 
 if __name__ == '__main__':
