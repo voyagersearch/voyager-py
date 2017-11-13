@@ -72,7 +72,7 @@ def merge_routes(folder_path):
                 logging.exception('Error while merging routes from {0}: {1}'.format(service_name, e))
 
 
-def check_env(user_name, password):
+def check_env(user_name='', password=''):
     """
     Checks the os.environ for certain vars and sets them if they dont exist.
     Voyager 1.9.10 - added specific env vars for pipeline steps and workers,
@@ -91,6 +91,8 @@ def check_env(user_name, password):
             resp = requests.get('{0}/api/rest/system/settings'.format(os.environ['VOYAGER_BASE_URL']),
                                 auth=(user_name, password))
             settings = resp.json()
+            if 'Subject does not have permission' in settings['message']:
+                raise ConnectionError
         except ConnectionError:
             logging.exception('Error trying to get the system settings from {0}/api/rest/system/settings'.format(os.environ['VOYAGER_BASE_URL']))
 
@@ -171,8 +173,8 @@ def create_and_start_service(*args):
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser(description='Voyager Service')
-    arg_parser.add_argument('-un', '--username', help="Voyager account username", required=True)
-    arg_parser.add_argument('-pw', '--password', help="Voyager account password", required=True)
+    arg_parser.add_argument('-un', '--username', help="Voyager account username", default='')
+    arg_parser.add_argument('-pw', '--password', help="Voyager account password", default='')
     arg_parser.add_argument('-p', '--port', help='port to run on', default=9999)
     arg_parser.add_argument('-a', '--address', help='service address', default='localhost')
 
