@@ -1,38 +1,43 @@
+# (C) Copyright 2017 Voyager Search
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import os
 import sys
 import json
+try:
+    import arcpy
+    import requests
+    from bottle import route, run, request, Bottle, response
+except ImportError as ie:
+    sys.stdout.write(ie.message)
+    sys.exit(1)
 
 
-def run(entry, *args):
-    """
-    Creates a layer file (.lyr) in the Voyager meta location for a GIS item that currently has no associated layer file.
-    Currently has support for Shapefiles, raster datasets and geodatbase feature classes.
-    :param entry: a JSON file containing a voyager entry.
-    """
-    try:
-        import arcpy
-    except ImportError as ie:
-        sys.stdout.write(ie.message)
-        sys.exit(1)
-    if 'VOYAGER_META_DIR' in os.environ:
-        meta_folder = os.environ['VOYAGER_META_DIR']
-    else:
-        if args is not None and len(args) > 0:
-            meta_folder = args[0]
-        else:
-            if os.name == 'nt':
-                meta_folder = 'c:/voyager/data/meta'
-            else:
-                meta_folder = '/var/lib/voyager/data/meta'
-    vmoptions = os.path.join(os.path.abspath(os.path.join(__file__, "../../../..")), 'Voyager.vmoptions')
-    mxd_path = os.path.join(os.path.abspath(os.path.join(__file__, "../../..")), 'processing/supportfiles/GroupLayerTemplate.mxd') #os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'GroupLayerTemplate.mxd')
-    with open(vmoptions, 'rb') as fp:
-        for i, line in enumerate(fp):
-            if line.startswith('-Ddata.dir'):
-                data_path = line.split('=')[1]
-                meta_folder = os.path.normpath('{0}\meta'.format(data_path.strip()))
-                break
-    new_entry = json.load(open(entry, "rb"))
+if 'VOYAGER_META_DIR' in os.environ:
+    meta_folder = os.environ['VOYAGER_META_DIR']
+else:
+    meta_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data/meta')
+
+if 'VOYAGER_APPS_DIR' in os.environ:
+    app_folder = os.environ['VOYAGER_APPS_DIR']
+else:
+    app_folder = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+mxd_path = os.path.join(app_folder, 'py/processing/supportfiles/GroupLayerTemplate.mxd')
+
+
+def create_layer_file(new_entry):
+    new_entry = json.loads(new_entry)
     if 'job' in new_entry and 'id' in new_entry['entry']['fields'] and 'path' in new_entry['job']:
         path = new_entry['job']['path']
         id = new_entry['entry']['fields']['id']
@@ -102,5 +107,13 @@ def run(entry, *args):
                 except arcpy.ExecuteError:
                     pass
 
-    sys.stdout.write(json.dumps(new_entry))
-    sys.stdout.flush()
+        return json.dumps(new_entry)
+
+
+service = Bottle()
+
+
+@service.route('/createlayerfiles', method='POST')
+def createlayerfiles():
+    entry = request.body.read()
+    return create_layer_file(entry)
