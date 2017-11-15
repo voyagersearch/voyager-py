@@ -336,6 +336,7 @@ class GeometryOps(object):
         """
         try:
             # If Polyline and tolerance is 1, just get the first, mid and last points.
+            wkt = wkt.upper().replace('NAN', '0')
             geometry = ogr.CreateGeometryFromWkt(wkt)
             if not geometry:
                 geometry = ogr.CreateGeometryFromWkt(eval(wkt))
