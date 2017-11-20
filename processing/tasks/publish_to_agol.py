@@ -16,6 +16,7 @@ import os
 import sys
 import glob
 import shutil
+import xml.dom.minidom as DOM
 import requests
 from utils import status
 from utils import task_utils
@@ -76,6 +77,72 @@ class AGOLHandler(object):
         return json_output['services'][0]['serviceurl']
 
 
+def update_sddraft(draft_file):
+    draft_parts = os.path.splitext(draft_file)
+    new_draft = draft_parts[0] + '_new' + draft_parts[1]
+
+    # Read the contents of the original SDDraft into an xml parser
+    doc = DOM.parse(draft_file)
+
+    # The follow 5 code pieces modify the SDDraft from a new MapService
+    # with caching capabilities to a FeatureService with Query,Create,
+    # Update,Delete,Uploads,Editing capabilities. The first two code
+    # pieces handle overwriting an existing service. The last three pieces
+    # change Map to Feature Service, disable caching and set appropriate
+    # capabilities. You can customize the capabilities by removing items.
+    # Note you cannot disable Query from a Feature Service.
+    tagsType = doc.getElementsByTagName('Type')
+    for tagType in tagsType:
+        if tagType.parentNode.tagName == 'SVCManifest':
+            if tagType.hasChildNodes():
+                tagType.firstChild.data = "esriServiceDefinitionType_Replacement"
+
+    tagsState = doc.getElementsByTagName('State')
+    for tagState in tagsState:
+        if tagState.parentNode.tagName == 'SVCManifest':
+            if tagState.hasChildNodes():
+                tagState.firstChild.data = "esriSDState_Published"
+
+    # Change service type from map service to feature service
+    typeNames = doc.getElementsByTagName('TypeName')
+    for typeName in typeNames:
+        # TODO: Is this a bug? It's documented as supported.
+        # if typeName.firstChild.data == "{}".format('MapServer'):
+        #     typeName.parentNode.getElementsByTagName("Enabled")[0].firstChild.data = "true"
+        # if typeName.firstChild.data == "{}".format('FeatureServer'):
+        #     typeName.parentNode.getElementsByTagName("Enabled")[0].firstChild.data = "true"
+        if typeName.firstChild.data == "MapServer":
+            typeName.firstChild.data = "FeatureServer"
+
+    # Turn off caching
+    configProps = doc.getElementsByTagName('ConfigurationProperties')[0]
+    propArray = configProps.firstChild
+    propSets = propArray.childNodes
+    for propSet in propSets:
+        keyValues = propSet.childNodes
+        for keyValue in keyValues:
+            if keyValue.tagName == 'Key':
+                if keyValue.firstChild.data == "isCached":
+                    keyValue.nextSibling.firstChild.data = "false"
+
+    # Turn on feature access capabilities
+    configProps = doc.getElementsByTagName('Info')[0]
+    propArray = configProps.firstChild
+    propSets = propArray.childNodes
+    for propSet in propSets:
+        keyValues = propSet.childNodes
+        for keyValue in keyValues:
+            if keyValue.tagName == 'Key':
+                if keyValue.firstChild.data == "WebCapabilities":
+                    keyValue.nextSibling.firstChild.data = "Query,Create,Update,Delete,Uploads,Editing"
+
+    # Write the new draft to disk
+    f = open(new_draft, 'w')
+    doc.writexml(f)
+    f.close()
+    return new_draft
+
+
 def create_service(temp_folder, map_document, portal_url, username, password, service_name, folder_name=''):
     """Creates a map service on an ArcGIS Server machine or in an ArcGIS Online account.
 
@@ -99,21 +166,28 @@ def create_service(temp_folder, map_document, portal_url, username, password, se
                                    summary=map_document.description,
                                    tags=map_document.tags)
 
+    feature_draft_file = update_sddraft(draft_file)
+
     # Analyze the draft file for any errors before staging.
     status_writer.send_status(_('Analyzing the map sd draft...'))
-    analysis = arcpy.mapping.AnalyzeForSD(draft_file)
+    analysis = arcpy.mapping.AnalyzeForSD(feature_draft_file)
     if analysis['errors'] == {}:
         # Stage the service.
         stage_file = draft_file.replace('sddraft', 'sd')
         status_writer.send_status(_('Staging the map service...'))
-        arcpy.StageService_server(draft_file, stage_file)
+        arcpy.StageService_server(feature_draft_file, stage_file)
     else:
+        # Analyze the draft file for any errors before staging.
+        analysis = arcpy.mapping.AnalyzeForSD(draft_file)
+        if analysis['errors'] == {}:
+            # Stage the service.
+            stage_file = draft_file.replace('sddraft', 'sd')
+            status_writer.send_status(_('Staging the map service...'))
+            arcpy.StageService_server(draft_file, stage_file)
         # If the sddraft analysis contained errors, display them and quit.
-        if (u'Data frame does not have a spatial reference', 2) in analysis['errors']:
-            errors = 'Cannot publish results. One or more inputs is missing a spatial reference.'
         else:
             errors = analysis['errors']
-        raise task_utils.AnalyzeServiceException(errors)
+            raise task_utils.AnalyzeServiceException(errors)
 
     # Upload/publish the service.
     status_writer.send_status(_('Publishing the map service to: {0}...').format(portal_url))
@@ -192,7 +266,7 @@ def execute(request):
                     data_frame = arcpy.mapping.ListDataFrames(mxd)[0]
                     arcpy.mapping.AddLayer(data_frame, layer)
                     mxd.save()
-                    create_service(request_folder, mxd, url, username, password,  service_name, folder_name)
+                    create_service(request_folder, mxd, url, username, password, service_name, folder_name)
                 published += 1
         except task_utils.AnalyzeServiceException as ase:
             status_writer.send_state(status.STAT_FAILED, _(ase))
