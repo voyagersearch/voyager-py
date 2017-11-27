@@ -56,6 +56,9 @@ if __name__ == '__main__':
         elif job.mongodb_client_info:
             from workers import mongodb_worker
             mongodb_worker.run_job(job)
+        elif job.scrapy_config:
+            from workers import web_crawler_worker
+            web_crawler_worker.run_job(job)
         elif job.sql_connection_info:
             if job.sql_driver == 'SQL Server':
                 from workers import sql_worker

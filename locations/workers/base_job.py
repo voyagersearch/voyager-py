@@ -227,6 +227,13 @@ class Job(object):
         return self.job['location']['id']
 
     @property
+    def scrapy_config(self):
+        try:
+            return self.job['location']['config']['scrapy']
+        except KeyError:
+            return ''
+
+    @property
     def generalize_value(self):
         """The value setting for generalizing the geometry.
         0   - do not generalize
