@@ -15,12 +15,12 @@ import os
 import sys
 import json
 try:
+    from bottle import route, run, request, Bottle, response
     import arcpy
     import requests
-    from bottle import route, run, request, Bottle, response
 except ImportError as ie:
     sys.stdout.write(ie.message)
-    sys.exit(1)
+#    sys.exit(1)
 
 
 if 'VOYAGER_META_DIR' in os.environ:

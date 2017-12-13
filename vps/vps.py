@@ -91,7 +91,7 @@ def check_env(user_name='', password=''):
             resp = requests.get('{0}/api/rest/system/settings'.format(os.environ['VOYAGER_BASE_URL']),
                                 auth=(user_name, password))
             settings = resp.json()
-            if 'Subject does not have permission' in settings['message']:
+            if 'message' in settings and 'Subject does not have permission' in settings['message']:
                 raise ConnectionError
         except ConnectionError:
             logging.exception('Error trying to get the system settings from {0}/api/rest/system/settings'.format(os.environ['VOYAGER_BASE_URL']))
@@ -124,8 +124,8 @@ def check_env(user_name='', password=''):
             # default to <working dir>/data
             os.environ['VOYAGER_DATA_DIR'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
-    if 'VOYAGER_SERVICE_FOLDERS' not in os.environ:
-        os.environ['VOYAGER_SERVICE_FOLDERS'] = json.dumps([])
+    if 'VOYAGER_PYTHON_SERVICE_FOLDERS' not in os.environ:
+        os.environ['VOYAGER_PYTHON_SERVICE_FOLDERS'] = json.dumps([])
 
 
 def create_and_start_service(*args):
@@ -153,7 +153,7 @@ def create_and_start_service(*args):
 
     try:
         # load any additional services dirs
-        folders = json.loads(os.environ['VOYAGER_SERVICE_FOLDERS'])
+        folders = json.loads(os.environ['VOYAGER_PYTHON_SERVICE_FOLDERS'])
         logging.debug(folders)
         for folder in folders:
             merge_routes(folder)
@@ -161,12 +161,12 @@ def create_and_start_service(*args):
         logging.exception(e)
 
     port = args[0].port
-    if 'VOYAGER_SERVICE_PORT' in os.environ:
-        port = os.environ['VOYAGER_SERVICE_PORT']
+    if 'VOYAGER_PYTHON_SERVICE_PORT' in os.environ:
+        port = os.environ['VOYAGER_PYTHON_SERVICE_PORT']
 
     address = args[0].address
-    if 'VOYAGER_SERVICE_ADDRESS' in os.environ:
-        address = os.environ['VOYAGER_SERVICE_ADDRESS']
+    if 'VOYAGER_PYTHON_SERVICE_ADDRESS' in os.environ:
+        address = os.environ['VOYAGER_PYTHON_SERVICE_ADDRESS']
 
     ROOT_APP.run(debug=True, host=address, port=port)
 
@@ -176,7 +176,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('-un', '--username', help="Voyager account username", default='')
     arg_parser.add_argument('-pw', '--password', help="Voyager account password", default='')
     arg_parser.add_argument('-p', '--port', help='port to run on', default=9999)
-    arg_parser.add_argument('-a', '--address', help='service address', default='localhost')
+    arg_parser.add_argument('-a', '--address', help='service address', default='0.0.0.0')
 
     arrgs = arg_parser.parse_args()
     create_and_start_service(arrgs)
