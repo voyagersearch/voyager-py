@@ -15,6 +15,12 @@
 import platform
 import sys
 
+try:
+    import zmq
+except ImportError:
+    msg = "Unable to find Python bindings for ZeroMQ, please refer to the documentation https://help.voyagersearch.com/doc-troubleshooting"
+    sys.stdout.write(msg)
+    sys.exit(1)
 
 try:
     import vgextractors
