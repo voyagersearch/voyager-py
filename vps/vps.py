@@ -16,8 +16,6 @@ import imp
 import argparse
 import logging
 import json
-import requests
-from requests import ConnectionError
 
 from bottle import Bottle, response, request
 
@@ -88,13 +86,14 @@ def check_env(user_name='', password=''):
         # if the VOYAGER_BASE_URL isn't in the environ, can safely assume the other 
         # environ vars won't be either, so go get them from the service. 
         try:
-            resp = requests.get('{0}/api/rest/system/settings'.format(os.environ['VOYAGER_BASE_URL']),
-                                auth=(user_name, password))
+            import requests
+            resp = requests.get('{0}/api/rest/system/settings'.format(os.environ['VOYAGER_BASE_URL']), auth=(user_name, password))
             settings = resp.json()
             if 'message' in settings and 'Subject does not have permission' in settings['message']:
-                raise ConnectionError
-        except ConnectionError:
+                raise Exception
+        except Exception as e:
             logging.exception('Error trying to get the system settings from {0}/api/rest/system/settings'.format(os.environ['VOYAGER_BASE_URL']))
+            logging.exception(e)
 
     if 'VOYAGER_LOGS_DIR' not in os.environ:
         if settings and settings['folders'] and settings['folders']['logs']:
