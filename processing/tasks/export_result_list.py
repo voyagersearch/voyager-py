@@ -14,6 +14,7 @@
 # limitations under the License.
 import os
 import sys
+import json
 import itertools
 import csv
 import shutil
@@ -112,6 +113,8 @@ def export_to_shp(jobs, file_name, output_folder):
             layer_def = layer.GetLayerDefn()
             feature = ogr.Feature(layer_def)
             geom = ogr.CreateGeometryFromJson("{0}".format(job['[geo]']))
+            if not geom:
+                geom = ogr.CreateGeometryFromJson("{0}".format(json.dumps(job['[geo]'])))
             feature.SetGeometry(geom)
         except KeyError:
             feature.SetGeometry(None)
@@ -285,8 +288,8 @@ def execute(request):
     headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     num_results, response_index = task_utils.get_result_count(request['params'])
 
-    query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
-    # query = '{0}/select?&wt=json&fl={1}'.format("http://localhost:8888/solr/v0", ','.join(fields))
+    # query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
+    query = '{0}/select?&wt=json&fl={1}'.format("http://localhost:8888/solr/v0", ','.join(fields))
     if 'query' in request['params'][response_index]:
         # Voyager Search Traditional UI
         for p in request['params']:

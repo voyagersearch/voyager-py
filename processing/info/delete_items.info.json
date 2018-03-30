@@ -31,8 +31,8 @@
   {
     "en":
     {
-      "display": "Delete Items",
-      "description": "Deletes items from the index",
+      "display": "Remove Items from Index",
+      "description": "Removes items from the index",
       "helpURL": "https://help.voyagersearch.com/doc-delete-items",
       "params":
   	  {
