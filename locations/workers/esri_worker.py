@@ -152,9 +152,13 @@ def index_service(connection_info):
         instance = connection_info['instance']
     else:
         instance = 'arcgis'
+    if 'verify_ssl' in connection_info and connection_info['verify_ssl'].lower() in ['false', 'n']:
+        verify_ssl = False
+    else:
+        verify_ssl = True
 
     # Create the ArcGIS service helper and get the service url and the service items (layers/tables).
-    ags_helper = worker_utils.ArcGISServiceHelper(connection_url, user_name, password, instance=instance)
+    ags_helper = worker_utils.ArcGISServiceHelper(connection_url, user_name, password, verify_ssl, instance=instance)
     try:
         if token == '' and generate_token == 'false':
             url, items = ags_helper.find_item_url(service_name, service_type, folder_name)

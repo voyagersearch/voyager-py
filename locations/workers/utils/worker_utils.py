@@ -39,9 +39,10 @@ class InvalidToken(Exception):
 
 class ArcGISServiceHelper(object):
     """ArcGIS Server and Portal helper class."""
-    def __init__(self, portal_url, username, password, referer='', token_expiration=60, instance=''):
+    def __init__(self, portal_url, username, password, verify_ssl, referer='', token_expiration=60, instance=''):
         self._username = username
         self._password = password
+        self._verify_ssl = verify_ssl
         self._portal_url = portal_url
         self._token_expiration = token_expiration
         if referer:
@@ -66,7 +67,7 @@ class ArcGISServiceHelper(object):
                           'expiration': str(self._token_expiration)}
 
             url = "{0}/{1}/tokens/generateToken".format(self._portal_url, self._instance)
-            response = requests.post(url + "?f=json", query_dict)
+            response = requests.post(url + "?f=json", query_dict, verify=self._verify_ssl)
             token = response.json()
 
             if "token" not in token:
@@ -93,7 +94,7 @@ class ArcGISServiceHelper(object):
                           'token': token,
                           'q': '''title:"{0}" AND owner:"{1}" AND type:"{2}"'''.format(service_name, self._username, service_type)}
 
-            response = requests.get(service_url, params=query_dict)
+            response = requests.get(service_url, params=query_dict, verify=self._verify_ssl)
             data = response.json()
             if 'error' in data:
                 if data['error']['message'] == "Invalid Token":
@@ -119,9 +120,9 @@ class ArcGISServiceHelper(object):
             else:
                 service_url = search_url
         if self.token:
-            r = requests.get(service_url, params={'f': 'json', 'token': self.token, 'referer': self._referer})
+            r = requests.get(service_url, params={'f': 'json', 'token': self.token, 'referer': self._referer}, verify=self._verify_ssl)
         else:
-            r = requests.get(service_url, params={'f': 'json'})
+            r = requests.get(service_url, params={'f': 'json'}, verify=self._verify_ssl)
         items = r.json()
         if 'error' in items:
             if items['error']['message'] == "Invalid Token":
@@ -141,7 +142,7 @@ class ArcGISServiceHelper(object):
         else:
             query = {'where': '1=1', 'returnIdsOnly':True, 'f': 'json'}
 
-        response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query)
+        response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query, verify=self._verify_ssl)
         data = response.json()
         objectids = data['objectIds']
         self.oid_field_name = data['objectIdFieldName']
@@ -161,7 +162,7 @@ class ArcGISServiceHelper(object):
             query = {'where': '1=1', 'outFields': '*', 'returnGeometry': False, 'token': token, 'f': 'json'}
         else:
             query = {'where': '1=1', 'outFields': '*', 'returnGeometry': False, 'f': 'json'}
-        response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query)
+        response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query, verify=self._verify_ssl)
         data = response.json()
         fields = data['fields']
         return fields
@@ -182,7 +183,7 @@ class ArcGISServiceHelper(object):
             query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr, 'token': token, 'f': 'json'}
         else:
             query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr, 'f': 'json'}
-        response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query)
+        response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query, verify=self._verify_ssl)
         data = response.json()
         return data
 
