@@ -18,7 +18,8 @@
         "POWER_POINT.mxd",
         "ANSI_D_LND.mxd",
         "ANSI_E_LND.mxd"
-      ]
+      ],
+      "value": "LETTER_LND.mxd"
     },
     {
       "type": "StringChoice",
