@@ -288,8 +288,7 @@ def execute(request):
     headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     num_results, response_index = task_utils.get_result_count(request['params'])
 
-    # query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
-    query = '{0}/select?&wt=json&fl={1}'.format("http://localhost:8888/solr/v0", ','.join(fields))
+    query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
     if 'query' in request['params'][response_index]:
         # Voyager Search Traditional UI
         for p in request['params']:
