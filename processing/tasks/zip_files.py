@@ -128,6 +128,8 @@ def zip_files(zipper, input_items, zip_file_location, flatten_results, show_prog
                         except IOError:
                             # For File GDB lock files.
                             pass
+            i += 1
+            zipped += 1
         else:
             status_writer.send_status(_('{0} is not a file or does not exist').format(in_file))
             if show_progress:
