@@ -1,0 +1,51 @@
+{
+  "name": "generate_field_values_report",
+  "runner": "python",
+  "categories": ["Voyager Tools"],
+  "group": "",
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "String",
+      "name": "file_name",
+      "required": true
+    },
+    {
+      "type": "FieldList",
+      "name": "fields",
+      "required": true,
+      "value": [
+        "format",
+        "format_type",
+        "format_category",
+        "format_keyword"
+      ]
+ 	}
+  ],
+  "display":
+  {
+    "en":
+	{
+      "display": "Generate Field Usage Report",
+      "description": "Generates a usage report for selected fields",
+      "helpURL": "https://help.voyagersearch.com/doc-204436747-export-result-list",
+	  "params":
+	  {
+        "file_name":
+		{
+			"display": "Output File Name",
+			"description": "The output csv file name"
+		},
+        "fields":
+		{
+			"display": "Output Fields",
+			"description": "The fields to be included in the output csv file"
+		}
+	  }
+	 }
+  }
+}
