@@ -20,6 +20,7 @@
       "type": "StringChoice",
       "name": "field_type",
       "required": true,
+      "value": "TEXT",
       "choices": [
         "TEXT",
         "DOUBLE",
