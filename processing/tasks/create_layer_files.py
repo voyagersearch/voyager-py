@@ -38,13 +38,17 @@ class ObjectEncoder(json.JSONEncoder):
             return json.JSONEncoder.default(self, obj)
 
 
-def update_index(file_location, layer_file, item_id, name, location):
+def update_index(file_location, layer_file, item_id, name, location, server, hdrs):
     """Update the index by re-indexng an item."""
     import zmq
     indexer = sys.argv[3].split('=')[1]
     zmq_socket = zmq.Context.instance().socket(zmq.PUSH)
     zmq_socket.connect(indexer)
-    entry = {"action": "UPDATE", "id": item_id, "location": location, "entry": {"fields": {"path_to_lyr": layer_file, "name": name}}}
+    res = requests.get("{0}/api/rest/index/record/{1}".format(server, item_id), headers=hdrs)
+    fields = res.json()
+    fields["path_to_lyr"] = layer_file
+    fields["hasLayerFile"] = True
+    entry = {"action": "UPDATE", "id": item_id, "location": location, "entry": {"fields": fields}}
     zmq_socket.send_json(entry, cls=ObjectEncoder)
 
 
@@ -101,7 +105,7 @@ def execute(request):
         for doc in docs:
             if 'path' in doc:
                 input_items.append((doc['id'], doc['path'], doc['name'], doc['location']))
-        result = create_layer_file(input_items, meta_folder)
+        result = create_layer_file(input_items, meta_folder, voyager_server, headers)
         created += result[0]
         errors += result[1]
         skipped += result[2]
@@ -116,7 +120,7 @@ def execute(request):
     task_utils.report(os.path.join(request['folder'], '__report.json'), created, skipped, errors, errors_reasons, skipped_reasons)
 
 
-def create_layer_file(input_items, meta_folder, show_progress=False):
+def create_layer_file(input_items, meta_folder, voyager_server, hdrs, show_progress=False):
     """Creates a layer for input items in the appropriate meta folders."""
     created = 0
     skipped = 0
@@ -186,7 +190,7 @@ def create_layer_file(input_items, meta_folder, show_progress=False):
             # Update the index.
             if lyr:
                 try:
-                    update_index(path, lyr, id, name, location)
+                    update_index(path, lyr, id, name, location, voyager_server, hdrs)
                 except (IndexError, ImportError) as ex:
                     status_writer.send_state(status.STAT_FAILED, ex)
                 processed_count += 1
