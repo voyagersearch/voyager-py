@@ -44,9 +44,12 @@ if __name__ == '__main__':
     else:
         from workers import base_job
         job = base_job.Job(sys.argv[1])
-        if job.path or job.service_connection:
+        if job.path:
             from workers import esri_worker
             esri_worker.run_job(job)
+        elif job.service_connection:
+            from workers import agol_worker
+            agol_worker.run_job(job)
         elif job.url:
             from workers import gdal_worker
             gdal_worker.run_job(job.job_file)

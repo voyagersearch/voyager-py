@@ -168,7 +168,7 @@ class ArcGISServiceHelper(object):
         return fields
 
     def get_item_rows(self, url, layer_id, token, spatial_rel='esriSpatialRelIntersects',
-                 where='1=1', out_fields='*', out_sr=4326, return_geometry=True):
+                 where='1=1', out_fields='*', out_sr=4326, return_geometry=True, response_format='json'):
         """Return the rows for a service layer or table.
         :param url: service url
         :param layer_id: service layer/table ID
@@ -180,9 +180,9 @@ class ArcGISServiceHelper(object):
         :param return_geometry: boolean to return geometry
         """
         if self.token:
-            query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr, 'token': token, 'f': 'json'}
+            query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr, 'token': token, 'f': response_format}
         else:
-            query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr, 'f': 'json'}
+            query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr, 'f': response_format}
         response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query, verify=self._verify_ssl)
         data = response.json()
         return data
@@ -218,7 +218,7 @@ class GeoJSONConverter(object):
     def _point_to_wkt(self, point, decimals=3):
         """Converts a GeoJSON POINT to WKT."""
         x_coord = round(point['coordinates'][0], decimals)
-        y_cood = round(point['coordinates'][0], decimals)
+        y_cood = round(point['coordinates'][1], decimals)
         wkt_point = 'POINT ({0} {1})'.format(x_coord, y_cood)
         return wkt_point
 
