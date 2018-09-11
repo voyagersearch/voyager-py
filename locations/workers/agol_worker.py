@@ -155,7 +155,7 @@ def index_service(connection_info):
             else:
                 status_writer.send_status("Layer {0} has no attributes.".format(layer_name))
 
-            if 'geometry' in features[0] and not features[0]['geometry'] == 'null':
+            if 'geometry' in features[0] and features[0]['geometry']:
                 geometry_type = features[0]['geometry']['type']
             else:
                 geometry_type = 'Table'
@@ -261,7 +261,7 @@ def index_service(connection_info):
                         entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                         job.send_entry(entry)
                         if (x % increment) == 0:
-                            status_writer.send_percent(x / row_count, "{0} {1:%}".format(layer_name, int(x) / row_count), 'esri_worker')
+                            status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer_name, int(i) / row_count), 'agol_worker')
                 else:
                     generalize_value = job.generalize_value
                     for x, feature in enumerate(features, 1):
