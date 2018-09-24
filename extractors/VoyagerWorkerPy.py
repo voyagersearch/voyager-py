@@ -14,15 +14,38 @@
 # limitations under the License.
 import platform
 import sys
+import os
+import glob
+
+
+def append_or_set_path(path):
+    try:
+        p = os.environ['PATH']
+        if len(p) > 0 and not p.endswith(os.pathsep):
+            p += os.pathsep
+        p += path
+        os.environ['PATH'] = p
+    except KeyError:
+        os.environ['PATH'] = path
+
+
+# Add dependent libraries to the system paths.
+arch_dir = 'win32_x86'
+if platform.system() == 'Darwin':
+    arch_dir = 'darwin_x86_64'
+elif platform.system() == 'Linux':
+    arch_dir = 'linux_amd64'
+
+dll_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'arch', arch_dir))
+append_or_set_path(dll_path)
+egg_path = os.path.join(dll_path, 'py')
+sys.path.append(egg_path)
+libs = glob.glob(os.path.join(egg_path, '*.egg'))
+for lib in libs:
+    sys.path.append(lib)
 
 try:
     import zmq
-except ImportError:
-    msg = "Unable to find Python bindings for ZeroMQ, please refer to the documentation https://help.voyagersearch.com/doc-troubleshooting"
-    sys.stdout.write(msg)
-    sys.exit(1)
-
-try:
     import vgextractors
     from vgextractors._extraction_worker import ExtractionWorker
     from vgextractors._job import ExtractionJob
@@ -34,6 +57,7 @@ except ImportError as ie:
 except OSError as ose:
     sys.stdout.write("{0}. {1}.".format(str(ose), "This version of pyzmq requires 32bit Python"))
     sys.exit(1)
+
 
 def get_class( kls ):
     parts = kls.split('.')
@@ -55,7 +79,6 @@ class VoyagerExtractorPy(ExtractionWorker):
             kls = get_class("vgextractors." + extmod + "." + extmod)
             self.extmap[kls.extractor()] = kls
 
-
     def run_info(self):
         extractors = []
 
@@ -66,13 +89,11 @@ class VoyagerExtractorPy(ExtractionWorker):
         return {
             'name':'VoyagerWorkerPy',
             'description':'Python worker',
-            'version':'1.9',
+            'version':'2.0',
             'properties':{
                 'version.python':platform.python_version()
             },
             'extractors': extractors }
-
-
 
     def extract(self, infile, job, name):
         extkls = self.get_extractor(name)
@@ -83,14 +104,12 @@ class VoyagerExtractorPy(ExtractionWorker):
             extinst = extkls()
             extinst.extract(infile, job)
 
-
     def get_extractor(self, name):
         if self.extmap is None:
             self.extmap = {}
         if self.extmap.has_key(name):
             return self.extmap[name]
         return None
-
 
 
 if __name__ == "__main__":
