@@ -152,11 +152,20 @@ def index_service(connection_info):
                 continue
             if 'properties' in features[0]:
                 attributes = OrderedDict(features[0]['properties'])
+            elif 'attributes' in features[0]:
+                attributes = OrderedDict(features[0]['attributes'])
             else:
                 status_writer.send_status("Layer {0} has no attributes.".format(layer_name))
 
             if 'geometry' in features[0] and features[0]['geometry']:
-                geometry_type = features[0]['geometry']['type']
+                if 'type' in features[0]['geometry']:
+                    geometry_type = features[0]['geometry']['type']
+                elif 'rings' in features[0]['geometry']:
+                    geometry_type = 'Rings'
+                elif 'paths' in features[0]['geometry']:
+                    geometry_type = 'Paths'
+                elif 'x' in features[0]['geometry'] and 'y' in features[0]['geometry']:
+                    geometry_type = 'Point'
             else:
                 geometry_type = 'Table'
             if 'crs' in rows:
@@ -164,7 +173,8 @@ def index_service(connection_info):
                     geo['srid'] = rows['crs']['properties']['name'].split(':')[1]
                 else:
                     geo['srid'] = rows['crs']['properties']['name']
-
+            elif 'spatialReference' in rows:
+                geo['srid'] = rows['spatialReference']['wkid']
             # Map the field and it's value.
             if not job.fields_to_keep == ['*']:
                 for fk in job.fields_to_keep:
@@ -221,7 +231,10 @@ def index_service(connection_info):
                     entry['id'] = hash_obj.hexdigest()
                     entry['location'] = job.location_id
                     entry['action'] = job.action_type
-                    mapped_fields = dict(zip(mapped_attributes.keys(), row['properties'].values()))
+                    if 'properties' in row:
+                        mapped_fields = dict(zip(mapped_attributes.keys(), row['properties'].values()))
+                    else:
+                        mapped_fields = dict(zip(mapped_attributes.keys(), row['attributes'].values()))
                     # Convert longs to datetime.
                     for df in date_fields:
                         mapped_fields[df] = get_date(mapped_fields[df])
@@ -233,21 +246,26 @@ def index_service(connection_info):
                     mapped_fields['format'] = 'application/vnd.esri.service.layer.record'
                     entry['entry'] = {'fields': mapped_fields}
                     job.send_entry(entry)
-                    if (i % increment) == 0:
-                        status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer_name, i / row_count), 'esri_worker')
+                    if (x % increment) == 0:
+                        status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer_name, i / row_count), 'agol_worker')
             else:
                 # Faster to do one if check for geometry type then to condense code and check in every iteration.
                 if geometry_type == 'Point':
                     for x, feature in enumerate(features, 1):
-                        # pt = feature['geometry']
-                        # geo['lon'] = pt['x']
-                        # geo['lat'] = pt['y']
-                        geo['wkt'] = geo_json_converter.convert_to_wkt(feature['geometry'], 6)
+                        if 'type' not in feature['geometry']:
+                            pt = feature['geometry']
+                            geo['lon'] = pt['x']
+                            geo['lat'] = pt['y']
+                        else:
+                            geo['wkt'] = geo_json_converter.convert_to_wkt(feature['geometry'], 6)
                         hash_obj = hashlib.md5(os.path.join(url, '{0}_{1}_{2}_{3}'.format(job.location_id, layer_name, int(i), x)))
                         entry['id'] = hash_obj.hexdigest()
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
-                        mapped_fields = dict(zip(mapped_attributes.keys(), feature['properties'].values()))
+                        if 'properties' in feature:
+                            mapped_fields = dict(zip(mapped_attributes.keys(), feature['properties'].values()))
+                        else:
+                            mapped_fields = dict(zip(mapped_attributes.keys(), feature['attributes'].values()))
                         # Convert longs to datetime.
                         for df in date_fields:
                             mapped_fields[df] = get_date(mapped_fields[df])
@@ -261,13 +279,18 @@ def index_service(connection_info):
                         entry['entry'] = {'geo': geo, 'fields': mapped_fields}
                         job.send_entry(entry)
                         if (x % increment) == 0:
-                            status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer_name, int(i) / row_count), 'agol_worker')
+                            status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer_name, i / row_count), 'agol_worker')
                 else:
                     generalize_value = job.generalize_value
                     for x, feature in enumerate(features, 1):
                         try:
                             # geometry = make_feature(feature)  # Catch possible null geometries.
-                            geometry = geo_json_converter.convert_to_wkt(feature['geometry'], 3)
+                            if geometry_type == 'Rings':
+                                geometry = geo_json_converter.create_polygon(feature['geometry']['rings'][0])
+                            elif geometry_type == 'Paths':
+                                geometry = geo_json_converter.create_polyline(feature['geometry']['paths'][0])
+                            else:
+                                geometry = geo_json_converter.convert_to_wkt(feature['geometry'], 3)
                         except RuntimeError:
                             continue
 
@@ -288,12 +311,21 @@ def index_service(connection_info):
                         entry['id'] = hash_obj.hexdigest()
                         entry['location'] = job.location_id
                         entry['action'] = job.action_type
-                        mapped_fields = dict(zip(mapped_attributes.keys(), OrderedDict(feature['properties']).values()))
+                        if 'properties' in feature:
+                            mapped_fields = dict(zip(mapped_attributes.keys(), OrderedDict(feature['properties']).values()))
+                        else:
+                            mapped_fields = dict(
+                                zip(mapped_attributes.keys(), OrderedDict(feature['attributes']).values()))
                         try:
                             # Convert longs to datetime.
                             for df in date_fields:
                                 mapped_fields[df] = get_date(mapped_fields[df])
-                            mapped_fields['geometry_type'] = geometry_type
+                            if geometry_type == 'Paths':
+                                mapped_fields['geometry_type'] = 'Polyline'
+                            elif geometry_type == 'Rings':
+                                mapped_fields['geometry_type'] = 'Polygon'
+                            else:
+                                mapped_fields['geometry_type'] = geometry_type
                             mapped_fields['meta_table_name'] = layer_name
                             try:
                                 mapped_fields['meta_table_path'] = layer['path']
@@ -311,7 +343,7 @@ def index_service(connection_info):
                         except KeyError:
                             job.send_entry(entry)
                         if (x % increment) == 0:
-                            status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer_name, i / row_count), 'esri_worker')
+                            status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer_name, i / row_count), 'agol_worker')
 
 
 def run_job(esri_job):

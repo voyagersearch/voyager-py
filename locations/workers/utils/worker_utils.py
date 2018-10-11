@@ -183,8 +183,18 @@ class ArcGISServiceHelper(object):
             query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr, 'token': token, 'f': response_format}
         else:
             query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr, 'f': response_format}
-        response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query, verify=self._verify_ssl)
-        data = response.json()
+        try:
+            response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query, verify=self._verify_ssl)
+            data = response.json()
+        except ValueError:
+            if self.token:
+                query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields,
+                         'returnGeometry': return_geometry, 'outSR': out_sr, 'token': token, 'f': 'json'}
+            else:
+                query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields,
+                         'returnGeometry': return_geometry, 'outSR': out_sr, 'f': 'json'}
+            response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query, verify=self._verify_ssl)
+            data = response.json()
         return data
 
 
@@ -194,6 +204,22 @@ class GeoJSONConverter(object):
     """
     def __str__(self):
         return "GeoJSONConverter"
+
+    def create_polyline(self, coords):
+        polyline = ogr.Geometry(ogr.wkbLineString)
+        for coord in coords:
+            polyline.AddPoint(coord[0], coord[1])
+        return polyline.ExportToWkt()
+
+    def create_polygon(self, coords):
+        ring = ogr.Geometry(ogr.wkbLinearRing)
+        for coord in coords:
+            ring.AddPoint(coord[0], coord[1])
+
+        # Create polygon
+        poly = ogr.Geometry(ogr.wkbPolygon)
+        poly.AddGeometry(ring)
+        return poly.ExportToWkt()
 
     def convert_to_wkt(self, geojson, number_of_decimals):
         if geojson['type'].upper() == 'POINT':
@@ -377,7 +403,7 @@ class GeometryOps(object):
                     if part.GetGeometryName() == 'LINESTRING':
                         num_points += part.GetPointCount()
                     else:
-                        geom_ref = part.GetGeometryRef(0)
+                        geom_ref = geometry.GetGeometryRef(0)
                         if geom_ref:
                             num_points += geom_ref.GetPointCount()
                         else:
