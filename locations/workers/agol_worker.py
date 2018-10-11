@@ -289,6 +289,8 @@ def index_service(connection_info):
                                 geometry = geo_json_converter.create_polygon(feature['geometry']['rings'][0])
                             elif geometry_type == 'Paths':
                                 geometry = geo_json_converter.create_polyline(feature['geometry']['paths'][0])
+                            elif geometry_type == 'LineString':
+                                geometry = geo_json_converter.create_polyline(feature['geometry']['coordinates'])
                             else:
                                 geometry = geo_json_converter.convert_to_wkt(feature['geometry'], 3)
                         except RuntimeError:
@@ -320,7 +322,7 @@ def index_service(connection_info):
                             # Convert longs to datetime.
                             for df in date_fields:
                                 mapped_fields[df] = get_date(mapped_fields[df])
-                            if geometry_type == 'Paths':
+                            if geometry_type in ('Paths', 'LineString'):
                                 mapped_fields['geometry_type'] = 'Polyline'
                             elif geometry_type == 'Rings':
                                 mapped_fields['geometry_type'] = 'Polygon'
@@ -342,7 +344,7 @@ def index_service(connection_info):
                             job.send_entry(entry)
                         except KeyError:
                             job.send_entry(entry)
-                        if (x % increment) == 0:
+                        if (i % increment) == 0:
                             status_writer.send_percent(i / row_count, "{0} {1:%}".format(layer_name, i / row_count), 'agol_worker')
 
 
