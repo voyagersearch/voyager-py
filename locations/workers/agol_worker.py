@@ -299,13 +299,14 @@ def index_service(connection_info):
                         # if generalize_value > 0.9:
                         #     geo['xmin'], geo['xmax'] = geometry.extent.XMin, geometry.extent.XMax
                         #     geo['ymin'], geo['ymax'] = geometry.extent.YMin, geometry.extent.YMax
-                        if generalize_value == 0 or generalize_value == 0.0:
-                            geo['wkt'] = geometry.WKT
-                        else:
-                            if geometry_ops:
-                                geo['wkt'] = geometry_ops.generalize_geometry(geometry, generalize_value)
-                            else:
+                        if geometry:
+                            if generalize_value == 0 or generalize_value == 0.0:
                                 geo['wkt'] = geometry.WKT
+                            else:
+                                if geometry_ops:
+                                    geo['wkt'] = geometry_ops.generalize_geometry(geometry, generalize_value)
+                                else:
+                                    geo['wkt'] = geometry.WKT
                                 # geo['xmin'], geo['xmax'] = geometry.extent.XMin, geometry.extent.XMax
                                 # geo['ymin'], geo['ymax'] = geometry.extent.YMin, geometry.extent.YMax
 

@@ -208,18 +208,26 @@ class GeoJSONConverter(object):
     def create_polyline(self, coords):
         polyline = ogr.Geometry(ogr.wkbLineString)
         for coord in coords:
-            polyline.AddPoint(coord[0], coord[1])
+            try:
+                polyline.AddPoint(coord[0], coord[1])
+            except TypeError as te:
+                try:
+                    polyline.AddPoint(coord[0][0], coord[0][1])
+                except Exception:
+                    return None
         return polyline.ExportToWkt()
 
     def create_polygon(self, coords):
-        ring = ogr.Geometry(ogr.wkbLinearRing)
-        for coord in coords:
-            ring.AddPoint(coord[0], coord[1])
-
-        # Create polygon
-        poly = ogr.Geometry(ogr.wkbPolygon)
-        poly.AddGeometry(ring)
-        return poly.ExportToWkt()
+        try:
+            ring = ogr.Geometry(ogr.wkbLinearRing)
+            for coord in coords:
+                ring.AddPoint(coord[0], coord[1])
+            # Create polygon
+            poly = ogr.Geometry(ogr.wkbPolygon)
+            poly.AddGeometry(ring)
+            return poly.ExportToWkt()
+        except Exception:
+            return None
 
     def convert_to_wkt(self, geojson, number_of_decimals):
         if geojson['type'].upper() == 'POINT':
