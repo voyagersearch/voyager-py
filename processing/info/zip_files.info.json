@@ -3,7 +3,7 @@
   "runner": "python",
   "categories": ["Extracting Data"],
   "constraints": [
-    {"format_type": "(File Database)"}
+    {"format_type": "(File)"}
   ],
   "params": [
     {

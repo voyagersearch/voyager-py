@@ -3,7 +3,7 @@
   "runner": "python",
   "categories": ["Managing Raster"],
   "constraints": [
-    {"format_keyword": "Raster"}
+    {"geometry_type": "Raster"}
   ],
   "params": [
     {
