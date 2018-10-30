@@ -146,37 +146,37 @@ def execute(request):
         os.makedirs(out_workspace)
 
     num_results, response_index = task_utils.get_result_count(parameters)
-    if num_results > task_utils.CHUNK_SIZE:
-        # Query the index for results in groups of 25.
-        query_index = task_utils.QueryIndex(parameters[response_index])
-        fl = query_index.fl
-        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
-        fq = query_index.get_fq()
-        if fq:
-            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
-            query += fq
-        elif 'ids' in parameters[response_index]:
-            groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
-        else:
-            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
-
-        headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
-        status_writer.send_status(_('Starting to process...'))
-        for group in groups:
-            if fq:
-                results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
-            elif 'ids' in parameters[response_index]:
-                results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
-            else:
-                results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
-
-            input_items = task_utils.get_input_items(results.json()['response']['docs'])
-            if not input_items:
-                input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
-            layers, files, errors, skipped = get_items(input_items, out_workspace)
+    # if num_results > task_utils.CHUNK_SIZE:
+    # Query the index for results in groups of 25.
+    query_index = task_utils.QueryIndex(parameters[response_index])
+    fl = query_index.fl
+    query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+    fq = query_index.get_fq()
+    if fq:
+        groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
+        query += fq
+    elif 'ids' in parameters[response_index]:
+        groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
     else:
-        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
+        groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
+
+    headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
+    status_writer.send_status(_('Starting to process...'))
+    for group in groups:
+        if fq:
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
+        elif 'ids' in parameters[response_index]:
+            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
+        else:
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
+
+        input_items = task_utils.get_input_items(results.json()['response']['docs'])
+        if not input_items:
+            input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
         layers, files, errors, skipped = get_items(input_items, out_workspace)
+    # else:
+    #     input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
+    #     layers, files, errors, skipped = get_items(input_items, out_workspace)
 
     if errors == num_results:
         status_writer.send_state(status.STAT_FAILED, _('No results to package'))

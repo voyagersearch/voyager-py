@@ -378,7 +378,7 @@ def execute(request):
     clip_result = requests.get(clip_query, headers=headers)
     clipper = clip_result.json()['response']['docs'][0]
     if 'absolute_path' in clipper and not clipper['absolute_path'].startswith('s3'):
-        clip_features = clipper['path']
+        clip_features = clipper['absolute_path']
     elif '[lyrFile]' in clipper:
         clip_features = clipper['[lyrFile]']
     elif '[geo]' in clipper:
