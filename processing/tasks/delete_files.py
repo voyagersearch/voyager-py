@@ -42,42 +42,38 @@ def execute(request):
 
     headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     num_results, response_index = task_utils.get_result_count(parameters)
-    if num_results > task_utils.CHUNK_SIZE:
-        # Query the index for results in groups of 25.
-        query_index = task_utils.QueryIndex(parameters[response_index])
-        fl = query_index.fl
-        query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
-        fq = query_index.get_fq()
-        if fq:
-            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
-            query += fq
-        elif 'ids' in parameters[response_index]:
-            groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
-        else:
-            groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
-
-        status_writer.send_percent(0.0, _('Starting to process...'), 'delete_files')
-        i = 0.
-        for group in groups:
-            i += len(group) - group.count('')
-            if fq:
-                results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
-            elif 'ids' in parameters[response_index]:
-                results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
-            else:
-                results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
-
-            input_items = task_utils.get_input_items(results.json()['response']['docs'], True, True)
-            if not input_items:
-                input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
-
-            result = delete_files(input_items)
-            deleted += result[0]
-            skipped += result[1]
-            status_writer.send_percent(i / num_results, '{0}: {1:.0f}%'.format("Processed", i / num_results * 100), 'delete_files')
+    # Query the index for results in groups of 25.
+    query_index = task_utils.QueryIndex(parameters[response_index])
+    fl = query_index.fl
+    query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', fl)
+    fq = query_index.get_fq()
+    if fq:
+        groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
+        query += fq
+    elif 'ids' in parameters[response_index]:
+        groups = task_utils.grouper(list(parameters[response_index]['ids']), task_utils.CHUNK_SIZE, '')
     else:
-        input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'], True, True)
-        deleted, skipped = delete_files(input_items, True)
+        groups = task_utils.grouper(range(0, num_results), task_utils.CHUNK_SIZE, '')
+
+    status_writer.send_percent(0.0, _('Starting to process...'), 'delete_files')
+    i = 0.
+    for group in groups:
+        i += len(group) - group.count('')
+        if fq:
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
+        elif 'ids' in parameters[response_index]:
+            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
+        else:
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
+
+        input_items = task_utils.get_input_items(results.json()['response']['docs'], True, True)
+        if not input_items:
+            input_items = task_utils.get_input_items(parameters[response_index]['response']['docs'])
+
+        result = delete_files(input_items)
+        deleted += result[0]
+        skipped += result[1]
+        status_writer.send_percent(i / num_results, '{0}: {1:.0f}%'.format("Processed", i / num_results * 100), 'delete_files')
 
     # Update state if necessary.
     if skipped > 0:
