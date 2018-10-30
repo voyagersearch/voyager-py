@@ -68,7 +68,7 @@ class QueryIndex(object):
 
     @property
     def fl(self):
-        return '&fl=id,name:[name],title,format,path:[absolute],f*,[lyrFile],[lyrURL],[downloadURL],[lyrURL],[geo],location,component_files'
+        return '&fl=id,name:[name],title,format,path,fullpath:[absolute],absolute_path:[absolute],f*,[lyrFile],[lyrURL],[downloadURL],[lyrURL],[geo],location,component_files,agent'
 
     def get_fq(self):
         """Return the query request string if the results are from a
@@ -591,6 +591,8 @@ def get_data_path(item):
 
         if os.path.exists(item['path']):
             return item['path']
+        if os.path.exists(item['absolute_path']):
+            return item['absolute_path']
         elif item['path'].startswith('s3:'):
             base_name = os.path.basename(item['path'])
             temp_folder = tempfile.mkdtemp()
@@ -608,7 +610,20 @@ def get_data_path(item):
                     return download_file
         elif '://s3' in item['path'] and '[downloadURL]' in item:
             return item['[downloadURL]']
-
+        elif '[downloadURL]' in item and not item['[downloadURL]'] == item['path']:
+            base_name = os.path.basename(item['path'])
+            temp_folder = tempfile.mkdtemp()
+            extension = os.path.splitext(item['[downloadURL]'])[1][1:]
+            download = requests.get(item['[downloadURL]'])
+            download_file = os.path.join(temp_folder, '{0}.{1}'.format(os.path.splitext(base_name)[0], extension))
+            with open(download_file, 'wb') as fp:
+                fp.write(download.content)
+            if extension == 'zip':
+                zip = zipfile.ZipFile(download_file)
+                zip.extractall(temp_folder)
+                return os.path.join(temp_folder, base_name)
+            else:
+                return download_file
         elif item['path'].startswith('http'):
             return item['path']
         elif item['format'] == 'format:application/vnd.esri.lyr':
