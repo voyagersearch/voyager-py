@@ -10,7 +10,7 @@ class TestTaskUtils(unittest.TestCase):
     """Test case for testing the processing task utility functions."""
     @classmethod
     def setUpClass(self):
-        self.fl = '&fl=id,name:[name],format,path:[absolute],[thumbURL],[lyrFile],[lyrURL],[downloadURL],[lyrURL]'
+        self.fl = '&fl=id,name:[name],format,path,fullpath:[absolute],absolute_path:[absolute],[thumbURL],[lyrFile],[lyrURL],[downloadURL],[lyrURL]'
         self.query = 'http://localhost:8888/solr/v0/select?&wt=json{0}'.format(self.fl)
         self.items = None
 
@@ -35,14 +35,14 @@ class TestTaskUtils(unittest.TestCase):
 
     def test_query_string(self):
         """Tests getting the query string from the request"""
-        expected = 'http://localhost:8888/solr/v0/select?&wt=json&fl=id,name:[name],format,path:[absolute],[thumbURL],[lyrFile],[lyrURL],[downloadURL],[lyrURL]&fq=location:baad8134e9644fc7&q=id:(25107622%20T14C47A34AF9_states_1%20T14C47A34AF9_states_8%20de71138aeb803dae%20df08413d8acdaba2%208fc582b9845105f8%202510bce8e885b1dc_0003%203adbb78602e5df2b%20726262e2a1b25862_0000%20a3fbb3a1f9ed41f8be16abc384673372),usa'
+        expected = 'http://localhost:8888/solr/v0/select?&wt=json&fl=id,name:[name],format,path,fullpath:[absolute],absolute_path:[absolute],[thumbURL],[lyrFile],[lyrURL],[downloadURL],[lyrURL]&fq=location:baad8134e9644fc7&q=id:(25107622%20T14C47A34AF9_states_1%20T14C47A34AF9_states_8%20de71138aeb803dae%20df08413d8acdaba2%208fc582b9845105f8%202510bce8e885b1dc_0003%203adbb78602e5df2b%20726262e2a1b25862_0000%20a3fbb3a1f9ed41f8be16abc384673372),usa'
         self.assertEqual(self.query, expected)
 
     def test_get_items(self):
         """Tests the get_items and get_data_path functions"""
         self.items = task_utils.get_input_items([{'path': os.path.join(os.getcwd(), 'test-data', 'usstates.shp'), 'name': 'USStates'},
                       {'path': os.path.join(os.getcwd(), 'test-data', 'USA.mxd'), 'name': 'USA'},
-                      {'path':'', '[lyrFile]': os.path.join(os.getcwd(), 'test-data', 'Cities.lyr'), 'name': 'Cities', 'format': ''}])
+                      {'path':'', 'absolute_path':'', '[lyrFile]': os.path.join(os.getcwd(), 'test-data', 'Cities.lyr'), 'name': 'Cities', 'format': ''}])
 
         expected_items = {'{0}\\test-data\\usstates.shp'.format(os.getcwd()): 'USStates',
                           '{0}\\test-data\\USA.mxd'.format(os.getcwd()): 'USA',
