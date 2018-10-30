@@ -106,12 +106,25 @@ def execute(request):
 
         input_items = []
         for doc in docs:
-            if 'path' in doc:
+            if 'path' in doc and os.path.exists(doc['path']):
                 if 'links' in doc:
                     links = eval(doc['links'])
                     input_items.append((doc['path'], links['links'][0]['link'][0]['id']))
                 else:
                     input_items.append((doc['path'], doc['id']))
+            elif 'absolute_path' in doc and os.path.exists(doc['absolute_path']):
+                if 'links' in doc:
+                    links = eval(doc['links'])
+                    input_items.append((doc['absolute_path'], links['links'][0]['link'][0]['id']))
+                else:
+                    input_items.append((doc['absolute_path'], doc['id']))
+            elif '[downloadURL]' in doc:
+                if 'links' in doc:
+                    links = eval(doc['links'])
+                    input_items.append((doc['[downloadURL]'], links['links'][0]['link'][0]['id']))
+                else:
+                    input_items.append((doc['[downloadURL]'], doc['id']))
+
         result = write_metadata(input_items, template_xml, xslt_file, summary, description, tags, data_credits, constraints, overwrite, headers)
         updated += result[0]
         errors += result[1]

@@ -374,16 +374,16 @@ def execute(request):
 
     # Get the Clip features by id.
     id = clip_features['id']
-    clip_query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', "&fl=id,path:[absolute],[lyrFile],[geo]&q=id:{0}".format(id))
+    clip_query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', "&fl=id,path,fullpath:[absolute],absolute_path:[absolute],[lyrFile],[geo]&q=id:{0}".format(id))
     clip_result = requests.get(clip_query, headers=headers)
     clipper = clip_result.json()['response']['docs'][0]
-    if 'path' in clipper and not clipper['path'].startswith('s3'):
+    if 'absolute_path' in clipper and not clipper['absolute_path'].startswith('s3'):
         clip_features = clipper['path']
     elif '[lyrFile]' in clipper:
         clip_features = clipper['[lyrFile]']
     elif '[geo]' in clipper:
         clip_features = arcpy.AsShape(clipper['[geo]']).projectAs(arcpy.SpatialReference(4326))
-    elif 'path' in clipper and clipper['path'].startswith('s3'):
+    elif 'absolute_path' in clipper and clipper['absolute_path'].startswith('s3'):
         base_name = os.path.basename(clipper['path'])
         temp_folder = tempfile.mkdtemp()
         if '[downloadURL]' in clipper:
