@@ -588,6 +588,8 @@ def get_data_path(item):
             import arcpy
             if arcpy.Exists(item['path']):
                 return item['path']
+            elif arcpy.Exists(item['absolute_path']):
+                return item['absolute_path']
 
         if os.path.exists(item['path']):
             return item['path']
