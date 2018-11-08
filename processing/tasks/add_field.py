@@ -87,9 +87,9 @@ def execute(request):
             if 'path' in doc:
                 if 'links' in doc:
                     links = eval(doc['links'])
-                    input_items.append((doc['id'], doc['path'], links['links'][0]['link'][0]['id']))
+                    input_items.append((doc['id'], doc['absolute_path'], links['links'][0]['link'][0]['id']))
                 else:
-                    input_items.append((doc['id'], doc['path']))
+                    input_items.append((doc['id'], doc['absolute_path']))
 
         result = add_field(input_items, field_name, field_type, field_value)
         created += result[0]
