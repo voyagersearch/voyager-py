@@ -1,5 +1,6 @@
 {
   "name": "replace_data_source",
+  "available": false,
   "runner": "python",
   "categories": ["Managing Data and Files"],
   "constraints": [{"format": "(application/vnd.esri.mxd application/vnd.esri.lyr)"}],

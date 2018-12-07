@@ -1,5 +1,6 @@
 {
   "name": "locate_xt_arcgis_tool",
+  "available": false,
   "runner": "python",
   "categories": ["Extracting Data"],
   "group": "Managing Data and Files",

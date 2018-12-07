@@ -1,5 +1,6 @@
 {
   "name": "calculate_raster_statistics",
+  "available": false,
   "runner": "python",
   "categories": ["Managing Raster"],
   "constraints": [

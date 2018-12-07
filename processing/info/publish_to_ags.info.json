@@ -1,5 +1,6 @@
 {
   "name": "publish_to_ags",
+  "available": false,
   "runner": "python",
   "categories": ["Publishing Services"],
   "constraints": [{"format_category": "(GIS CAD)"}],

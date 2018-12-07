@@ -1,5 +1,6 @@
 {
   "name": "mosaic_to_workspace",
+  "available": false,
   "parent": "mosaic",
   "runner": "python",
   "categories": ["Managing Raster"],

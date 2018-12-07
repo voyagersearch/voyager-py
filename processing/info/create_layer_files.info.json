@@ -1,8 +1,10 @@
 {
   "name": "create_layer_files",
+  "available": false,
   "runner": "python",
   "categories": ["Voyager Tools"],
-  "constraints": [{"format_type": "(Other File Database Layer)"}],
+  "constraints": [{"format_type": "(Other File Database Layer)"},
+    {"hasLayerFile": "false"}],
   "security": ["_ADMIN"],
   "params": [
     {

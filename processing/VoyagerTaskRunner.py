@@ -48,6 +48,8 @@ if __name__ == '__main__':
             try:
                 fp = open(os.path.join(info_dir, '{0}.info.json'.format(task)))
                 d = json.load(fp)
+                if 'available' in d and not d['available']:
+                    task_properties['available'] = False
             except ValueError as ve:
                 task_properties['available'] = False
                 task_properties['JSON syntax error'] = str(ve)
