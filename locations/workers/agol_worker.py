@@ -257,7 +257,7 @@ def index_service(connection_info):
                             geo['lon'] = pt['x']
                             geo['lat'] = pt['y']
                         else:
-                            geo['wkt'] = geo_json_converter.convert_to_wkt(feature['geometry'], 6)
+                            geo['wkt'] = geo_json_converter.convert_to_wkt(feature['geometry'], 14)
                         hash_obj = hashlib.md5(os.path.join(url, '{0}_{1}_{2}_{3}'.format(job.location_id, layer_name, int(i), x)))
                         entry['id'] = hash_obj.hexdigest()
                         entry['location'] = job.location_id
@@ -292,7 +292,7 @@ def index_service(connection_info):
                             elif geometry_type == 'LineString':
                                 geometry = geo_json_converter.create_polyline(feature['geometry']['coordinates'])
                             else:
-                                geometry = geo_json_converter.convert_to_wkt(feature['geometry'], 3)
+                                geometry = geo_json_converter.convert_to_wkt(feature['geometry'], 14)
                         except RuntimeError:
                             continue
 
@@ -301,7 +301,10 @@ def index_service(connection_info):
                         #     geo['ymin'], geo['ymax'] = geometry.extent.YMin, geometry.extent.YMax
                         if geometry:
                             if generalize_value == 0 or generalize_value == 0.0:
-                                geo['wkt'] = geometry.WKT
+                                if isinstance(geometry, str):
+                                    geo['wkt'] = geometry
+                                else:
+                                    geo['wkt'] = geometry.WKT
                             else:
                                 if geometry_ops:
                                     geo['wkt'] = geometry_ops.generalize_geometry(geometry, generalize_value)
