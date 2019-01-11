@@ -101,19 +101,20 @@ def index_service(connection_info):
     # Support wildcards for filtering layers and views in the service.
     layers = items['layers'] + items['tables']
     layers_to_keep = job.tables_to_keep()
+    layers_process = []
     for layer in layers_to_keep:
         lk = layer.split('*')
         if len(lk) == 3 and layer.startswith('*') and layer.endswith('*'):
-            layers = [l['id'] for l in layers if lk[1] in l['name']]
+            layers_process += [l['id'] for l in layers if lk[1] in l['name']]
         elif layer.endswith('*'):
-            layers = [l for l in layers if lk[0] in l['name']]
+            layers_process += [l for l in layers if lk[0] in l['name']]
         elif layer.startswith('*'):
-            layers = [l for l in layers if lk[1] in l['name']]
+            layers_process += [l for l in layers if lk[1] in l['name']]
         else:
-            layers = [l for l in layers if lk[0] == l['name']]
+            layers_process += [l for l in layers if lk[0] == l['name']]
 
     # Index the records for each layer and table within a feature or map service.
-    for layer in layers:
+    for layer in layers_process:
         i = 0.
         geo = {}
         layer_id = layer['id']
@@ -133,7 +134,7 @@ def index_service(connection_info):
             fields_types[f['name']] = f['type']
 
         # Check if the layer is empty and ensure to get all features, not just first 1000 (esri default).
-        objectid_groups, row_count = ags_helper.get_item_row_count(url, layer_id, ags_helper.token)
+        groups, row_count = ags_helper.get_item_row_count(url, layer_id, ags_helper.token)
         oid_field_name = ags_helper.oid_field_name
         if not row_count:
             status_writer.send_status("Layer {0} has no features.".format(layer_name))
@@ -141,9 +142,8 @@ def index_service(connection_info):
         else:
             increment = float(job.get_increment(row_count))
 
-        for group in objectid_groups:
-            group = [oid for oid in group if not oid == None]
-            rows = ags_helper.get_item_rows(url, layer_id, ags_helper.token, where='{0} IN {1}'.format(oid_field_name, tuple(group)), response_format='geojson')
+        for group in groups:
+            rows = ags_helper.get_item_rows(url, layer_id, ags_helper.token, where='1=1', resultOffset=group, resultRecordCount=1000, response_format='geojson')
             features = None
             if 'features' in rows:
                 features = rows['features']

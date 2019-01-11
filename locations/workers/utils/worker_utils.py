@@ -138,19 +138,15 @@ class ArcGISServiceHelper(object):
         :param token: token value
         """
         if self.token:
-            query = {'where': '1=1', 'returnIdsOnly':True, 'token': token, 'f': 'json'}
+            query = {'where': '1=1', 'returnCountOnly':True, 'token': token, 'f': 'json'}
         else:
-            query = {'where': '1=1', 'returnIdsOnly':True, 'f': 'json'}
+            query = {'where': '1=1', 'returnCountOnly':True, 'f': 'json'}
 
         response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query, verify=self._verify_ssl)
         data = response.json()
-        objectids = data['objectIds']
-        self.oid_field_name = data['objectIdFieldName']
-        if not objectids:
-            return None, None
-        args = [iter(objectids)] * 100
-        id_groups = itertools.izip_longest(fillvalue=None, *args)
-        return id_groups, len(objectids)
+        num_records = data['count']
+        id_groups = range(0, num_records, 1000)
+        return id_groups, num_records
 
     def get_item_fields(self, url, layer_id, token):
         """Return the fields of a service layer or table.
@@ -168,7 +164,7 @@ class ArcGISServiceHelper(object):
         return fields
 
     def get_item_rows(self, url, layer_id, token, spatial_rel='esriSpatialRelIntersects',
-                 where='1=1', out_fields='*', out_sr=4326, return_geometry=True, response_format='json'):
+                 where='1=1', out_fields='*', resultOffset=0, resultRecordCount=1000, out_sr=4326, return_geometry=True, response_format='json'):
         """Return the rows for a service layer or table.
         :param url: service url
         :param layer_id: service layer/table ID
@@ -180,18 +176,18 @@ class ArcGISServiceHelper(object):
         :param return_geometry: boolean to return geometry
         """
         if self.token:
-            query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr, 'token': token, 'f': response_format}
+            query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'resultOffset': resultOffset, 'resultRecordCount': resultRecordCount, 'returnGeometry': return_geometry, 'outSR': out_sr, 'token': token, 'f': response_format}
         else:
-            query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'returnGeometry': return_geometry, 'outSR': out_sr, 'f': response_format}
+            query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'resultOffset': resultOffset, 'resultRecordCount': resultRecordCount, 'returnGeometry': return_geometry, 'outSR': out_sr, 'f': response_format}
         try:
             response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query, verify=self._verify_ssl)
             data = response.json()
         except ValueError:
             if self.token:
-                query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields,
+                query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'resultOffset': resultOffset, 'resultRecordCount': resultRecordCount,
                          'returnGeometry': return_geometry, 'outSR': out_sr, 'token': token, 'f': 'json'}
             else:
-                query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields,
+                query = {'spatialRel': spatial_rel, 'where': where, 'outFields': out_fields, 'resultOffset': resultOffset, 'resultRecordCount': resultRecordCount,
                          'returnGeometry': return_geometry, 'outSR': out_sr, 'f': 'json'}
             response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query, verify=self._verify_ssl)
             data = response.json()
