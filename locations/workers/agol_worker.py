@@ -114,7 +114,10 @@ def index_service(connection_info):
             layers_process += [l for l in layers if lk[0] == l['name']]
 
     # Index the records for each layer and table within a feature or map service.
+    skip_tables = job.tables_to_skip()
     for layer in layers_process:
+        if layer['name'] in skip_tables:
+            continue
         i = 0.
         geo = {}
         layer_id = layer['id']
