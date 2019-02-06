@@ -66,6 +66,10 @@ def index_service(connection_info):
     service_name = connection_info['service_name']
     service_type = connection_info['service_type']
     folder_name = connection_info['folder_name']
+    if 'query' in connection_info:
+        where_clause = connection_info['query']
+    else:
+        where_clause = "1=1"
     if 'instance' in connection_info:
         instance = connection_info['instance']
     else:
@@ -137,7 +141,11 @@ def index_service(connection_info):
             fields_types[f['name']] = f['type']
 
         # Check if the layer is empty and ensure to get all features, not just first 1000 (esri default).
-        groups, row_count = ags_helper.get_item_row_count(url, layer_id, ags_helper.token)
+
+        query = job.get_table_query(layer_name)
+        if query:
+            where_clause = query
+        groups, row_count = ags_helper.get_item_row_count(url, layer_id, ags_helper.token, where_clause)
         oid_field_name = ags_helper.oid_field_name
         if not row_count:
             status_writer.send_status("Layer {0} has no features.".format(layer_name))
@@ -146,7 +154,7 @@ def index_service(connection_info):
             increment = float(job.get_increment(row_count))
 
         for group in groups:
-            rows = ags_helper.get_item_rows(url, layer_id, ags_helper.token, where='1=1', resultOffset=group, resultRecordCount=1000, response_format='geojson')
+            rows = ags_helper.get_item_rows(url, layer_id, ags_helper.token, where=where_clause, resultOffset=group, resultRecordCount=1000, response_format='geojson')
             features = None
             if 'features' in rows:
                 features = rows['features']

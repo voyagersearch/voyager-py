@@ -131,16 +131,16 @@ class ArcGISServiceHelper(object):
                 raise Exception(items['error']['message'])
         return service_url, items
 
-    def get_item_row_count(self, url, layer_id, token):
+    def get_item_row_count(self, url, layer_id, token, where):
         """Returns the row count of a service layer or table.
         :param url: Service url
         :param layer_id: service layer/table ID
         :param token: token value
         """
         if self.token:
-            query = {'where': '1=1', 'returnCountOnly':True, 'token': token, 'f': 'json'}
+            query = {'where': where, 'returnCountOnly':True, 'token': token, 'f': 'json'}
         else:
-            query = {'where': '1=1', 'returnCountOnly':True, 'f': 'json'}
+            query = {'where': where, 'returnCountOnly':True, 'f': 'json'}
 
         response = requests.get('{0}/{1}/query?'.format(url, layer_id), params=query, verify=self._verify_ssl)
         data = response.json()
