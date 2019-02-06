@@ -145,7 +145,12 @@ def index_service(connection_info):
         query = job.get_table_query(layer_name)
         if query:
             where_clause = query
-        groups, row_count = ags_helper.get_item_row_count(url, layer_id, ags_helper.token, where_clause)
+        try:
+            groups, row_count = ags_helper.get_item_row_count(url, layer_id, ags_helper.token, where_clause)
+        except Exception:
+            where_clause = "1=1"
+            groups, row_count = ags_helper.get_item_row_count(url, layer_id, ags_helper.token, where_clause)
+
         oid_field_name = ags_helper.oid_field_name
         if not row_count:
             status_writer.send_status("Layer {0} has no features.".format(layer_name))
