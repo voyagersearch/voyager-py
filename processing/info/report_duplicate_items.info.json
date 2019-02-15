@@ -1,0 +1,37 @@
+{
+  "name": "report_duplicate_items",
+  "runner": "python",
+  "categories": ["Voyager Tools"],
+  "params": [
+    {
+      "type": "VoyagerResults",
+      "name": "input_items",
+      "required": true
+    },
+    {
+      "type": "FieldList",
+      "name": "fields",
+      "required": false,
+      "value": [
+        "id",
+        "name",
+        "title",
+        "absolute_path",
+        "format",
+        "bytes"
+      ]
+ 	}
+  ],
+  "display": {
+    "en": {
+      "display": "Report Duplicate Items",
+      "description": "Report duplicate items",
+      "params": {
+        "fields": {
+          "display": "Output Fields",
+          "description": "The fields to be included in the report"
+        }
+      }
+    }
+  }
+}
