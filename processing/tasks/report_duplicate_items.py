@@ -80,6 +80,9 @@ def execute(request):
     query = voyager_instance + "/select?q={!func}joindf(md5,md5)&f.md5.facet.mincount=2&f.contentHash.facet.mincount=2&f.schemaHash.facet.mincount=2&sort=md5 desc&start=0&rows=1&fl=id,title,name:[name],format,fullpath:[absolute],absolute_path:[absolute],download:[downloadURL],format_type,bytes,layerURL:[lyrURL],md5,path,name&fq={!frange l=2}{!func}joindf(md5,md5)&wt=json"
     results = requests.get(query, auth=("admin", "admin"), headers=headers)
     result_count = results.json()['response']['numFound']
+    if result_count == 0:
+        status_writer.send_state(status.STAT_WARNING, "No duplicates found.")
+        return
     duplicates = collections.defaultdict(list)
     groups = grouper(range(0, result_count), 25, '')
 
