@@ -2,6 +2,7 @@
   "name": "delete_items",
   "runner": "python",
   "categories": ["Voyager Tools"],
+  "security": ["_ADMIN"],
   "params": [
     {
       "type": "VoyagerResults",
