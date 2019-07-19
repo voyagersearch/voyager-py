@@ -59,6 +59,12 @@ if __name__ == '__main__':
         elif job.mongodb_client_info:
             from workers import mongodb_worker
             mongodb_worker.run_job(job)
+        elif job.alfresco_config:
+            from workers import alfresco_connector
+            alfresco_connector.run_job(job)
+        elif job.smartsimple_config:
+            from workers import smartsimple_connector
+            smartsimple_connector.run_job(job)
         elif job.sql_connection_info:
             if job.sql_driver == 'SQL Server':
                 from workers import sql_worker

@@ -265,6 +265,20 @@ class Job(object):
             return ''
 
     @property
+    def alfresco_config(self):
+        try:
+            return self.job['location']['config']['alfresco']
+        except KeyError:
+            return ''
+
+    @property
+    def smartsimple_config(self):
+        try:
+            return self.job['location']['config']['smartsimple']
+        except KeyError:
+            return ''
+
+    @property
     def url(self):
         """URL for GDAL/OGR dataset."""
         try:
@@ -629,7 +643,11 @@ class Job(object):
         try:
             self.zmq_socket.send_json(entry, cls=ObjectEncoder)
         except Exception as ex:
-            print(ex)
+            try:
+                self.zmq_socket.send_json(entry)
+            except Exception as ex:
+                print json.dumps(entry)
+                print(ex)
 
     def search_fields(self, dataset):
         """Returns a valid list of existing fields for the search cursor."""

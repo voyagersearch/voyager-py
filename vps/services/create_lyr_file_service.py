@@ -19,7 +19,8 @@ try:
     import arcpy
     import requests
 except ImportError as ie:
-    sys.stdout.write(ie.message)
+    sys.stdout.write(ie.name)
+    pass
 #    sys.exit(1)
 
 
