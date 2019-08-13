@@ -47,6 +47,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
     global field_values
 
     for ds, out_name in input_items.items():
+        status_writer.send_status(ds)
         try:
             if not isinstance(out_name, list):
                 out_name = ''
@@ -201,6 +202,7 @@ def clip_data(input_items, out_workspace, out_coordinate_system, gcs_sr, gcs_cli
                 continue
 
             dsc = arcpy.Describe(ds)
+
             try:
                 if dsc.spatialReference.name == 'Unknown':
                     status_writer.send_state(status.STAT_WARNING, _('{0} has an Unknown projection. Output may be invalid or empty.').format(dsc.name))
@@ -488,7 +490,7 @@ def execute(request):
                 if create_mxd:
                     mxd_template = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'supportfiles', 'MapTemplate.mxd')
                     task_utils.create_mxd(out_workspace, mxd_template, 'output')
-                zip_file = task_utils.zip_data(out_workspace, '{0}.zip'.format(output_file_name))
+                zip_file = task_utils.zip_data(out_workspace, '{0}.zip'.format(os.path.basename(output_file_name)))
                 shutil.move(zip_file, os.path.join(os.path.dirname(out_workspace), os.path.basename(zip_file)))
         except arcpy.ExecuteError as ee:
             status_writer.send_state(status.STAT_FAILED, _(ee))
