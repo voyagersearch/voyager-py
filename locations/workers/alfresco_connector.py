@@ -2,11 +2,13 @@ import requests
 import json
 import os
 import logging
+import urllib3
 
 import warnings
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 warnings.simplefilter('ignore', InsecureRequestWarning)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logging.basicConfig(filename=r'D:/tmp/oea_tmp/alfresco_connector.log',
                     level=logging.INFO,
