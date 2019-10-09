@@ -413,7 +413,6 @@ def worker(data_path, esri_service=False):
 
         # Get the table schema.
         table_entry = {}
-        table_links = []
         schema['name'] = dsc.name
         try:
             alias = dsc.aliasName
@@ -464,6 +463,8 @@ def worker(data_path, esri_service=False):
         if job.schema_only:
             job.send_entry(table_entry)
             return table_entry
+        else:
+            job.send_entry(table_entry)
 
         if dsc.dataType == 'Table':
             # Get join information.
@@ -528,8 +529,8 @@ def worker(data_path, esri_service=False):
                         entry['action'] = job.action_type
                         entry['relation'] = 'contains'
                         entry['entry'] = {'fields': mapped_fields}
+                        entry['entry']['links'] = [{'relation': 'database', 'id': table_entry['id']}]
                         job.send_entry(entry)
-                        table_links.append({'relation': 'contains', 'id': entry['id']})
                         if (i % increment) == 0:
                             status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
                     except (AttributeError, RuntimeError):
@@ -605,8 +606,8 @@ def worker(data_path, esri_service=False):
                             entry['action'] = job.action_type
                             entry['relation'] = 'contains'
                             entry['entry'] = {'geo': geo, 'fields': mapped_fields}
+                            entry['entry']['links'] = [{'relation': 'database', 'id': table_entry['id']}]
                             job.send_entry(entry)
-                            table_links.append({'relation': 'contains', 'id': entry['id']})
                             if (i % increment) == 0:
                                 status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
                         except (AttributeError, RuntimeError):
@@ -655,15 +656,13 @@ def worker(data_path, esri_service=False):
                             entry['location'] = job.location_id
                             entry['action'] = job.action_type
                             entry['entry'] = {'geo': geo, 'fields': mapped_fields}
+                            entry['entry']['links'] = [{'relation': 'database', 'id': table_entry['id']}]
                             job.send_entry(entry)
-                            table_links.append({'relation': 'contains', 'id': entry['id']})
                             if (i % increment) == 0:
                                 status_writer.send_percent(i / row_count, "{0} {1:%}".format(dsc.name, i / row_count), 'esri_worker')
                         except (AttributeError, RuntimeError):
                             continue
 
-        table_entry['entry']['links'] = table_links
-        job.send_entry(table_entry)
         return table_entry
 
 
@@ -764,7 +763,7 @@ def run_job(esri_job):
         tables_to_keep = job.tables_to_keep()
         tables_to_skip = job.tables_to_skip()
         arcpy.env.workspace = job.path
-        if tables_to_keep:
+        if tables_to_keep and not tables_to_keep == ["*"]:
             tables = []
             for tbl in tables_to_keep:
                 [tables.append(os.path.join(job.path, fc)) for fc in arcpy.ListFeatureClasses(tbl)]
@@ -798,7 +797,8 @@ def run_job(esri_job):
                 if te:
                     gdb_links.append({'relation': 'contains', 'id': te['id']})
                 status_writer.send_percent(i / len(tables), "{0} {1:%}".format(tbl, i / len(tables)), 'esri_worker')
-            except Exception:
+            except Exception as ex:
+                print(ex)
                 continue
     gdb_entry['entry']['links'] = gdb_links
     job.send_entry(gdb_entry)

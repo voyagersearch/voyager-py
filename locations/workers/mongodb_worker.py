@@ -76,8 +76,8 @@ def run_job(mongodb_job):
         else:
             break
 
+        table_id = '{0}_{1}'.format(job.location_id, collection_name)
         if not job.schema_only:
-            table_links = []
             # Index each document -- get a suitable base 10 increment for reporting percentage.
             try:
                 increment = job.get_increment(documents.count())
@@ -146,8 +146,8 @@ def run_job(mongodb_job):
                 entry['location'] = job.location_id
                 entry['action'] = job.action_type
                 entry['entry'] = {'geo': geo, 'fields': mapped_fields}
+                entry['entry']['links'] = [{'relation': 'database', 'id': table_id}]
                 job.send_entry(entry)
-                table_links.append({'relation': 'contains', 'id': entry['id']})
                 if (i % increment) == 0:
                     status_writer.send_percent(float(i) / documents.count(),
                                                '{0}: {1:%}'.format(collection_name, float(i)/documents.count()),
@@ -194,7 +194,6 @@ def run_job(mongodb_job):
         table_entry['relation'] = 'contains'
         table_entry['entry'] = {'fields': {'format': 'schema', '_discoveryID': job.discovery_id, 'name': collection_name, 'path': job.mongodb_client_info, 'fi_rows': int(documents.count())}}
         table_entry['entry']['fields']['schema'] = schema
-        table_entry['entry']['links'] = table_links
         job.send_entry(table_entry)
         mongodb_links.append(table_entry)
 
