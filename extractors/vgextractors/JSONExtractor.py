@@ -1,7 +1,7 @@
 import os
 import json
 import sys
-sys.path.append(r"C:\Voyager\server_1.9.9.502\app\arch")
+sys.path.append(os.path.abspath(os.path.join(__file__ ,"../../../..", "arch")))
 from _vgdexfield import VgDexField
 
 
