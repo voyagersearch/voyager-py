@@ -548,7 +548,7 @@ def get_input_items(parameters, list_ids=False, list_components=False):
                 continue
             if list_components and 'component_files' in i:
                     for c in i['component_files']:
-                        if not i['absolute_path'].startswith('s3') and '://s3' not in i['absolute_path']:
+                        if 'absolute_path in i and 'not i['absolute_path'].startswith('s3') and '://s3' not in i['absolute_path']:
                             results[os.path.join(os.path.dirname(i['absolute_path']), c)] = ''
                         else:
                             results[os.path.join(os.path.dirname(data_path), c)] = ''
