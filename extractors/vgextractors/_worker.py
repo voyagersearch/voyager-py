@@ -126,7 +126,7 @@ class Base:
             self._vpid = "%s/%s_%s/%s_%s" % \
                         (time.strftime("%Y%m%d", t),
                          socket.gethostname(),
-                         self.procname,
+                         os.path.basename(self.procname),
                          time.strftime("%H%M%S", t),
                          os.getpid())
         return self._vpid

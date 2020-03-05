@@ -28,7 +28,6 @@ class JSONExtractor(object):
         # Set some of the most basic properties.
         json_name = os.path.splitext(os.path.basename(infile))[0]
         job.set_field(VgDexField.NAME, json_name)
-        job.set_field(VgDexField.PATH, infile)
         job.set_field(VgDexField.FILE_EXTENSION, 'json')
         job.set_field(VgDexField.FORMAT, 'application/json')
         job.set_field(VgDexField.FORMAT_CATEGORY, 'JSON')
