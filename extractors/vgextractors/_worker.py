@@ -178,7 +178,7 @@ class Base:
                 else:
                     lastjobtime = time.time()
                     self.log.info("start %s" % nextjob)
-                    self.status.job_started(nextjob.id, nextjob.description, nextjob.get_timeout())
+                    self.status.job_started(nextjob.id, nextjob.get_timeout(), nextjob.description)
                     ok = False
                     try:
                         ok = self.run_job(nextjob)
