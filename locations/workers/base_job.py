@@ -393,6 +393,10 @@ class Job(object):
             db = self.sql_connection_info['connection']['database']
             un = self.sql_connection_info['connection']['uid']
             pw = self.sql_connection_info['connection']['password']
+            if 'instance' in self.sql_connection_info['connection']:
+                inst = self.sql_connection_info['connection']['instance']
+            else:
+                inst = None
 
             if self.drvr == 'Oracle':
                 import cx_Oracle
@@ -412,6 +416,8 @@ class Job(object):
                 self.db_cursor = self.db_connection.cursor()
             elif self.drvr == 'SQL Server':
                 import pyodbc
+                if inst is not None:
+                    srvr = '{0}\\{1}'.format(srvr, inst)                
                 self.__sql_server_connection_str = "DRIVER={0};SERVER={1};DATABASE={2};UID={3};PWD={4}".format(self.drvr, srvr, db, un, pw)
                 self.db_connection = pyodbc.connect(self.__sql_server_connection_str)
                 self.db_cursor = self.db_connection.cursor()
