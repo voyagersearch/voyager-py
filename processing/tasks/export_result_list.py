@@ -23,6 +23,7 @@ import xml.etree.cElementTree as et
 import requests
 from utils import status
 from utils import task_utils
+import string
 
 
 SHAPE_FIELD_LENGTH = slice(0, 10)
@@ -31,6 +32,35 @@ skipped_reasons = {}
 exported_count = 0.
 errors_count = 0.
 status_writer = status.Writer()
+
+text_characters = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
+_null_trans = string.maketrans("", "")
+
+
+def change(val, encoding_type):
+    if isinstance(val, (str, unicode)):
+        return val.encode(encoding_type)
+    else:
+        return val
+
+
+def is_ascii(filename, blocksize=512):
+    return is_text(open(filename).read(blocksize))
+
+
+def is_text(s):
+    if "\0" in s:
+        return 0
+    if not s:  # Empty files are considered text
+        return 1
+    # Get the non-text characters (maps a character to itself then
+    # use the 'remove' option to get rid of the text characters.)
+    t = s.translate(_null_trans, text_characters)
+    # If more than 30% non-text characters, then
+    # this is considered a binary file
+    if len(t) / len(s) > 0.30:
+        return 0
+    return 1
 
 
 def export_to_shp(jobs, file_name, output_folder):
@@ -149,10 +179,14 @@ def export_to_csv(jobs, file_name, output_folder, fields):
     """
     global exported_count
     global  errors_count
-    write_keys = True
-    if os.path.exists(os.path.join(output_folder, '{0}.csv'.format(file_name))):
+    sfs = file_name
+    file_name_new = file_name.encode('ascii', 'ignore')
+    file_path = os.path.join(output_folder, '{0}.csv'.format(file_name_new))
+    if os.path.exists(file_path):
         write_keys = False
-    with open(os.path.join(output_folder, '{0}.csv'.format(file_name)), 'ab') as csv_file:
+    else:
+        write_keys = True
+    with open(file_path, 'ab') as csv_file:
         if 'location:[localize]' in fields:
             i = fields.index('location:[localize]')
             fields.remove('location:[localize]')
@@ -166,7 +200,8 @@ def export_to_csv(jobs, file_name, output_folder, fields):
             writer.writeheader()
         for cnt, job in enumerate(jobs, 1):
             try:
-                writer.writerow(job)
+                encoded_job = {k: change(v, 'utf-8') for (k, v) in job.items()}
+                writer.writerow(encoded_job)
                 exported_count += 1
             except Exception as ex:
                 errors_count += 1
@@ -288,7 +323,11 @@ def execute(request):
     headers = {'x-access-token': task_utils.get_security_token(request['owner'])}
     num_results, response_index = task_utils.get_result_count(request['params'])
 
-    query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
+    if len(sys.argv) == 2:
+        query = '{0}/solr/v0/select?&wt=json&fl={1}'.format('http://localhost:8888', ','.join(fields))
+    else:
+        query = '{0}/select?&wt=json&fl={1}'.format(sys.argv[2].split('=')[1], ','.join(fields))
+
     if 'query' in request['params'][response_index]:
         # Voyager Search Traditional UI
         for p in request['params']:
@@ -326,7 +365,9 @@ def execute(request):
         query += '&rows={0}&start={1}'
         exported_cnt = 0.
         for i in xrange(0, num_results, chunk_size):
-            res = requests.get(query.replace('{0}', str(chunk_size)).replace('{1}', str(i)), headers=headers)
+            url = query.replace('{0}', str(chunk_size)).replace('{1}', str(i))
+            res = requests.get(url, headers=headers)
+
             jobs = res.json()['response']['docs']
             if out_format == 'CSV':
                 export_to_csv(jobs, file_name, task_folder, fields)
