@@ -13,17 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import re
 import sys
 import json
 import itertools
 import csv
 import shutil
 import datetime
+import string
 import xml.etree.cElementTree as et
 import requests
+
 from utils import status
 from utils import task_utils
-import string
 
 
 SHAPE_FIELD_LENGTH = slice(0, 10)
@@ -178,10 +180,13 @@ def export_to_csv(jobs, file_name, output_folder, fields):
     :param output_folder: the output task folder
     """
     global exported_count
-    global  errors_count
-    sfs = file_name
+    global errors_count
+
     file_name_new = file_name.encode('ascii', 'ignore')
-    file_path = os.path.join(output_folder, '{0}.csv'.format(file_name_new))
+    if not file_name_new:
+        file_path = output_folder + os.sep + file_name + '.csv'
+    else:
+        file_path = os.path.join(output_folder, '{0}.csv'.format(file_name_new))
     if os.path.exists(file_path):
         write_keys = False
     else:
@@ -216,8 +221,8 @@ def export_to_xml(jobs, file_name, output_folder):
     :param file_name: the output file name
     :param output_folder: the output task folder
     """
-    global  exported_count
-    global  errors_count
+    global exported_count
+    global errors_count
     comment = et.Comment('{0}'.format(datetime.datetime.today().strftime('Exported: %c')))
     if not os.path.exists(os.path.join(output_folder, "{0}.xml".format(file_name))):
         results = et.Element('results')
@@ -303,6 +308,7 @@ def execute(request):
     :param request: json as a dict.
     """
     chunk_size = task_utils.CHUNK_SIZE
+
     file_name = task_utils.get_parameter_value(request['params'], 'file_name', 'value')
     fields = task_utils.get_parameter_value(request['params'], 'fields', 'value')
     out_format = task_utils.get_parameter_value(request['params'], 'output_format', 'value')
@@ -340,7 +346,21 @@ def execute(request):
         # Replace spaces with %20 & remove \\ to avoid HTTP Error 400.
         if 'fq' in request_qry:
             try:
-                query += '&fq={0}'.format(request_qry['fq'].replace("\\", ""))
+                if isinstance(request_qry['fq'], list):
+                    for fq in request_qry['fq']:
+                        try:
+                            query += '&fq={0}'.format(str(fq))
+                        except UnicodeEncodeError:
+                            query += '&fq={0}'.format(str(fq.encode('utf-8')))
+                else:
+                    query += '&fq={0}'.format(request_qry['fq'])
+                if '{!expand}' in query:
+                    query = query.replace('{!expand}', '')
+                if '{!tag' in query:
+                    tag = re.findall('{!(.*?)}', query)
+                    if tag:
+                        tag_str = "{!" + tag[0] + "}"
+                        query = query.replace(tag_str, '')
                 query = query.replace(' ', '%20')
             except AttributeError:
                 for qry in request_qry['fq']:
@@ -348,6 +368,9 @@ def execute(request):
         if 'q' in request_qry:
             try:
                 query += '&q={0}'.format(request_qry['q'].replace("\\", ""))
+                query = query.replace(' ', '%20')
+            except UnicodeEncodeError:
+                query += '&q={0}'.format(request_qry['q'].encode('utf-8').replace("\\", ""))
                 query = query.replace(' ', '%20')
             except AttributeError:
                 for qry in request_qry['q']:
