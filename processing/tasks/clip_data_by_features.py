@@ -22,7 +22,13 @@ import zipfile
 import arcpy
 from utils import status
 from utils import task_utils
+import warnings
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+warnings.simplefilter('ignore', InsecureRequestWarning)
 
+
+# Get SSL trust setting.
+verify_ssl = task_utils.get_ssl_mode()
 
 status_writer = status.Writer()
 files_to_package = list()
@@ -375,7 +381,7 @@ def execute(request):
     # Get the Clip features by id.
     id = clip_features['id']
     clip_query = '{0}{1}{2}'.format(sys.argv[2].split('=')[1], '/select?&wt=json', "&fl=id,path,fullpath:[absolute],absolute_path:[absolute],[lyrFile],[geo]&q=id:{0}".format(id))
-    clip_result = requests.get(clip_query, headers=headers)
+    clip_result = requests.get(clip_query, verify=verify_ssl, headers=headers)
     clipper = clip_result.json()['response']['docs'][0]
     if 'absolute_path' in clipper and not clipper['absolute_path'].startswith('s3'):
         clip_features = clipper['absolute_path']
@@ -388,7 +394,7 @@ def execute(request):
         temp_folder = tempfile.mkdtemp()
         if '[downloadURL]' in clipper:
             download = os.path.join(temp_folder, os.path.basename(clipper['[downloadURL]']))
-            response = requests.get(clipper['[downloadURL]'])
+            response = requests.get(clipper['[downloadURL]'], verify=verify_ssl)
             with open(download, 'wb') as fp:
                 fp.write(response.content)
             if download.endswith('.zip'):
@@ -416,11 +422,11 @@ def execute(request):
     status_writer.send_percent(0.0, _('Starting to process...'), 'clip_data')
     for group in groups:
         if fq:
-            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), verify=verify_ssl, headers=headers)
         elif 'ids' in parameters[response_index]:
-            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
+            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), verify=verify_ssl, headers=headers)
         else:
-            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), verify=verify_ssl, headers=headers)
 
         docs = results.json()['response']['docs']
         input_items = task_utils.get_input_items(docs)

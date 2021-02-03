@@ -19,7 +19,13 @@ import requests
 import urllib
 from utils import status
 from utils import task_utils
+import warnings
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+warnings.simplefilter('ignore', InsecureRequestWarning)
 
+
+# Get SSL trust setting.
+verify_ssl = task_utils.get_ssl_mode()
 
 status_writer = status.Writer()
 errors_reasons = {}
@@ -39,7 +45,7 @@ def get_display_tempate_id(owner):
     try:
         voyager_server = sys.argv[2].split('=')[1].split('solr')[0][:-1]
         get_url = "{0}/api/rest/display/config/default".format(voyager_server)
-        get_response = requests.get(get_url, headers={'Content-type': 'application/json',
+        get_response = requests.get(get_url, verify=verify_ssl, headers={'Content-type': 'application/json',
                                                           'x-access-token': task_utils.get_security_token(owner)})
         if get_response.status_code == 200:
             return get_response.json()['id']
@@ -52,12 +58,13 @@ def get_display_tempate_id(owner):
     except requests.RequestException:
         return ''
 
+
 def get_existing_saved_search_query(search_name, owner):
     """Retrieves the query from an existing saved search."""
     try:
         voyager_server = sys.argv[2].split('=')[1].split('solr')[0][:-1]
         get_url = "{0}/api/rest/display/ssearch/export".format(voyager_server)
-        get_response = requests.get(get_url, headers={'Content-type': 'application/json',
+        get_response = requests.get(get_url, verify=verify_ssl, headers={'Content-type': 'application/json',
                                                       'x-access-token': task_utils.get_security_token(owner)})
         search_query = ''
         if get_response.status_code == 200:
@@ -79,7 +86,7 @@ def delete_saved_search(search_name, owner):
     try:
         voyager_server = sys.argv[2].split('=')[1].split('solr')[0][:-1]
         get_url = "{0}/api/rest/display/ssearch/export".format(voyager_server)
-        get_response = requests.get(get_url, headers={'Content-type': 'application/json', 'x-access-token': task_utils.get_security_token(owner)})
+        get_response = requests.get(get_url, verify=verify_ssl, headers={'Content-type': 'application/json', 'x-access-token': task_utils.get_security_token(owner)})
         if get_response.status_code == 200:
             delete_url = ''
             saved_searches = get_response.json()['searches']
@@ -89,7 +96,7 @@ def delete_saved_search(search_name, owner):
                     delete_url = "{0}/api/rest/display/ssearch/{1}".format(voyager_server, search_id)
                     break
             if delete_url:
-                res = requests.delete(delete_url, headers={'Content-type': 'application/json', 'x-access-token': task_utils.get_security_token(owner)})
+                res = requests.delete(delete_url, verify=verify_ssl, headers={'Content-type': 'application/json', 'x-access-token': task_utils.get_security_token(owner)})
                 if not res.status_code == 200:
                     if hasattr(res, 'content'):
                         return False, eval(res.content)['error']
@@ -140,7 +147,7 @@ def create_saved_search(search_name, groups, owner, query, has_q):
                 "path": "",
                 "share": groups
             }
-        response = requests.post(url, json.dumps(query), headers={'Content-type': 'application/json', 'x-access-token': task_utils.get_security_token(owner)})
+        response = requests.post(url, json.dumps(query), verify=verify_ssl, headers={'Content-type': 'application/json', 'x-access-token': task_utils.get_security_token(owner)})
         if response.status_code == 200:
             return True, 'Created save search: {0}'.format(response.json()['title'])
         else:

@@ -18,7 +18,13 @@ import shutil
 import requests
 from utils import status
 from utils import task_utils
+import warnings
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+warnings.simplefilter('ignore', InsecureRequestWarning)
 
+
+# Get SSL trust setting.
+verify_ssl = task_utils.get_ssl_mode()
 
 status_writer = status.Writer()
 import arcpy
@@ -31,7 +37,7 @@ def index_item(id, header):
     :param id: Item's index ID
     """
     solr_url = "{0}/flags?op=add&flag=__to_extract&fq=id:({1})&fl=*,[true]".format(sys.argv[2].split('=')[1], id)
-    requests.get(solr_url, headers=header)
+    requests.get(solr_url, verify=verify_ssl, headers=header)
 
 
 def get_workspace_type(workspace_path):
@@ -113,11 +119,11 @@ def execute(request):
     for group in groups:
         i += len(group) - group.count('')
         if fq:
-            results = requests.get(query + "{0}&rows={1}&start={2}".format(fl, task_utils.CHUNK_SIZE, group[0]), headers=headers)
+            results = requests.get(query + "{0}&rows={1}&start={2}".format(fl, task_utils.CHUNK_SIZE, group[0]), verify=verify_ssl, headers=headers)
         elif 'ids' in parameters[response_index]:
-            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers= headers)
+            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), verify=verify_ssl, headers= headers)
         else:
-            results = requests.get(query + "{0}&rows={1}&start={2}".format(fl, task_utils.CHUNK_SIZE, group[0]), headers=headers)
+            results = requests.get(query + "{0}&rows={1}&start={2}".format(fl, task_utils.CHUNK_SIZE, group[0]), verify=verify_ssl, headers=headers)
 
         input_items = task_utils.get_input_items(results.json()['response']['docs'], True)
         if not input_items:

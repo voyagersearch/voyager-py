@@ -17,7 +17,13 @@ import sys
 import requests
 from utils import status
 from utils import task_utils
+import warnings
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+warnings.simplefilter('ignore', InsecureRequestWarning)
 
+
+# Get SSL trust setting.
+verify_ssl = task_utils.get_ssl_mode()
 
 status_writer = status.Writer()
 errors_reasons = {}
@@ -36,7 +42,7 @@ def delete_items(fq_query, q_query, thumbs, metadata, layers, owner):
             fq = "&fq={0}".format(fq_query)
 
         url = "{0}/api/rest/index/records?query={1}{2}&items=true&thumbnails={3}&metadata={4}&layers={5}".format(voyager_server, query, fq, thumbs, metadata, layers)
-        response = requests.delete(url, headers={'Content-type': 'application/json', 'x-access-token': task_utils.get_security_token(owner)})
+        response = requests.delete(url, verify=verify_ssl, headers={'Content-type': 'application/json', 'x-access-token': task_utils.get_security_token(owner)})
         if response.status_code == 200:
             return True, 'Deleted items: {0}'.format(response.json())
         else:

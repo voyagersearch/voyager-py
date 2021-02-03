@@ -20,6 +20,13 @@ import requests
 import arcpy
 from utils import status
 from utils import task_utils
+import warnings
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+warnings.simplefilter('ignore', InsecureRequestWarning)
+
+
+# Get SSL trust setting.
+verify_ssl = task_utils.get_ssl_mode()
 
 
 status_writer = status.Writer()
@@ -405,11 +412,11 @@ def execute(request):
     status_writer.send_percent(0.0, _('Starting to process...'), 'add_to_geodatabase')
     for group in groups:
         if fq:
-            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), verify=verify_ssl, headers=headers)
         elif 'ids' in parameters[response_index]:
-            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
+            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), verify=verify_ssl, headers=headers)
         else:
-            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), verify=verify_ssl, headers=headers)
 
         docs = results.json()['response']['docs']
         input_items = task_utils.get_input_items(docs)

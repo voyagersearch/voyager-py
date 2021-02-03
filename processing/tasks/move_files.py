@@ -18,7 +18,13 @@ import shutil
 import requests
 from utils import status
 from utils import task_utils
+import warnings
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+warnings.simplefilter('ignore', InsecureRequestWarning)
 
+
+# Get SSL trust setting.
+verify_ssl = task_utils.get_ssl_mode()
 
 status_writer = status.Writer()
 errors_reasons = {}
@@ -28,7 +34,7 @@ skipped_reasons = {}
 def remove_from_index(id):
     """Remove the item from the index."""
     solr_url = "{0}/update?stream.body=<delete><id>{1}</id></delete>&commit=true".format(sys.argv[2].split('=')[1], id)
-    requests.post(solr_url, headers={'Content-type': 'application/json'})
+    requests.post(solr_url, verify=verify_ssl, headers={'Content-type': 'application/json'})
 
 
 def create_dir(src_file, target_folder):
@@ -89,11 +95,11 @@ def execute(request):
     for group in groups:
         i += len(group) - group.count('')
         if fq:
-            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), verify=verify_ssl, headers=headers)
         elif 'ids' in parameters[response_index]:
-            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
+            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), verify=verify_ssl, headers=headers)
         else:
-            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]),headers=headers)
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), verify=verify_ssl, headers=headers)
 
         input_items = task_utils.get_input_items(results.json()['response']['docs'], True, True)
         if not input_items:
