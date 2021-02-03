@@ -23,6 +23,9 @@ import datetime
 import string
 import xml.etree.cElementTree as et
 import requests
+import warnings
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+warnings.simplefilter('ignore', InsecureRequestWarning)
 
 from utils import status
 from utils import task_utils
@@ -307,6 +310,10 @@ def execute(request):
     """Exports search results a CSV, shapefile or XML document.
     :param request: json as a dict.
     """
+
+    # Get SSL trust setting.
+    verify_ssl = task_utils.get_ssl_mode()
+
     chunk_size = task_utils.CHUNK_SIZE
 
     file_name = task_utils.get_parameter_value(request['params'], 'file_name', 'value')
@@ -389,7 +396,7 @@ def execute(request):
         exported_cnt = 0.
         for i in xrange(0, num_results, chunk_size):
             url = query.replace('{0}', str(chunk_size)).replace('{1}', str(i))
-            res = requests.get(url, headers=headers)
+            res = requests.get(url, verify=verify_ssl, headers=headers)
 
             jobs = res.json()['response']['docs']
             if out_format == 'CSV':
@@ -415,7 +422,7 @@ def execute(request):
         i = 0
         for group in groups:
             i += len([v for v in group if not v == ''])
-            results = requests.get(query + '&ids={0}'.format(','.join(group)), headers=headers)
+            results = requests.get(query + '&ids={0}'.format(','.join(group)), verify=verify_ssl, headers=headers)
             jobs = eval(results.text)['response']['docs']
             if out_format == 'CSV':
                 export_to_csv(jobs, file_name, task_folder, fields)

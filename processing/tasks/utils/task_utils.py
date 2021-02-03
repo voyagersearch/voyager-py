@@ -30,7 +30,6 @@ import status
 # Constants
 CHUNK_SIZE = 25
 
-
 # Custom Exceptions
 class LicenseError(Exception):
     pass
@@ -692,6 +691,14 @@ def from_wkt(wkt, sr):
         array.add(arcpy.Point(float(pt[0]), float(pt[1])))
     poly = arcpy.Polygon(array, sr)
     return poly
+
+
+def get_ssl_mode():
+    value = os.environ['VOYAGER_SSL_MODE']
+    if value.lower() == 'verify':
+        return True
+    else:
+        return False
 
 
 def get_spatial_reference(factory_code):

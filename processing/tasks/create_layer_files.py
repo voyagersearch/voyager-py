@@ -20,7 +20,13 @@ import requests
 import arcpy
 from utils import status
 from utils import task_utils
+import warnings
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+warnings.simplefilter('ignore', InsecureRequestWarning)
 
+
+# Get SSL trust setting.
+verify_ssl = task_utils.get_ssl_mode()
 
 status_writer = status.Writer()
 result_count = 0
@@ -44,7 +50,7 @@ def update_index(file_location, layer_file, item_id, name, location, server, hdr
     indexer = sys.argv[3].split('=')[1]
     zmq_socket = zmq.Context.instance().socket(zmq.PUSH)
     zmq_socket.connect(indexer)
-    res = requests.get("{0}/api/rest/index/record/{1}".format(server, item_id), headers=hdrs)
+    res = requests.get("{0}/api/rest/index/record/{1}".format(server, item_id), verify=verify_ssl, headers=hdrs)
     fields = res.json()
     fields["path_to_lyr"] = layer_file
     fields["hasLayerFile"] = True
@@ -69,7 +75,7 @@ def execute(request):
     # meta_folder = task_utils.get_parameter_value(parameters, 'meta_data_folder', 'value')
     voyager_server = sys.argv[2].split('=')[1].split('solr')[0][:-1]
     url = "{0}/api/rest/system/settings".format(voyager_server)
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, verify=verify_ssl, headers=headers)
     meta_folder = response.json()['folders']['meta']
     result_count, response_index = task_utils.get_result_count(parameters)
     # Query the index for results in groups of 25.
@@ -91,11 +97,11 @@ def execute(request):
     for group in groups:
         i += len(group) - group.count('')
         if fq:
-            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), verify=verify_ssl, headers=headers)
         elif 'ids' in parameters[response_index]:
-            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), headers=headers)
+            results = requests.get(query + '{0}&ids={1}'.format(fl, ','.join(group)), verify=verify_ssl, headers=headers)
         else:
-            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), headers=headers)
+            results = requests.get(query + "&rows={0}&start={1}".format(task_utils.CHUNK_SIZE, group[0]), verify=verify_ssl, headers=headers)
 
         docs = results.json()['response']['docs']
         # docs = eval(results.read().replace('false', 'False').replace('true', 'True'))['response']['docs']

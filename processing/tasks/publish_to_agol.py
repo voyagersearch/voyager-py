@@ -20,7 +20,13 @@ import xml.dom.minidom as DOM
 import requests
 from utils import status
 from utils import task_utils
+import warnings
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+warnings.simplefilter('ignore', InsecureRequestWarning)
 
+
+# Get SSL trust setting.
+verify_ssl = task_utils.get_ssl_mode()
 
 status_writer = status.Writer()
 import arcpy
@@ -41,7 +47,7 @@ class AGOLHandler(object):
                       'password': self.password,
                       'referer': self.portal_url}
         url = "{0}/sharing/rest/generateToken".format(self.portal_url)
-        response = requests.post(url + "?f=json", data=query_dict)
+        response = requests.post(url + "?f=json", data=query_dict, verify=verify_ssl)
         token = response.json()
         if "token" not in token:
             raise task_utils.PublishException(token['error']['message'] + ', ' + token['error']['details'][0])
@@ -61,12 +67,12 @@ class AGOLHandler(object):
             "&title="+self.service_name + \
             "&tags="+tags + \
             "&description=" + description
-        response = requests.post(url, files=sd_file)
+        response = requests.post(url, files=sd_file, verify=verify_ssl)
         items = response.json()
         if "success" in items:
             publish_url = '{0}/content/users/{1}/publish'.format(self.http, self.username)
             query_dict = {'itemID': items['id'], 'filetype': 'serviceDefinition', 'f': 'json', 'token': self.token}
-            json_response = requests.post(publish_url, data=query_dict)
+            json_response = requests.post(publish_url, data=query_dict, verify=verify_ssl)
             json_output = json_response.json()
             word_test = ["success", "results", "services", "notSharedWith"]
             if not any(word in json_output for word in word_test):
