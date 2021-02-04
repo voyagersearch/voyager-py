@@ -694,12 +694,14 @@ def from_wkt(wkt, sr):
 
 
 def get_ssl_mode():
-    value = os.environ['VOYAGER_SSL_MODE']
-    if value.lower() == 'verify':
-        return True
-    else:
+    try:
+        value = os.environ['VOYAGER_SSL_MODE']
+        if value.lower() == 'verify':
+            return True
+        else:
+            return False
+    except KeyError:
         return False
-
 
 def get_spatial_reference(factory_code):
     """Returns spatial reference object.
