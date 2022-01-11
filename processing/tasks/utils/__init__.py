@@ -11,6 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import status
-import task_utils
+try:
+    import tasks.utils.status
+except ImportError:
+    import status
+
+try:
+    import tasks.utils.task_utils
+except ImportError:
+    import task_utils
 __all__ = ['status', 'task_utils']

@@ -24,8 +24,10 @@ import time
 import tempfile
 import zipfile
 import requests
-import status
-
+try:
+    import tasks.utils.status
+except ImportError:
+    import status
 
 # Constants
 CHUNK_SIZE = 25
@@ -111,6 +113,7 @@ class QueryIndex(object):
 class ServiceLayer(object):
     """Helper class for working with ArcGIS services."""
     def __init__(self, service_layer_url, geometry='', geometry_type='', token=''):
+        self._verfify_ssl = get_ssl_mode()
         self.object_ids_cnt = 0
         self._service_layer_url = service_layer_url
         self._token = token
@@ -145,16 +148,16 @@ class ServiceLayer(object):
 
     def __get_layer_name(self):
         """Returns the service layer name."""
-        res = requests.get(self._service_layer_url + '?f=json')
+        res = requests.get(self._service_layer_url + '?f=json', verify=self._verfify_ssl)
         return res.json()['name']
 
     def __get_wkid(self):
         """Returns the spatial reference wkid for the service layer."""
         if self._token:
-            query = {'where': '1=1', 'returnExtentOnly': True, 'token': self._token, 'f': 'json'}
+            query = {'where': '1=1', 'objectids': 1, 'returnExtentOnly': True, 'token': self._token, 'f': 'json'}
         else:
-            query = {'where': '1=1', 'returnExtentOnly': True, 'f': 'json'}
-        response = requests.get('{0}/query?'.format(self._service_layer_url), params=query)
+            query = {'where': '1=1', 'objectids': 1, 'returnExtentOnly': True, 'f': 'json'}
+        response = requests.get('{0}/query?'.format(self._service_layer_url), params=query, verify=self._verfify_ssl)
         data = response.json()
         if 'extent' in data:
             return data['extent']['spatialReference']['wkid']
@@ -163,11 +166,13 @@ class ServiceLayer(object):
 
     def __get_object_ids(self, geom, geom_type):
         """Returns groups of OIDs/FIDs for the service layer as an iterator (groups of 100)."""
+        if not geom:
+            return None
         if self._token:
             query = {'where': '1=1', 'returnIdsOnly':True, 'geometry': geom, 'geometryType': geom_type, 'token': self._token, 'f': 'json'}
         else:
             query = {'where': '1=1', 'geometry': geom, 'geometryType': geom_type, 'returnIdsOnly':True, 'f': 'json'}
-        response = requests.get('{0}/query?'.format(self._service_layer_url), params=query)
+        response = requests.get('{0}/query?'.format(self._service_layer_url), params=query, verify=self._verfify_ssl)
         data = response.json()
         if 'error' in data:
             if data['error']['code'] == 400:
@@ -484,7 +489,10 @@ def grouper(iterable, n, fill_value=None):
     e.g. grouper([1,2,3,4], 2, 'end') --> (1,2) (2,3) 'end'
     """
     args = [iter(iterable)] * n
-    return itertools.izip_longest(fillvalue=fill_value, *args)
+    try:
+        return itertools.izip_longest(fillvalue=fill_value, *args)
+    except AttributeError:
+        return itertools.zip_longest(fillvalue=fill_value, *args)
 
 
 def list_files(source_file, file_extensions):
@@ -781,6 +789,7 @@ def make_thumbnail(layer_or_mxd, output_png_file, use_data_frame=True):
 
 
 def report(report_file, num_processed=0, num_skipped=0, num_errors=0, errors_details=None, skipped_details=None, num_warnings=0, warnings_details=None):
+    # type: (object, object, object, object, object, object, object, object) -> object
     """Create a markdown report of inputs processed or skipped.
     :param report_file: path of the .json file
     :param num_processed: number of items processed
@@ -812,7 +821,7 @@ def report(report_file, num_processed=0, num_skipped=0, num_errors=0, errors_det
             errors_list.append({'Item': k, 'Reason': v})
         report_dict['Errors'] = errors_list
 
-    with open(report_file, 'wb') as fp:
+    with open(report_file, 'w') as fp:
         json.dump(report_dict, fp)
 
 
