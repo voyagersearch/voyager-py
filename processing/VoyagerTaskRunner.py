@@ -69,14 +69,14 @@ if __name__ == '__main__':
                 task_properties['available'] = False
                 task_properties['No LocateXT Tool'] = str(ioe)
             except ImportError as ie:
-                if 'arcpy' in ie:
+                if 'arcpy' in str(ie):
                     task_properties['available'] = False
                     task_properties['Import error'] = '{0}. Requires ArcGIS'.format(str(ie))
                 else:
                     task_properties['available'] = False
                     task_properties['Import error'] = str(ie)
-            except RuntimeError as re:
-                if 'NotInitialized' in re:
+            except (RuntimeError, TypeError) as re:
+                if 'NotInitialized' in str(re):
                     task_properties['available'] = False
                     task_properties['License error'] = '{0}. ArcGIS is not licensed.'.format(str(re))
                 else:

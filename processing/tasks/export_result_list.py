@@ -38,14 +38,34 @@ exported_count = 0.
 errors_count = 0.
 status_writer = status.Writer()
 
-text_characters = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
-_null_trans = string.maketrans("", "")
+try:
+    text_characters = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
+except TypeError:
+    text_characters = "".join(list(map(chr, range(32, 127))) + list("\n\r\t\b"))
+try:
+    _null_trans = string.maketrans("", "")
+except AttributeError:
+    pass
+
+field_prefixes = ('fs_', 'fi_', 'fd_', 'fl_', 'fb_', 'fu_', 'ff_', 'fss_', 'meta_')
+
+
+def remove(key):
+    if key.startswith(field_prefixes):
+        return key.replace(filter(key.startswith, field_prefixes)[0], '')
+    else:
+        return key
 
 
 def change(val, encoding_type):
-    if isinstance(val, (str, unicode)):
+    try:
+        if isinstance(val, (str, unicode)):
+            return val.encode(encoding_type)
+    except Exception:
         return val.encode(encoding_type)
     else:
+        if isinstance(val, list):
+            val = ';'.join(val).encode(encoding_type)
         return val
 
 
@@ -60,7 +80,10 @@ def is_text(s):
         return 1
     # Get the non-text characters (maps a character to itself then
     # use the 'remove' option to get rid of the text characters.)
-    t = s.translate(_null_trans, text_characters)
+    try:
+        t = s.translate(_null_trans, text_characters)
+    except TypeError:
+        t = ''.join(c for c in s if c.isalpha())
     # If more than 30% non-text characters, then
     # this is considered a binary file
     if len(t) / len(s) > 0.30:
@@ -76,18 +99,19 @@ def export_to_shp(jobs, file_name, output_folder):
     """
     global exported_count
     global errors_count
-    try:
-        from osgeo import ogr
-    except ImportError as ie:
-        errors_count += 1
-        exported_count = 0
-        errors_reasons['Import Error'] = ie.message
-        status_writer.send_state(status.STAT_FAILED, repr(ie))
-        return
 
+    from osgeo import ogr
+    from osgeo import osr
+    # os.environ['GDAL_DATA'] = r'C:\voyager\server_2-1381\app\gdal'
     driver = ogr.GetDriverByName("ESRI Shapefile")
     for job in jobs:
         try:
+            geometry_type = None
+            if '[geo]' not in job:
+                errors_count += 1
+                status_writer.send_state(status.STAT_WARNING, 'No Geometry field')
+                status_writer.send_state(status.STAT_WARNING)
+                continue
             geo_json = job['[geo]']
             if geo_json['type'].lower() == 'polygon':
                 geometry_type = ogr.wkbPolygon
@@ -111,12 +135,11 @@ def export_to_shp(jobs, file_name, output_folder):
                 geometry_type = ogr.wkbMultiPoint
         except KeyError as ke:
             errors_count += 1
-            errors_reasons[job.values()[0]] = 'No Geometry field for this item.'
-            status_writer.send_state(status.STAT_WARNING)
+            status_writer.send_state(status.STAT_WARNING, 'No Geometry field')
             continue
         except TypeError as te:
             errors_count += 1
-            errors_reasons[job.values()[0]] = repr(te)
+            status_writer.send_state(status.STAT_WARNING, 'No Geometry field')
             status_writer.send_state(status.STAT_WARNING)
             continue
 
@@ -126,7 +149,7 @@ def export_to_shp(jobs, file_name, output_folder):
         else:
             shape_file = driver.CreateDataSource(os.path.join(output_folder, '{0}_{1}.shp'.format(file_name, geo_json['type'])))
             epsg_code = 4326
-            srs = ogr.osr.SpatialReference()
+            srs = osr.SpatialReference()
             srs.ImportFromEPSG(epsg_code)
             layer = shape_file.CreateLayer('{0}_{1}'.format(file_name, geo_json['type']), srs, geometry_type)
             for name in jobs[0].keys():
@@ -160,20 +183,18 @@ def export_to_shp(jobs, file_name, output_folder):
             pass
 
         try:
-            for field, value in job.iteritems():
+            for field, value in job.items():
                 field, value = str(field), str(value)
                 i = feature.GetFieldIndex(field[0:10])
                 feature.SetField(i, value)
             layer.CreateFeature(feature)
-            shape_file.Destroy()
-            shape_file = None
             exported_count += 1
+            shape_file.Destroy()
         except Exception as ex:
             errors_count += 1
-            errors_reasons[job.values()[0]] = repr(ex)
-            shape_file = None
+            status_writer.send_state(status.STAT_WARNING, 'No Geometry field')
+            shape_file.Destroy()
             continue
-
 
 def export_to_csv(jobs, file_name, output_folder, fields):
     """
@@ -194,7 +215,7 @@ def export_to_csv(jobs, file_name, output_folder, fields):
         write_keys = False
     else:
         write_keys = True
-    with open(file_path, 'ab') as csv_file:
+    with open(file_path, 'a') as csv_file:
         if 'location:[localize]' in fields:
             i = fields.index('location:[localize]')
             fields.remove('location:[localize]')
@@ -203,17 +224,36 @@ def export_to_csv(jobs, file_name, output_folder, fields):
             i = fields.index('path[absolute]')
             fields.remove('path[absolute]')
             fields.insert(i, '[absolute]')
+
+        for f in fields:
+            pre = filter(f.startswith, field_prefixes)
+            try:
+                prefix = next(pre)
+            except StopIteration:
+                continue
+            except TypeError:
+                if pre:
+                    prefix = pre[0]
+                else:
+                    prefix = None
+            if prefix:
+                i = fields.index(f)
+                fields.remove(f)
+                fields.insert(i, f.replace(prefix, ''))
         writer = csv.DictWriter(csv_file, fieldnames=fields)
         if write_keys:
             writer.writeheader()
         for cnt, job in enumerate(jobs, 1):
             try:
-                encoded_job = {k: change(v, 'utf-8') for (k, v) in job.items()}
+                try:
+                    encoded_job = {remove(k): v for (k, v) in job.items()}
+                except Exception:
+                    encoded_job = {remove(k): change(v, 'utf-8') for (k, v) in job.items()}
                 writer.writerow(encoded_job)
                 exported_count += 1
             except Exception as ex:
                 errors_count += 1
-                errors_reasons[job.keys()[0]] = repr(ex)
+                errors_reasons['error'] = repr(ex)
                 continue
 
 
@@ -261,7 +301,7 @@ def export_to_xml(jobs, file_name, output_folder):
 
             except Exception as ex:
                 errors_count += 1
-                errors_reasons[job.keys()[0]] = repr(ex)
+                errors_reasons['error'] = repr(ex)
                 continue
         exported_count += len(results)
         tree = et.ElementTree(results)
@@ -300,7 +340,7 @@ def export_to_xml(jobs, file_name, output_folder):
                 exported_count += 1
             except Exception as ex:
                 errors_count += 1
-                errors_reasons[job.keys()[0]] = repr(ex)
+                errors_reasons['error'] = repr(ex)
                 continue
     tree.getroot().insert(0, comment)
     tree.write(os.path.join(output_folder, "{0}.xml".format(file_name)), encoding='UTF-8')
@@ -394,7 +434,7 @@ def execute(request):
 
         query += '&rows={0}&start={1}'
         exported_cnt = 0.
-        for i in xrange(0, num_results, chunk_size):
+        for i in range(0, num_results, chunk_size):
             url = query.replace('{0}', str(chunk_size)).replace('{1}', str(i))
             res = requests.get(url, verify=verify_ssl, headers=headers)
 
@@ -439,5 +479,5 @@ def execute(request):
         task_utils.report(os.path.join(request['folder'], '__report.json'), exported_count, 0, errors_count, errors_reasons)
     else:
         task_utils.report(os.path.join(request['folder'], '__report.json'), exported_count, 0, errors_count, errors_reasons)
-        zip_file = task_utils.zip_data(task_folder, 'output.zip')
+        zip_file = task_utils.zip_data(task_folder, '{0}.zip'.format(file_name))
         shutil.move(zip_file, os.path.join(os.path.dirname(task_folder), os.path.basename(zip_file)))
