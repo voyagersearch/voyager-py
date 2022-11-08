@@ -66,10 +66,18 @@ class QueryIndex(object):
     def __init__(self, items):
         self._items = items
         self._fq = ''
+        self._bq = ''
 
     @property
     def fl(self):
         return '&fl=id,name:[name],title,format,path,fullpath:[absolute],absolute_path:[absolute],f*,[lyrFile],[lyrURL],[downloadURL],[lyrURL],[geo],location,component_files,agent'
+
+    def get_bq(self):
+        if 'query' in self._items:
+            if 'bq' in self._items['query']:
+                self._bq = self._items['query']['bq']
+                return self._bq
+        return ''
 
     def get_fq(self):
         """Return the query request string if the results are from a
@@ -167,7 +175,7 @@ class ServiceLayer(object):
     def __get_object_ids(self, geom, geom_type):
         """Returns groups of OIDs/FIDs for the service layer as an iterator (groups of 100)."""
         if not geom:
-            return None
+            print("no geometry")
         if self._token:
             query = {'where': '1=1', 'returnIdsOnly':True, 'geometry': geom, 'geometryType': geom_type, 'token': self._token, 'f': 'json'}
         else:
