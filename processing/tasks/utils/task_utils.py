@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import collections
 import os
 import re
 import glob
@@ -535,14 +536,22 @@ def get_parameter_value(parameters, parameter_name, value_key='value'):
                 return ''
 
 
-def get_input_items(parameters, list_ids=False, list_components=False):
+def get_input_items(parameters, list_ids=False, list_components=False, ordered_items=None):
     """Get the input search result items and output names.
 
     :param: parameters: parameter list
     :rtype: dict
     """
-    results = {}
+    results = collections.OrderedDict()
     docs = parameters
+
+    if ordered_items:
+        ordered_docs = []
+        for x in ordered_items:
+            for y in docs:
+                if y['id'] == x.replace("(", '').replace(")", ''):
+                    ordered_docs.append(y)
+        docs = ordered_docs
     try:
         for i in docs:
             try:
@@ -625,6 +634,22 @@ def get_data_path(item):
                     return os.path.join(temp_folder, base_name)
                 else:
                     return download_file
+            elif '[downloadURL]' not in item and 's3://' in item['path']:
+                bucket = item['path'].replace("s3://", "").split("/")[0]
+                public_path = "https://" + item['path'].replace("s3://", "").replace(bucket,
+                                                                                     bucket + ".s3.amazonaws.com")
+                extension = os.path.splitext(public_path)[1][1:]
+                download = requests.get(public_path)
+                download_file = os.path.join(temp_folder, '{0}.{1}'.format(os.path.splitext(base_name)[0], extension))
+                with open(download_file, 'wb') as fp:
+                    fp.write(download.content)
+                if extension == 'zip':
+                    zip = zipfile.ZipFile(download_file)
+                    zip.extractall(temp_folder)
+                    return os.path.join(temp_folder, base_name)
+                else:
+                    return download_file
+
         elif '://s3' in item['path'] and '[downloadURL]' in item:
             return item['[downloadURL]']
         elif '[downloadURL]' in item and not item['[downloadURL]'] == item['path']:
@@ -642,7 +667,19 @@ def get_data_path(item):
             else:
                 return download_file
         elif item['path'].startswith('http'):
-            return item['path']
+            base_name = os.path.basename(item['path'])
+            temp_folder = tempfile.mkdtemp()
+            extension = os.path.splitext(item['path'])[1][1:]
+            download = requests.get(item['path'])
+            download_file = os.path.join(temp_folder, '{0}.{1}'.format(os.path.splitext(base_name)[0], extension))
+            with open(download_file, 'wb') as fp:
+                fp.write(download.content)
+            if extension == 'zip':
+                zip = zipfile.ZipFile(download_file)
+                zip.extractall(temp_folder)
+                return os.path.join(temp_folder, base_name)
+            else:
+                return download_file
         elif item['format'] == 'format:application/vnd.esri.lyr':
             return item['[absolute]']
         elif item['format'] == 'application/vnd.esri.map.data.frame':
