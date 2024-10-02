@@ -850,19 +850,19 @@ def report(report_file, num_processed=0, num_skipped=0, num_errors=0, errors_det
 
     if warnings_details:
         warnings_list = []
-        for k, v in warnings_details.iteritems():
+        for k, v in warnings_details.items():
             warnings_list.append({'Item': k, 'Reason': v})
         report_dict['Warnings'] = warnings_list
 
     if skipped_details:
         skipped_list = []
-        for k, v in skipped_details.iteritems():
+        for k, v in skipped_details.items():
             skipped_list.append({'Item': k, 'Reason': v})
         report_dict['Skipped'] = skipped_list
 
     if errors_details:
         errors_list = []
-        for k, v in errors_details.iteritems():
+        for k, v in errors_details.items():
             errors_list.append({'Item': k, 'Reason': v})
         report_dict['Errors'] = errors_list
 

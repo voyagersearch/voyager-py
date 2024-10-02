@@ -24,14 +24,20 @@ from tasks.utils import task_utils
 
 def run_task(json_file):
     """Main function for running processing tasks."""
-    with open(json_file) as data_file:
-        try:
-            request = json.load(data_file)
-            __import__(request['task'])
-            getattr(sys.modules[request['task']], "execute")(request)
-        except (ImportError, ValueError) as ex:
-            sys.stderr.write(repr(ex))
-            sys.exit(1)
+    try:
+        data_file = open(json_file)
+    except Exception:
+        data_file = open(json_file, encoding='utf-8')
+
+    try:
+        request = json.load(data_file)
+        __import__(request['task'])
+        getattr(sys.modules[request['task']], "execute")(request)
+        data_file.close()
+    except (ImportError, ValueError) as ex:
+        sys.stderr.write(repr(ex))
+        data_file.close()
+        sys.exit(1)
 
 
 if __name__ == '__main__':
