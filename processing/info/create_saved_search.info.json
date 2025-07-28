@@ -37,7 +37,7 @@
     {
       "display": "Create a List - Saved Search",
       "description": "Creates a list as a saved search of items in the cart",
-      "helpURL": "https://help.voyagersearch.com/doc-create-list-saved-search",
+      "helpURL": "https://product.help.voyagersearch.com/wiki/spaces/VH/pages/2249719809/Create+a+List+Saved+Search",
       "params":
   	  {
         "search_action": {

@@ -56,7 +56,7 @@
     "en": {
       "display": "Clip Data by Features",
       "description": "Clips selected search results using a polygon item within the index",
-      "helpURL": "https://help.voyagersearch.com/doc-211335158-clip-data-by-features",
+      "helpURL": "https://product.help.voyagersearch.com/wiki/spaces/VH/pages/2249162940/Clip+Data+by+Features",
       "params": {
         "clip_features": {
           "display": "Clip Features",

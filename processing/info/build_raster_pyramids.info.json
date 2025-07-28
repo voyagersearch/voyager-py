@@ -50,7 +50,7 @@
     {
       "display": "Build Raster Pyramids",
       "description": "Builds pyramids for input raster datasets. Pyramids improves display performance.",
-      "helpURL": "https://help.voyagersearch.com/doc-203104778-build-raster-pyramids",
+      "helpURL": "https://product.help.voyagersearch.com/wiki/spaces/VH/pages/2249261137/Build+Raster+Pyramids",
   	  "params":
   	  {
     		"resampling_method": {

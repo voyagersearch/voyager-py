@@ -29,7 +29,7 @@
     {
       "display": "Copy Files",
       "description": "Copies files to a target folder",
-      "helpURL": "https://help.voyagersearch.com/doc-203514753-copy-files",
+      "helpURL": "https://product.help.voyagersearch.com/wiki/spaces/VH/pages/2249555975/Copy+Files",
   	  "params":
   	  {
   	    "target_folder": {

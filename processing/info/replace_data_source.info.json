@@ -32,7 +32,7 @@
     {
       "display": "Replace Data Source",
       "description": "Replaces a layer's data source",
-      "helpURL": "https://help.voyagersearch.com/doc-203514743-replace-data-source",
+      "helpURL": "https://product.help.voyagersearch.com/wiki/spaces/VH/pages/2249818153/Replace+Data+Source",
       "params":
       {
 		"create_backup":

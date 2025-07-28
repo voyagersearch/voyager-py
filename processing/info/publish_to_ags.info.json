@@ -31,7 +31,7 @@
     {
       "display": "Publish to ArcGIS Server",
       "description": "Publish results as a map service on ArcGIS for Server",
-      "helpURL": "https://help.voyagersearch.com/doc-203519576-publish-to-an-arcgis-server",
+      "helpURL": "https://product.help.voyagersearch.com/wiki/spaces/VH/pages/2249654337/Publish+to+ArcGIS+Server",
       "params":
       {
 		"server_connection_path":

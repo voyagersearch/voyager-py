@@ -42,7 +42,7 @@
     {
       "display": "Write GIS Metadata",
       "description": "Create or update existing metadata for GIS datasets",
-      "helpURL": "https://help.voyagersearch.com/doc-204035673-write-gis-metadata",
+      "helpURL": "https://product.help.voyagersearch.com/wiki/spaces/VH/pages/2249981982/Write+GIS+Metadata",
       "params":
       {
       "overwrite": {

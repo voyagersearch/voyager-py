@@ -87,7 +87,7 @@
     {
       "display": "Mosaic to Workspace",
       "description": "Mosaic input rasters to a new dataset in an existing workspace",
-      "helpURL": "https://help.voyagersearch.com/doc-203514833-mosaic-to-workspace",
+      "helpURL": "https://product.help.voyagersearch.com/wiki/spaces/VH/pages/2249261183/Mosaic+to+Workspace",
       "params": {
         "target_workspace": {
           "display": "Target Workspace",

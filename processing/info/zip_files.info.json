@@ -27,7 +27,7 @@
     {
       "display": "Zip Files",
       "description": "Compress input files into a single zip file",
-      "helpURL": "https://help.voyagersearch.com/doc-203514783-zip-files",
+      "helpURL": "https://product.help.voyagersearch.com/wiki/spaces/VH/pages/2249719838/Zip+Files",
       "params":
       {
         "flatten_results":

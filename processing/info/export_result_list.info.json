@@ -44,7 +44,7 @@
 	{
       "display": "Export Result List",
       "description": "Export search results to a CSV, shapefile or XML document",
-      "helpURL": "https://help.voyagersearch.com/doc-204436747-export-result-list",
+      "helpURL": "https://product.help.voyagersearch.com/wiki/spaces/VH/pages/2249588802/Export+Result+List",
 	  "params":
 	  {
         "file_name":

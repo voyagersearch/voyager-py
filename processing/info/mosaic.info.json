@@ -81,7 +81,7 @@
     {
       "display": "Mosaic",
       "description": "Mosaic input rasters to a new raster dataset where the result is to be downloaded",
-      "helpURL": "https://help.voyagersearch.com/doc-203514773-mosaic",
+      "helpURL": "https://product.help.voyagersearch.com/wiki/spaces/VH/pages/2249654328/Mosaic",
   	  "params":
   	  {
     		"processing_extent": {
