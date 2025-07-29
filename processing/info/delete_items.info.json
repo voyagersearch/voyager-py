@@ -34,7 +34,7 @@
     {
       "display": "Remove Items from Index",
       "description": "Removes items from the index",
-      "helpURL": "https://help.voyagersearch.com/doc-delete-items",
+      "helpURL": "https://product.help.voyagersearch.com/wiki/spaces/VH/pages/2249981970/Remove+Items+from+Index",
       "params":
   	  {
   	    "delete_thumbnails": {

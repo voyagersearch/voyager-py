@@ -69,7 +69,7 @@
     "en": {
       "display": "Create GeoPDF",
       "description": "Add selected data to a GeoPDF document",
-      "helpURL": "https://help.voyagersearch.com/doc-203514763-create-geopdf",
+      "helpURL": "https://product.help.voyagersearch.com/wiki/spaces/VH/pages/2249654303/Create+a+GeoPDF",
       "params": {
         "map_template": {
           "display": "Map Template",
