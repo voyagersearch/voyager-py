@@ -39,7 +39,7 @@
     {
       "display": "Add Field",
       "description": "Adds a new field and calculates it with the field value.",
-      "helpURL": "https://product.help.voyagersearch.com/wiki/spaces/VH/pages/2249687079/Create+an+Esri+Map+or+Layer+Package",
+      "helpURL": "https://product.help.voyagersearch.com/wiki/spaces/VH/pages/2249326710/Add+Field",
   	  "params":
   	  {
   	    "field_name": {
