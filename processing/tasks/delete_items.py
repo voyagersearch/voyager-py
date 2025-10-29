@@ -34,9 +34,10 @@ def delete_items(fq_query, q_query, thumbs, metadata, layers, owner):
     """Delete items from the index using the Voyager API."""
     try:
         voyager_server = sys.argv[2].split('=')[1].split('solr')[0][:-1]
+        # voyager_server = "http://localhost:8888"
         if fq_query:
             if '{!tag=' in fq_query:
-                fq_query = fq_query.split('}')[1]
+                fq_query = "&fq=" + fq_query.split('}')[1]
             if ' AND ' in fq_query:
                 fq_query = fq_query.replace(' AND ', '&fq=')
             query = fq_query
@@ -45,7 +46,10 @@ def delete_items(fq_query, q_query, thumbs, metadata, layers, owner):
                 query = q_query + query
         else:
             query = q_query
-            fq = "&fq={0}".format(fq_query)
+            if fq_query:
+                fq = fq_query
+            else:
+                fq = ''
 
         url = "{0}/api/rest/index/records?query={1}{2}&items=true&thumbnails={3}&metadata={4}&layers={5}".format(voyager_server, query, fq, thumbs, metadata, layers)
         url = requote_uri(url)
@@ -98,7 +102,7 @@ def execute(request):
     if fq:
         fq = "&fq=" + fq
     if query:
-        query = "&q=" + query
+        query = query
 
     result = delete_items(fq, query, delete_thumbs, delete_metadata, delete_layers, request_owner)
 
