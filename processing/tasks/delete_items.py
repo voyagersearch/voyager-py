@@ -52,7 +52,7 @@ def delete_items(fq_query, q_query, thumbs, metadata, layers, owner):
                 fq = ''
 
         url = "{0}/api/rest/index/records?query={1}{2}&items=true&thumbnails={3}&metadata={4}&layers={5}".format(voyager_server, query, fq, thumbs, metadata, layers)
-        url = requote_uri(url)
+        url = requote_uri(url.replace(",", "%20C"))
         status_writer.send_status(url)
         response = requests.delete(url, verify=verify_ssl, headers={'Content-type': 'application/json', 'x-access-token': task_utils.get_security_token(owner)})
         if response.status_code == 200:
