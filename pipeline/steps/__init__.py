@@ -9,8 +9,6 @@ for module in os.listdir(os.path.dirname(__file__)):
         continue
     __all__.append(module[:-3])
 
-# dll_path = r"C:\Voyager\server_1.9.7.3244\app\arch\win32_x86" #os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'arch', 'win32_x86'))
-# gdal_path = r"C:\Voyager\server_1.9.7.3244\app\gdal"
 dll_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'arch', 'win32_x86'))
 gdal_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '..', 'gdal'))
 
